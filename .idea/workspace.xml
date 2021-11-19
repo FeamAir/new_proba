@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="60ec22a2-d526-433c-a497-51ed372137bd" name="Changes" comment="number">
-      <change afterPath="$PROJECT_DIR$/lesson_3/leap_year.py" afterDir="false" />
+    <list default="true" id="60ec22a2-d526-433c-a497-51ed372137bd" name="Changes" comment="year">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -199,7 +198,14 @@
       <option name="project" value="LOCAL" />
       <updated>1637266815648</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="year">
+      <created>1637274512016</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1637274512016</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -207,7 +213,19 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="master" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>
@@ -217,6 +235,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="add files" />
     <MESSAGE value="number" />
-    <option name="LAST_COMMIT_MESSAGE" value="number" />
+    <MESSAGE value="year" />
+    <option name="LAST_COMMIT_MESSAGE" value="year" />
   </component>
 </project>
