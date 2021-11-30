@@ -9,11 +9,11 @@ while True:
     cnt += 1
     text = "your number {luck} is bigger".format(luck=say)
     text1 = "your number {luck} is less".format(luck=say)
-    if say > number:# если число введенное пользоваелем больше рендомного
+    if say > number:  # если число введенное пользоваелем больше рендомного
         print(text)
-    if say < number:#если число введенное пользоваелем меньше рендомного
+    if say < number:  # если число введенное пользоваелем меньше рендомного
         print(text1)
-    if say == number:#если число введенное пользоваелем совпала с рендомным числом
+    if say == number:  # если число введенное пользоваелем совпала с рендомным числом
         break
-if say == number:#
+if say == number:
     print(f"{name}, you win. Number of attempts = {cnt}")
