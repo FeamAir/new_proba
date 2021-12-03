@@ -7,4 +7,4 @@ if x < year < y:
     else:
         print(year, 'this is not leap year')
 else:
-    print(year, "the entered year does not meet the conditions")
+    print(year, 'the entered year does not meet the conditions')
