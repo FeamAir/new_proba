@@ -1,0 +1,10 @@
+say = list(input("enter number \n"))
+print(say)
+k = int(input("enter index"))
+c = input("enter change index")
+d = input("enter add number")
+say = say[:k]+[c]+say[k:]
+print(say)
+say.append(d)
+say.sort()
+print(say.sort())
