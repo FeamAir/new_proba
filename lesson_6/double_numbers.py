@@ -12,7 +12,7 @@ for i in a:
 print(c)
 
 # or
-
+# еще в работе
 # a = list(input("numbers"))
 # b = list(input("numbers"))
 # c = []
