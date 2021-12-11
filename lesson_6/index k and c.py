@@ -8,5 +8,4 @@ say.append(c)
 for a in range(len(say) - 1, k, -1):
     say[a], say[a - 1] = say[a - 1], say[a]
 print(say)
-say.sort()
 print(say)
