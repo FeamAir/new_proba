@@ -13,16 +13,3 @@ print(say)
 say.append(d)
 say.sort()
 print(say)
-
-
-# say = [0, 1, 2, 3, 4, 5, 6]
-# k = (4)
-# print(type(k))
-# c = (5)
-# say1 = say + [c]
-# print(say1)
-# for i in range(k, len(say1)-1):
-#     say1[-1],say1[k] = say1[k],say1[-1]
-# print(say1)
-
-# say1[-1],say1[k] = say1[k],say1[-1]
