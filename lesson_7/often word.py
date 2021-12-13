@@ -12,4 +12,4 @@ for words in txt.split():
 print(dict)
 max_count = max(dict.values())
 most_frequent = [k for k, v in dict.items() if v == max_count]
-print(max(most_frequent))
+
