@@ -10,6 +10,6 @@ for words in txt.split():
 # for words in txt.replace(',', ' ,').split():
 #     dict[words] = dict.get(words, 0) + 1
 print(dict)
-max_count = max(dict.values())
-most_frequent = [k for k, v in dict.items() if v == max_count]
-print(max(most_frequent))
+max_cnt = max(dict.values())
+often = [k for k, v in dict.items() if v == max_cnt]
+print(max(often))
