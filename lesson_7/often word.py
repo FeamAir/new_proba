@@ -13,4 +13,4 @@ print("You have = ", often)
 for i in range(len(often)):
     if i > 1:
         d = input("what words?? \n")
-        print("total value", dict[d])
+
