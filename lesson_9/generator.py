@@ -1,8 +1,8 @@
 def ger(x, y):
     if 0 < x < y < 101:
-            for i in range(x, y):
-                if i % 2 != 0:
-                    yield i
+        for i in range(x, y):
+            if i % 2 != 0:
+                yield i
     else:
         print("False, only numbers 1-100")
 
