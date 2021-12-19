@@ -13,3 +13,5 @@ def ger(x, y):
 
 a = ger(int(input("enter from num \n")), int(input("enter untill num \n")))
 print(next(a), end=" ")
+print(next(a), end=" ")
+print(next(a), end=" ")
