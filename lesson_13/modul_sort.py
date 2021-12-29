@@ -1,54 +1,27 @@
 """ Module sort.
 
-    This module has two sorting options.
+    This module has three sorting options.
     1) bubble_sort
-    2)quick_sort
+    2) quick_sort
+    3) insertion_sort
 
 """
 from random import randint
 
 
-def bubble_sort(x):
+def bubble_sort(lst):
     """Bubble_sort.
-        This function creates an MxM matrix and sorts it using the bubble method.
-        You set a number equal to your matrix.
+        This function sorts it using the bubble method.
         Bubble_sort = O(n^2)
-
     """
-    m_num = [[randint(1, 50) for i in range(x)] for i in range(x)]
-    list_sum = [sum([m_num[index_col][i] for index_col in range(x)])
-                for i in range(x)
-                ]
-    print("Начальный список = \n", '\n'.join(str(item) for item in m_num))
-    print(list_sum, sep='\n')
+    length = len(lst)
     while True:
-        for i in range(x - 1):
-            for j in range(x - 2, i - 1, -1):
-                if list_sum[j] > list_sum[j + 1]:
-                    list_sum[j], list_sum[j + 1] = list_sum[j + 1], list_sum[j]
-                    for line in range(x):
-                        m_num[line][j], m_num[line][j + 1] = \
-                            m_num[line][j + 1], m_num[line][j]
-            for coll in range(x):
-                if list_sum[coll] % 2 == 0:
-                    for a in range(x - 1):
-                        if m_num[a][coll] > m_num[a + 1][coll]:
-                            m_num[a][coll], m_num[a + 1][coll] = \
-                                m_num[a + 1][coll], m_num[a][coll]
-                else:
-                    for a in range(x - 1):
-                        if m_num[a][coll] < m_num[a + 1][coll]:
-                            m_num[a][coll], m_num[a + 1][coll] = \
-                                m_num[a + 1][coll], m_num[a][coll]
-        m_num.append(list_sum)
-        break
-    return sort_list_b(m_num)
+        for i in range(length - 1):
+            for j in range(length - 2, i - 1, -1):
+                if lst[j] > lst[j + 1]:
+                    lst[j], lst[j + 1] = lst[j + 1], lst[j]
+        return lst
 
-
-def sort_list_b(b_num):
-    a = ("\n".join(["\t".join([str(cell) for cell in row]) for row in b_num]))
-    # print("Финальный список = \n", a)
-    return a
 
 
 def partition(nums, low, high):
@@ -73,6 +46,7 @@ def quick_sort(nums):
         This function allows you to sort the list using the method quick_sort.
         Bubble_sort = O(n log (n))
     """
+
     def q_sort(items, low, high):
         if low < high:
             lst_index = partition(items, low, high)
@@ -82,12 +56,34 @@ def quick_sort(nums):
     q_sort(nums, 0, len(nums) - 1)
 
 
-__all__ = ["quick_sort", "bubble_sort"]
+def insertion_sort(data):
+    """insertion_sort.
+         This function sorts it using the insertion_sort.
+         insertion_sort = O(n^2)
+    """
+    for i in range(len(data)):
+        j = i - 1
+        key = data[i]
+        while data[j] > key and j >= 0:
+            data[j + 1] = data[j]
+            j -= 1
+        data[j + 1] = key
+    return data
+
+
+__all__ = ["quick_sort", "bubble_sort", "insertion_sort"]
 
 if __name__ == "__main__":
     say = [randint(0, 30) for i in range(10)]
+    print(say)
+    insertion_sort(say)
+    print(say)
+    # print(say)
+    # bubble_sort(say)
+    # print(say)
+
     # print(say)
     # quick_sort(say)
     # print(say)
-    # # say = bubble_sort(int(input("enter sum matrix \n")))
+    # say = bubble_sort(int(input("enter sum matrix \n")))
 

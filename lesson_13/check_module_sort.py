@@ -1,34 +1,49 @@
-# from random import randint
+from random import randint
 from modul_sort import *
+print(dir())
 
 
-# print(dir())
+#   В данном фаиле предоставлено три варианта использования метод сортировки
+#   Перед использыванием не забудьте убрать Хештег
 
 
-#   Данная функция создаёт матрицу и вызывает Метод пузырька
+#   Данная функция создаёт список и вызывает Метод пузырька
 
 
-def my_num(x):
-    a = bubble_sort(x)
-    return a
-
-
-say = my_num(int(input("enter sum matrix \n")))
-print(say)
+# def my_bub(x):
+#     lst = [randint(0, 20) for i in range(x)]
+#     print("Начальный список = \n", lst)
+#     a = bubble_sort(lst)
+#     return a
+#
+#
+# say = my_bub(int(input("Количество элементов в списке \n")))
+# print("Финальный список = \n", say)
 
 
 #   Данная функция вызывает быстрый метод сортировки
-#   Необходимо убрать хеш на импорте random
 
 
 # def my_quick(x):
-#     print("Начальный список =", x)
-#     quick_sort(x)
+#     lst = [randint(0, 20) for i in range(x)]
+#     print("Начальный список = \n", lst)
+#     quick_sort(lst)
+#     return lst
 #
-#     return x
 #
-#
-# say = my_quick([randint(0, 30) for i in range(10)])
-# print("Конечный результат =", say)
+# say = my_quick(int(input("Количество элементов в списке \n")))
+# print("Финальный список = \n", say)
 
 
+#   Данная функция вызывает метод сортировка вставками
+
+
+# def my_insert(x):
+#     lst = [randint(0, 20) for i in range(x)]
+#     print("Начальный список = \n", lst)
+#     insertion_sort(lst)
+#     return lst
+#
+#
+# say = my_insert(int(input("Количество элементов в списке \n")))
+# print("Финальный список = \n", say)
