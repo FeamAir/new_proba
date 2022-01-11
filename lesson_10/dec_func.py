@@ -2,10 +2,10 @@ def benchmark(func):
     import time
 
     def wrapper(*args):
-        start = time.time()
+        start_time = time.perf_counter()
         res = func(*args)
-        end = time.time()
-        print("- Время Выполнения: {} секунд.".format(end-start))
+        total = time.perf_counter() - start_time
+        print("- Время Выполнения: {} секунд.".format(total))
         return res
     return wrapper
 
