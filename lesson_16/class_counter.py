@@ -7,7 +7,6 @@ class Counter:
         self.start = start
         self.end = end
         self.current = self.start
-        self.status = self.current  # << добавил статус
 
     def status_count(self):  # добавил метод  статус
         return self.current  # теперь возвращает место остановки инкримента
@@ -24,7 +23,8 @@ class Counter:
     def refresh_count(self):  # изменил на первоначальный отсчет
         """Обнуления счетчика"""
         self.current = self.start  # изменил на первоначальный отсчет
-        return "Cчетчик сброшен на начальное значение {}".format(self.current)
+        print("Cчетчик сброшен на начальное значение {}".format(self.current))
+        return self.current
 
 
 if __name__ == "__main__":
@@ -41,5 +41,5 @@ if __name__ == "__main__":
     print(my_count.increment_count())
     print(my_count.status_count())
     print(my_count.increment_count())
-    print(my_count.increment_count())
+    print(my_count.refresh_count())
     print(my_count.increment_count())
