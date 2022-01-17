@@ -10,17 +10,16 @@ class Counter:
         self.status = self.current  # << добавил статус
 
     def status_count(self):  # добавил метод  статус
-        self.status = self.current
-        return self.status  # теперь возвращает место остановки инкримента
+        return self.current  # теперь возвращает место остановки инкримента
 
     def increment_count(self):  # метод не изминял
         """Фукция инкрементирует значение счетчика,
             а так же следит за границами выполнения"""
-        if self.current <= self.end:  # добавил "="
+        if self.current < self.end:  # добавил "="
             self.current += 1
             return self.current
-        else:
-            return "Превышено значение счетчика"
+        if self.current == self.end:
+            return self.end
 
     def refresh_count(self):  # изменил на первоначальный отсчет
         """Обнуления счетчика"""
@@ -34,6 +33,13 @@ if __name__ == "__main__":
     print(my_count.status_count())
     print(my_count.refresh_count())
     print(my_count.status_count())
-    print(my_count.increment_count)
-    print(my_count.increment_count)
+    print(my_count.increment_count())
+    print(my_count.increment_count())
     print(my_count.status_count())
+    print(my_count.increment_count())
+    print(my_count.increment_count())
+    print(my_count.increment_count())
+    print(my_count.status_count())
+    print(my_count.increment_count())
+    print(my_count.increment_count())
+    print(my_count.increment_count())
