@@ -8,8 +8,8 @@ class Counter:
         self.end = end
         self.current = self.start
 
-    def status_count(self):  # добавил метод  статус
-        return self.current  # теперь возвращает место остановки инкримента
+    def status_count(self):
+        return self.current
 
     def increment_count(self):  # метод не изминял
         """Фукция инкрементирует значение счетчика,
