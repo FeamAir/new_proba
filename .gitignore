@@ -140,3 +140,16 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Godot
+.godot/
+export.cfg
+export_credentials.cfg
+android/build/
+
+# Ключи подписи и секреты: никогда не коммитить
+*.keystore
+*.jks
+keystore.properties
+*.p12
+play-service-account*.json
