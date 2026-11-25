@@ -4,60 +4,59 @@ extends RefCounted
 ## Сохраняется в тот же user://save.cfg, раздел [meta]; старые сохранения без него
 ## загружаются со значениями по умолчанию.
 
+const I18n := preload("res://scripts/i18n.gd")
+
 const HEROES := ["owl", "axolotl"]
-const HERO_NAMES := {"owl": "Совёнок", "axolotl": "Аксолотль"}
 
 const SLOTS := ["head", "eyes", "neck", "back", "skin"]
-const SLOT_NAMES := {"head": "Голова", "eyes": "Глаза", "neck": "Шея", "back": "Спина", "skin": "Окраска"}
 
 ## Вещи гардероба. price — цена в осколках; stars — нужно звёзд всего;
 ## hall — нужно пройти зал с этим номером (1 = Аметистовый, ... 5 = Сердце горы).
+## Названия вещей, украшений, залов, героев — в scripts/i18n.gd (ключи item_<id>, hall_<n>...).
 const ITEMS := [
-	{"id": "bow", "slot": "head", "name": "Бантик", "price": 20},
-	{"id": "cap", "slot": "head", "name": "Колпачок", "price": 30},
-	{"id": "miner", "slot": "head", "name": "Каска шахтёра", "price": 60},
-	{"id": "wreath", "slot": "head", "name": "Грибной венок", "price": 80, "hall": 2},
-	{"id": "crown", "slot": "head", "name": "Корона", "price": 150, "stars": 60},
-	{"id": "sunglasses", "slot": "eyes", "name": "Тёмные очки", "price": 40},
-	{"id": "crystal_glasses", "slot": "eyes", "name": "Очки-кристаллы", "price": 50},
-	{"id": "monocle", "slot": "eyes", "name": "Монокль", "price": 70, "stars": 30},
-	{"id": "bowtie", "slot": "neck", "name": "Бабочка", "price": 30},
-	{"id": "scarf", "slot": "neck", "name": "Шарф в ромбик", "price": 35},
-	{"id": "necklace", "slot": "neck", "name": "Ожерелье", "price": 90, "hall": 1},
-	{"id": "backpack", "slot": "back", "name": "Рюкзак", "price": 45},
-	{"id": "cape", "slot": "back", "name": "Звёздный плащ", "price": 120, "hall": 3},
-	{"id": "skin_mint", "slot": "skin", "name": "Мятный", "price": 60},
-	{"id": "skin_moon", "slot": "skin", "name": "Лунный", "price": 80},
-	{"id": "skin_gold", "slot": "skin", "name": "Золотой", "price": 200, "stars": 100},
+	{"id": "bow", "slot": "head", "price": 20},
+	{"id": "cap", "slot": "head", "price": 30},
+	{"id": "miner", "slot": "head", "price": 60},
+	{"id": "wreath", "slot": "head", "price": 80, "hall": 2},
+	{"id": "crown", "slot": "head", "price": 150, "stars": 60},
+	{"id": "sunglasses", "slot": "eyes", "price": 40},
+	{"id": "crystal_glasses", "slot": "eyes", "price": 50},
+	{"id": "monocle", "slot": "eyes", "price": 70, "stars": 30},
+	{"id": "bowtie", "slot": "neck", "price": 30},
+	{"id": "scarf", "slot": "neck", "price": 35},
+	{"id": "necklace", "slot": "neck", "price": 90, "hall": 1},
+	{"id": "backpack", "slot": "back", "price": 45},
+	{"id": "cape", "slot": "back", "price": 120, "hall": 3},
+	{"id": "skin_mint", "slot": "skin", "price": 60},
+	{"id": "skin_moon", "slot": "skin", "price": 80},
+	{"id": "skin_gold", "slot": "skin", "price": 200, "stars": 100},
 ]
 
 ## Украшения дома: у каждого героя свой дом и свой набор. spots — куда можно поставить:
 ## floor (пол слева/справа), wall (стена или ветка слева/справа), hang (подвес сверху),
 ## near (рядом с героем).
 const SPOTS := ["floor_l", "floor_r", "wall_l", "wall_r", "hang", "near"]
-const SPOT_NAMES := {"floor_l": "Пол слева", "floor_r": "Пол справа", "wall_l": "Слева",
-	"wall_r": "Справа", "hang": "Сверху", "near": "Рядом"}
 const DECOR := [
-	{"id": "owl_nest", "home": "owl", "name": "Коврик-гнездо", "price": 10, "spots": ["near", "floor"]},
-	{"id": "owl_lantern", "home": "owl", "name": "Фонарик", "price": 15, "spots": ["hang", "wall", "near"]},
-	{"id": "owl_garland", "home": "owl", "name": "Гирлянда", "price": 20, "spots": ["hang"]},
-	{"id": "owl_mushrooms", "home": "owl", "name": "Грибы-лампы", "price": 20, "spots": ["floor"]},
-	{"id": "owl_birdhouse", "home": "owl", "name": "Скворечник", "price": 25, "spots": ["wall"]},
-	{"id": "owl_books", "home": "owl", "name": "Книжки", "price": 30, "spots": ["wall", "near"]},
-	{"id": "owl_swing", "home": "owl", "name": "Качели", "price": 30, "spots": ["hang"]},
-	{"id": "owl_hammock", "home": "owl", "name": "Гамак", "price": 35, "spots": ["wall", "floor"]},
-	{"id": "owl_moon", "home": "owl", "name": "Луна-подвеска", "price": 40, "spots": ["hang"], "stars": 25},
-	{"id": "owl_nightlight", "home": "owl", "name": "Кристалл-ночник", "price": 50, "spots": ["floor", "near"], "hall": 1},
-	{"id": "axo_starfish", "home": "axolotl", "name": "Морская звезда", "price": 10, "spots": ["wall"]},
-	{"id": "axo_coral", "home": "axolotl", "name": "Коралл", "price": 15, "spots": ["wall", "floor"]},
-	{"id": "axo_anchor", "home": "axolotl", "name": "Якорь", "price": 20, "spots": ["floor", "wall"]},
-	{"id": "axo_shell", "home": "axolotl", "name": "Жемчужница", "price": 25, "spots": ["floor", "near"]},
-	{"id": "axo_lily", "home": "axolotl", "name": "Кувшинка", "price": 25, "spots": ["hang"]},
-	{"id": "axo_bubble", "home": "axolotl", "name": "Лампа-пузырь", "price": 30, "spots": ["hang", "near"]},
-	{"id": "axo_tree", "home": "axolotl", "name": "Кораллы-деревья", "price": 35, "spots": ["floor"]},
-	{"id": "axo_sofa", "home": "axolotl", "name": "Камень-диван", "price": 40, "spots": ["near"]},
-	{"id": "axo_castle", "home": "axolotl", "name": "Замок", "price": 50, "spots": ["floor"], "hall": 2},
-	{"id": "axo_chest", "home": "axolotl", "name": "Сундук", "price": 60, "spots": ["floor", "near"], "stars": 40},
+	{"id": "owl_nest", "home": "owl", "price": 10, "spots": ["near", "floor"]},
+	{"id": "owl_lantern", "home": "owl", "price": 15, "spots": ["hang", "wall", "near"]},
+	{"id": "owl_garland", "home": "owl", "price": 20, "spots": ["hang"]},
+	{"id": "owl_mushrooms", "home": "owl", "price": 20, "spots": ["floor"]},
+	{"id": "owl_birdhouse", "home": "owl", "price": 25, "spots": ["wall"]},
+	{"id": "owl_books", "home": "owl", "price": 30, "spots": ["wall", "near"]},
+	{"id": "owl_swing", "home": "owl", "price": 30, "spots": ["hang"]},
+	{"id": "owl_hammock", "home": "owl", "price": 35, "spots": ["wall", "floor"]},
+	{"id": "owl_moon", "home": "owl", "price": 40, "spots": ["hang"], "stars": 25},
+	{"id": "owl_nightlight", "home": "owl", "price": 50, "spots": ["floor", "near"], "hall": 1},
+	{"id": "axo_starfish", "home": "axolotl", "price": 10, "spots": ["wall"]},
+	{"id": "axo_coral", "home": "axolotl", "price": 15, "spots": ["wall", "floor"]},
+	{"id": "axo_anchor", "home": "axolotl", "price": 20, "spots": ["floor", "wall"]},
+	{"id": "axo_shell", "home": "axolotl", "price": 25, "spots": ["floor", "near"]},
+	{"id": "axo_lily", "home": "axolotl", "price": 25, "spots": ["hang"]},
+	{"id": "axo_bubble", "home": "axolotl", "price": 30, "spots": ["hang", "near"]},
+	{"id": "axo_tree", "home": "axolotl", "price": 35, "spots": ["floor"]},
+	{"id": "axo_sofa", "home": "axolotl", "price": 40, "spots": ["near"]},
+	{"id": "axo_castle", "home": "axolotl", "price": 50, "spots": ["floor"], "hall": 2},
+	{"id": "axo_chest", "home": "axolotl", "price": 60, "spots": ["floor", "near"], "stars": 40},
 ]
 
 # Начисление осколков за победу
@@ -70,12 +69,12 @@ const CHAIN_CAP := 12        # не больше 12 за цепочки
 # Залы: по 10 уровней. После 50-го — «Бесконечные глубины», нумерация продолжается.
 const HALL_SIZE := 10
 const HALLS := [
-	{"name": "Аметистовый зал", "col": Color("#B46CFF")},
-	{"name": "Изумрудный зал", "col": Color("#3DDC97")},
-	{"name": "Огненный зал", "col": Color("#FF7A3D")},
-	{"name": "Ледяной зал", "col": Color("#7FE3FF")},
-	{"name": "Сердце горы", "col": Color("#FF4D6D")},
-	{"name": "Бесконечные глубины", "col": Color("#9C8FD6")},
+	{"col": Color("#B46CFF")},
+	{"col": Color("#3DDC97")},
+	{"col": Color("#FF7A3D")},
+	{"col": Color("#7FE3FF")},
+	{"col": Color("#FF4D6D")},
+	{"col": Color("#9C8FD6")},
 ]
 const METERS_PER_LEVEL := 12
 
@@ -97,6 +96,27 @@ static func hall_index(level: int) -> int:
 
 static func hall(level: int) -> Dictionary:
 	return HALLS[hall_index(level)]
+
+
+## Название зала по номеру 0..5 на текущем языке (тексты — scripts/i18n.gd).
+static func hall_name(h: int) -> String:
+	return I18n.t("hall_%d" % clampi(h, 0, HALLS.size() - 1))
+
+
+static func hero_name(kind: String) -> String:
+	return I18n.t("hero_" + kind)
+
+
+static func slot_name(slot: String) -> String:
+	return I18n.t("slot_" + slot)
+
+
+static func spot_name(spot: String) -> String:
+	return I18n.t("spot_" + spot)
+
+
+static func item_name(id: String) -> String:
+	return I18n.t("item_" + id)
 
 
 static func depth(level: int) -> int:
@@ -158,9 +178,9 @@ static func lock_reason(id: String, total_stars: int, max_level: int) -> String:
 	if it.is_empty():
 		return "?"
 	if it.has("stars") and total_stars < int(it.stars):
-		return "Нужно звёзд: %d" % it.stars
+		return I18n.t("lock_stars") % it.stars
 	if it.has("hall") and not hall_done(int(it.hall), max_level):
-		return "Пройди: %s" % HALLS[int(it.hall) - 1].name
+		return I18n.t("lock_hall") % hall_name(int(it.hall) - 1)
 	return ""
 
 

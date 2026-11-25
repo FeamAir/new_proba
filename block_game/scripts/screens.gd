@@ -6,6 +6,7 @@ extends RefCounted
 const Meta := preload("res://scripts/meta.gd")
 const Hero := preload("res://scripts/hero.gd")
 const Home := preload("res://scripts/home.gd")
+const I18n := preload("res://scripts/i18n.gd")
 
 const NODE_GAP := 130.0     # шаг между уровнями на карте
 const HALL_HEAD := 240.0    # место под заголовок зала
@@ -152,8 +153,8 @@ func draw_pick() -> void:
 	rects.clear()
 	var H: float = g.H
 	var oy := (H - 1280.0) * 0.4
-	_shadow_text(g.W / 2.0, 150 + oy, "Выбери друга", 64, g.TEXT)
-	_ctext(g.W / 2.0, 205 + oy, "Он пойдёт с тобой в глубины пещеры", 28, g.DIM)
+	_shadow_text(g.W / 2.0, 150 + oy, I18n.t("pick_title"), 64, g.TEXT)
+	_ctext(g.W / 2.0, 205 + oy, I18n.t("pick_sub"), 28, g.DIM)
 	for i in 2:
 		var kind: String = Meta.HEROES[i]
 		var r := Rect2(28 + i * 340, 250 + oy, 324, 580)
@@ -167,10 +168,10 @@ func draw_pick() -> void:
 			g.draw_circle(r.get_center() + Vector2(0, 10), 150 - k * 30, Color(glow, 0.05 + k * 0.02), true, -1.0, true)
 		var sc := 1.08 if kind == "owl" else 0.98
 		hero.draw(g, kind, r.position + Vector2(r.size.x / 2.0, 300), sc, {}, g.t_total + i * 1.7, react if sel else 99.0)
-		_ctext(r.get_center().x, r.end.y - 70, Meta.HERO_NAMES[kind], 42, g.ACCENT if sel else g.TEXT, r.size.x)
-		_ctext(r.get_center().x, r.end.y - 30, "живёт в дупле" if kind == "owl" else "живёт в гроте", 24, g.DIM, r.size.x)
-	_button("ok", Rect2(160, 880 + oy, 400, 120), "ГОТОВО", true, 50, pick_choice != "")
-	_ctext(g.W / 2.0, 1070 + oy, "Друга можно сменить в гардеробе", 26, g.DIM)
+		_ctext(r.get_center().x, r.end.y - 70, Meta.hero_name(kind), 42, g.ACCENT if sel else g.TEXT, r.size.x)
+		_ctext(r.get_center().x, r.end.y - 30, I18n.t("pick_lives_" + kind), 24, g.DIM, r.size.x)
+	_button("ok", Rect2(160, 880 + oy, 400, 120), I18n.t("pick_ok"), true, 50, pick_choice != "")
+	_ctext(g.W / 2.0, 1070 + oy, I18n.t("pick_hint"), 26, g.DIM)
 
 
 func tap_pick(pos: Vector2) -> void:
@@ -219,7 +220,7 @@ func draw_home() -> void:
 	g.draw_polygon(PackedVector2Array([Vector2(0, by - 60), Vector2(g.W, by - 60), Vector2(g.W, H), Vector2(0, H)]),
 		PackedColorArray([Color(0.04, 0.02, 0.1, 0), Color(0.04, 0.02, 0.1, 0), Color(0.04, 0.02, 0.1, 0.9), Color(0.04, 0.02, 0.1, 0.9)]))
 	var hall: Dictionary = Meta.hall(g.max_level)
-	var label := "%s · глубина %d м" % [hall.name, Meta.depth(g.max_level)]
+	var label := I18n.t("home_depth") % [Meta.hall_name(Meta.hall_index(g.max_level)), Meta.depth(g.max_level)]
 	var lw: float = g.font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x + 48.0
 	var lr := Rect2((g.W - lw) / 2.0, by - 6, lw, 44)
 	_pill(lr, Color(0.08, 0.04, 0.16, 0.85))
@@ -232,14 +233,14 @@ func draw_home() -> void:
 	g._rbox(pb.grow(6), Color(g.ACCENT, 0.25), 40)
 	g._rbox(pb, g.ACCENT, 36)
 	g._rbox(Rect2(pb.position + Vector2(8, 6), Vector2(pb.size.x - 16, pb.size.y * 0.4)), Color(1, 1, 1, 0.14), 30)
-	_ctext(g.W / 2.0, pr.position.y + 70, "ИГРАТЬ", 56, DARK_TEXT)
-	_ctext(g.W / 2.0, pr.position.y + 108, "Уровень %d" % g.max_level, 28, Color("#5A3A10"))
+	_ctext(g.W / 2.0, pr.position.y + 70, I18n.t("play"), 56, DARK_TEXT)
+	_ctext(g.W / 2.0, pr.position.y + 108, I18n.t("level_n") % g.max_level, 28, Color("#5A3A10"))
 	_button("map", Rect2(40, H - 140, 310, 104), "", false)
 	_button("wardrobe", Rect2(370, H - 140, 310, 104), "", false)
 	_map_icon(Vector2(100, H - 88))
-	_text(Vector2(140, H - 74), "Карта", 38, g.TEXT)
+	_text(Vector2(140, H - 74), I18n.t("map"), 38, g.TEXT)
 	_hanger_icon(Vector2(430, H - 88))
-	_text(Vector2(470, H - 74), "Гардероб", 36, g.TEXT)
+	_text(Vector2(470, H - 74), I18n.t("wardrobe"), 36, g.TEXT)
 	_fade_over(Rect2(0, 0, g.W, H))
 
 
@@ -300,7 +301,7 @@ func draw_wardrobe() -> void:
 	var L := _wr_layout()
 	var kind: String = g.meta.hero if g.meta.hero != "" else "owl"
 	_back_button()
-	_text(Vector2(132, 84), "Гардероб", 46, g.TEXT)
+	_text(Vector2(132, 84), I18n.t("wardrobe"), 46, g.TEXT)
 	var shr := Rect2(g.W - 170, 38, 150, 58)
 	_pill(shr, Color(0.1, 0.06, 0.2, 0.85))
 	shard_icon(shr.position + Vector2(32, 29), 17)
@@ -317,7 +318,7 @@ func draw_wardrobe() -> void:
 		for sp in Meta.SPOTS:
 			var sc: Vector2 = home.spot_screen(kind, sp)
 			rects["spot_" + sp] = Rect2(sc - Vector2(50, 50), Vector2(100, 100))
-		_text(Vector2(st.position.x + 18, st.position.y + 40), "Дупло" if kind == "owl" else "Грот", 30, Color(g.TEXT, 0.8))
+		_text(Vector2(st.position.x + 18, st.position.y + 40), I18n.t("house_" + kind), 30, Color(g.TEXT, 0.8))
 	else:
 		for k in 5:
 			g.draw_circle(st.get_center() + Vector2(0, 40), 260 - k * 45, Color(0.45, 0.25, 0.8, 0.05 + k * 0.015), true, -1.0, true)
@@ -330,7 +331,7 @@ func draw_wardrobe() -> void:
 	# что вылезло за сцену сверху — закрываем фоном, поверх шапка
 	g.draw_rect(Rect2(0, 0, g.W, st.position.y), g.BG_TOP)
 	_back_button()
-	_text(Vector2(132, 84), "Гардероб", 46, g.TEXT)
+	_text(Vector2(132, 84), I18n.t("wardrobe"), 46, g.TEXT)
 	_pill(shr, Color(0.1, 0.06, 0.2, 0.85))
 	shard_icon(shr.position + Vector2(32, 29), 17)
 	_text(shr.position + Vector2(58, 42), str(g.meta.shards), 34, g.CRYSTAL_COL)
@@ -347,7 +348,7 @@ func draw_wardrobe() -> void:
 			var has: bool = g.meta.placed_at(kind, sp) != ""
 			if has and not sel:
 				g.draw_circle(r.position + Vector2(r.size.x - 12, 12), 6, OK_COL, true, -1.0, true)
-			_text(Vector2(r.position.x, r.position.y + 38), Meta.SPOT_NAMES[sp], 17, DARK_TEXT if sel else g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+			_text(Vector2(r.position.x, r.position.y + 38), Meta.spot_name(sp), 17, DARK_TEXT if sel else g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 	else:
 		for i in 2:
 			var h: String = Meta.HEROES[i]
@@ -358,7 +359,7 @@ func draw_wardrobe() -> void:
 			if sel:
 				g.draw_polyline(_rr_outline(r.grow(-1), 20), g.ACCENT, 3.0, true)
 			hero.draw_avatar(g, h, r.position + Vector2(36, 31), 24, g.meta.outfit(), g.t_total, g.ACCENT if sel else g.DIM)
-			_text(Vector2(r.position.x + 70, r.position.y + 42), Meta.HERO_NAMES[h], 30, g.ACCENT if sel else g.TEXT)
+			_text(Vector2(r.position.x + 70, r.position.y + 42), Meta.hero_name(h), 30, g.ACCENT if sel else g.TEXT)
 	# вкладки
 	var tabs := Meta.SLOTS.duplicate()
 	tabs.append("home")
@@ -369,7 +370,7 @@ func draw_wardrobe() -> void:
 		rects["tab_" + tname] = r
 		var sel := tname == tab
 		g._rbox(r, g.ACCENT if sel else Color("#2A1A4F"), 18)
-		var label: String = "Дом" if tname == "home" else Meta.SLOT_NAMES[tname]
+		var label: String = I18n.t("tab_home") if tname == "home" else Meta.slot_name(tname)
 		_text(Vector2(r.position.x, r.position.y + 41), label, 22, DARK_TEXT if sel else g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 	# сетка вещей
 	var items: Array = Meta.decor_for(kind, spot) if tab == "home" else Meta.items_in(tab)
@@ -407,20 +408,20 @@ func _card(it: Dictionary, r: Rect2, kind: String) -> void:
 	g.draw_set_transform(Vector2.ZERO)
 	if lock != "":
 		g._rbox(Rect2(r.position, Vector2(r.size.x, 132)), Color(0.08, 0.04, 0.15, 0.5), 22)
-	_text(Vector2(r.position.x, r.position.y + 154), it.name, 21, g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+	_text(Vector2(r.position.x, r.position.y + 154), Meta.item_name(it.id), 21, g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 	var sy := r.position.y + 186
 	var cx := r.get_center().x
 	if on:
-		_ctext(cx, sy, "СТОИТ" if is_decor else "НАДЕТО", 24, OK_COL, r.size.x)
+		_ctext(cx, sy, I18n.t("card_placed") if is_decor else I18n.t("card_worn"), 24, OK_COL, r.size.x)
 	elif own:
-		_ctext(cx, sy, "Поставить" if is_decor else "Надеть", 24, g.ACCENT, r.size.x)
+		_ctext(cx, sy, I18n.t("card_place") if is_decor else I18n.t("card_wear"), 24, g.ACCENT, r.size.x)
 	elif lock != "":
 		_lock_icon(Vector2(r.position.x + 30, sy - 10), 16, g.DIM)
 		var short := ""
 		if it.has("stars"):
 			short = "★ %d" % it.stars
 		elif it.has("hall"):
-			short = "Зал %d" % it.hall
+			short = I18n.t("card_hall") % it.hall
 		_ctext(cx + 14, sy, short, 24, g.DIM, r.size.x - 30)
 	else:
 		var price := str(it.price)
@@ -478,7 +479,7 @@ func tap_wardrobe(pos: Vector2) -> void:
 			match res:
 				"bought":
 					g.play("levelup")
-					say("Куплено: %s" % it.name)
+					say(I18n.t("bought") % Meta.item_name(it.id))
 					poke_hero()
 				"on":
 					g.play("crystal")
@@ -487,7 +488,7 @@ func tap_wardrobe(pos: Vector2) -> void:
 					g.play("click")
 				"poor":
 					g.play("gameover", 1.3, -8.0)
-					say("Не хватает осколков: нужно ещё %d" % (int(it.price) - g.meta.shards))
+					say(I18n.t("poor") % (int(it.price) - g.meta.shards))
 				_:
 					g.play("click", 0.7)
 					say(Meta.lock_reason(it.id, g.total_stars(), g.max_level))
@@ -580,11 +581,11 @@ func draw_map() -> void:
 			continue
 		var col: Color = Meta.HALLS[h].col
 		var first := h * 10 + 1
-		var sub := "Глубина %d–%d м" % [Meta.depth(first), Meta.depth(first + 9)] if h < 5 else "Глубина %d м и ниже" % Meta.depth(51)
+		var sub := I18n.t("map_range") % [Meta.depth(first), Meta.depth(first + 9)] if h < 5 else I18n.t("map_below") % Meta.depth(51)
 		if h == 5 and g.max_level <= 50:
-			sub = "Откроются после 50-го уровня"
+			sub = I18n.t("map_locked")
 		g._rbox(Rect2(110, y0 + 30, 500, 110), Color(0.06, 0.035, 0.13, 0.85), 30)
-		_shadow_text(g.W / 2.0, y0 + 80, Meta.HALLS[h].name, 44, col)
+		_shadow_text(g.W / 2.0, y0 + 80, Meta.hall_name(h), 44, col)
 		_ctext(g.W / 2.0, y0 + 122, sub, 26, g.DIM)
 	# точки уровней
 	for n in range(1, last + 1):
@@ -619,11 +620,11 @@ func draw_map() -> void:
 	g.draw_polygon(PackedVector2Array([Vector2(0, 122), Vector2(g.W, 122), Vector2(g.W, 170), Vector2(0, 170)]),
 		PackedColorArray([g.BG_TOP, g.BG_TOP, Color(g.BG_TOP, 0.0), Color(g.BG_TOP, 0.0)]))
 	_back_button()
-	_text(Vector2(132, 84), "Карта", 46, g.TEXT)
+	_text(Vector2(132, 84), I18n.t("map"), 46, g.TEXT)
 	_counters(g.W - 20, 40)
 	# глубина текущего уровня
 	var hall: Dictionary = Meta.hall(g.max_level)
-	var label := "Глубина %d м · %s" % [Meta.depth(g.max_level), hall.name]
+	var label := I18n.t("map_depth") % [Meta.depth(g.max_level), Meta.hall_name(Meta.hall_index(g.max_level))]
 	var lw: float = g.font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 28).x + 50.0
 	var lr := Rect2((g.W - lw) / 2.0, H - 84, lw, 56)
 	_pill(lr, Color(0.06, 0.03, 0.12, 0.92))
@@ -685,12 +686,12 @@ func draw_win() -> void:
 	var y0 := H * 0.5 - 520.0
 	var hop := absf(sin(st * 5.0)) * 10.0 * clampf(2.0 - st, 0.0, 1.0)
 	avatar(Vector2(g.W / 2.0, y0 + 110 - hop), 78, g.ACCENT)
-	_shadow_text(g.W / 2.0, y0 + 260, "УРОВЕНЬ %d ПРОЙДЕН!" % g.level, 50, g.TEXT)
+	_shadow_text(g.W / 2.0, y0 + 260, I18n.t("win_title") % g.level, 50, g.TEXT)
 	for i in 3:
 		var appear := clampf((st - 0.2 - i * 0.25) / 0.2, 0.0, 1.0)
 		var r := 44.0 * (0.5 + 0.5 * appear) if i < g.last_stars else 44.0
 		g._draw_star(Vector2(g.W / 2.0 + (i - 1) * 120, y0 + 340), r, i < g.last_stars and appear > 0.0)
-	_ctext(g.W / 2.0, y0 + 430, "Очки: %d   Фигуры: %d" % [g.score, g.pieces_used], 30, g.DIM)
+	_ctext(g.W / 2.0, y0 + 430, I18n.t("win_stats") % [g.score, g.pieces_used], 30, g.DIM)
 	# осколки
 	var rw: Dictionary = g.last_reward
 	var total: int = rw.get("total", 0)
@@ -704,11 +705,11 @@ func draw_win() -> void:
 		_text(Vector2(box.position.x + 140, box.position.y + 84), "+%d %s" % [shown, shards_word(shown)], int(46 * bump), g.CRYSTAL_COL)
 		var parts: Array = []
 		if rw.get("win", 0) > 0:
-			parts.append("%s +%d" % ["первая победа" if rw.get("win", 0) == Meta.WIN_FIRST else "победа", rw.win])
+			parts.append(I18n.t("win_first" if rw.get("win", 0) == Meta.WIN_FIRST else "win_repeat") % rw.win)
 		if rw.get("stars", 0) > 0:
-			parts.append("звёзды +%d" % rw.stars)
+			parts.append(I18n.t("win_stars") % rw.stars)
 		if rw.get("chains", 0) > 0:
-			parts.append("каскады +%d" % rw.chains)
+			parts.append(I18n.t("win_chains") % rw.chains)
 		_ctext(box.get_center().x, box.position.y + 136, " · ".join(parts), 24, g.DIM, box.size.x - 20)
 		# летящие искорки
 		if st < 2.0:
@@ -718,18 +719,12 @@ func draw_win() -> void:
 				var p := Vector2(box.position.x + 90, box.position.y + 64) + Vector2(cos(a), sin(a)) * rr
 				g.draw_circle(p, 4, Color(g.CRYSTAL_COL, clampf(2.0 - st, 0.0, 1.0)), true, -1.0, true)
 	if st > 0.8:
-		_button("next", Rect2(110, y0 + 690, 500, 120), "Дальше  ›", true, 46)
-		_button("home", Rect2(110, y0 + 830, 500, 96), "Домой", false, 36)
+		_button("next", Rect2(110, y0 + 690, 500, 120), I18n.t("next"), true, 46)
+		_button("home", Rect2(110, y0 + 830, 500, 96), I18n.t("home"), false, 36)
 
 
 static func shards_word(n: int) -> String:
-	var m10 := n % 10
-	var m100 := n % 100
-	if m10 == 1 and m100 != 11:
-		return "осколок"
-	if m10 >= 2 and m10 <= 4 and (m100 < 12 or m100 > 14):
-		return "осколка"
-	return "осколков"
+	return I18n.forms("shards_forms", n)
 
 
 func draw_lose() -> void:
@@ -738,12 +733,12 @@ func draw_lose() -> void:
 	g.draw_rect(Rect2(0, 0, g.W, H), Color(0.05, 0.03, 0.1, 0.78))
 	var y0 := H * 0.5 - 420.0
 	avatar(Vector2(g.W / 2.0, y0 + 110), 70)
-	_shadow_text(g.W / 2.0, y0 + 260, "ПОЛЕ ЗАПОЛНЕНО", 54, g.TEXT)
-	_ctext(g.W / 2.0, y0 + 330, "Кристаллы: %d из %d" % [g.crystals_total - g.crystals_left, g.crystals_total], 34, g.CRYSTAL_COL)
-	_ctext(g.W / 2.0, y0 + 380, "Не сдавайся — попробуй ещё!", 28, g.DIM)
+	_shadow_text(g.W / 2.0, y0 + 260, I18n.t("lose_title"), 54, g.TEXT)
+	_ctext(g.W / 2.0, y0 + 330, I18n.t("lose_crystals") % [g.crystals_total - g.crystals_left, g.crystals_total], 34, g.CRYSTAL_COL)
+	_ctext(g.W / 2.0, y0 + 380, I18n.t("lose_hint"), 28, g.DIM)
 	if g.state_time > 0.8:
-		_button("retry", Rect2(110, y0 + 450, 500, 120), "Ещё раз", true, 46)
-		_button("home", Rect2(110, y0 + 590, 500, 96), "Домой", false, 36)
+		_button("retry", Rect2(110, y0 + 450, 500, 120), I18n.t("retry"), true, 46)
+		_button("home", Rect2(110, y0 + 590, 500, 96), I18n.t("home"), false, 36)
 
 
 func tap_end(pos: Vector2) -> void:

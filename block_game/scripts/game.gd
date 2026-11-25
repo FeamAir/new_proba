@@ -27,6 +27,8 @@ const Gravity := preload("res://scripts/gravity.gd")
 ## Мета-слой 0.6: герой, осколки, гардероб, дома (данные — meta.gd, экраны — screens.gd)
 const Meta := preload("res://scripts/meta.gd")
 const Screens := preload("res://scripts/screens.gd")
+## Тексты на разных языках (английский, русский): scripts/i18n.gd
+const I18n := preload("res://scripts/i18n.gd")
 ## true — после очистки падают все группы поля (и камень уровня над дырами ниже линии);
 ## false — только то, что выше нижней очищенной линии (ниже неё поле не трогается).
 const FALL_ALL := false
@@ -166,7 +168,7 @@ func _layout() -> void:
 		buttons[names[i]] = Rect2(16 + i * (w + 12), btn_y, w, btn_h)
 	var mw := 460.0
 	var y0 := H * 0.5 - 160.0
-	var items := ["resume", "music", "sound", "restart", "menu"]
+	var items := ["resume", "music", "sound", "language", "restart", "menu"]
 	for i in items.size():
 		menu_buttons[items[i]] = Rect2((W - mw) / 2.0, y0 + i * 104.0, mw, 88)
 
@@ -466,14 +468,14 @@ func _check_lines() -> bool:
 	var mid_y: float = board_pos.y + (clearing_rows[0] + 0.5) * CELL
 	var px := board_pos.x + COLS * CELL / 2.0
 	if chain >= 2:
-		_popup("КАСКАД ×%d" % chain, Vector2(px, mid_y - 50), ACCENT, 46)
+		_popup(I18n.t("cascade") % chain, Vector2(px, mid_y - 50), ACCENT, 46)
 		play("combo%d" % mini(chain - 1, 5))
 	else:
 		play("line%d" % mini(n, 4))
 	_popup("+%d" % gained, Vector2(px, mid_y), TEXT, 38)
 	if freed > 0:
 		play("crystal")
-		_popup("КРИСТАЛЛ!" if freed == 1 else "КРИСТАЛЛЫ ×%d" % freed, Vector2(px, mid_y + 50), CRYSTAL_COL, 36)
+		_popup(I18n.t("crystal_one") if freed == 1 else I18n.t("crystal_many") % freed, Vector2(px, mid_y + 50), CRYSTAL_COL, 36)
 	_set_state(State.CLEARING)
 	clear_timer = CLEAR_TIME
 	return true
@@ -572,12 +574,24 @@ func _load() -> void:
 		stars = cfg.get_value("progress", "stars", {})
 		music_on = cfg.get_value("settings", "music", true)
 		sfx_on = cfg.get_value("settings", "sfx", true)
+	# язык: из [settings] language; в старом сохранении его нет — по языку телефона
+	I18n.load_from(cfg, OS.get_locale_language())
 	meta.load_from(cfg)  # старое сохранение без [meta] — значения по умолчанию
 	# Подарок игрокам версий до 0.6: осколки за уже пройденное (один раз, пока нет раздела [meta]).
 	if not cfg.has_section("meta") and max_level > 1:
 		meta.shards += legacy_gift(total_stars())
 		_save()
 	level = max_level
+
+
+## Переключить язык (по кругу: en -> ru -> en) и запомнить выбор в save.cfg.
+func toggle_language() -> void:
+	set_language(I18n.next_lang())
+
+
+func set_language(l: String) -> void:
+	if I18n.set_lang(l):
+		_save()
 
 
 static func legacy_gift(total: int) -> int:
@@ -590,6 +604,7 @@ func _save() -> void:
 	cfg.set_value("progress", "stars", stars)
 	cfg.set_value("settings", "music", music_on)
 	cfg.set_value("settings", "sfx", sfx_on)
+	I18n.save_to(cfg)
 	meta.save_to(cfg)
 	cfg.save(SAVE_PATH)
 
@@ -763,6 +778,7 @@ func _pause_menu_tap(pos: Vector2) -> void:
 				"sound":
 					sfx_on = not sfx_on
 					_save()
+				"language": toggle_language()
 				"restart": start_level(level)
 				"menu": go_home()
 			return
@@ -975,7 +991,7 @@ func _draw_block(p: Vector2, s: float, v: int, glow := false) -> void:
 func _draw_panel() -> void:
 	var pw := W - panel_x - 20.0
 	var y := board_pos.y + 4.0
-	draw_string(font, Vector2(panel_x, y + 20), "ДАЛЕЕ", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, DIM)
+	draw_string(font, Vector2(panel_x, y + 20), I18n.t("panel_next"), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, DIM)
 	var box := Rect2(panel_x, y + 34, pw, 130)
 	_rbox(box, BTN, 18)
 	if true:
@@ -991,12 +1007,12 @@ func _draw_panel() -> void:
 			_draw_block(origin + Vector2(c) * cs, cs, next_type)
 
 	y += 220.0
-	draw_string(font, Vector2(panel_x, y), "КРИСТАЛЛЫ", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, DIM)
+	draw_string(font, Vector2(panel_x, y), I18n.t("panel_crystals"), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, DIM)
 	_draw_block(Vector2(panel_x - 6, y + 10), 56, CRYSTAL)
 	draw_string(font, Vector2(panel_x + 52, y + 52), "%d/%d" % [crystals_total - crystals_left, crystals_total], HORIZONTAL_ALIGNMENT_LEFT, -1, 38, CRYSTAL_COL)
 
 	var bump := 1.0 + 0.25 * score_bump
-	var stats := [["СЧЁТ", str(int(shown_score)), 40 * bump], ["УРОВЕНЬ", str(level), 40], ["ФИГУРЫ", "%d" % pieces_used, 40]]
+	var stats := [[I18n.t("panel_score"), str(int(shown_score)), 40 * bump], [I18n.t("panel_level"), str(level), 40], [I18n.t("panel_pieces"), "%d" % pieces_used, 40]]
 	for i in stats.size():
 		var sy := y + 130.0 + i * 100.0
 		draw_string(font, Vector2(panel_x, sy), stats[i][0], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, DIM)
@@ -1075,9 +1091,10 @@ func _draw_overlay() -> void:
 	match state:
 		State.PAUSED:
 			draw_rect(Rect2(0, 0, W, H), Color(0.05, 0.03, 0.1, 0.85))
-			_center_text("ПАУЗА", menu_buttons["resume"].position.y - 50, 60, TEXT)
-			var labels := {"resume": "Продолжить", "music": "Музыка: " + ("вкл" if music_on else "выкл"),
-				"sound": "Звуки: " + ("вкл" if sfx_on else "выкл"), "restart": "Начать уровень заново", "menu": "Домой"}
+			_center_text(I18n.t("pause_title"), menu_buttons["resume"].position.y - 50, 60, TEXT)
+			var labels := {"resume": I18n.t("pause_resume"), "music": I18n.t("pause_music") % I18n.t("on" if music_on else "off"),
+				"sound": I18n.t("pause_sound") % I18n.t("on" if sfx_on else "off"), "language": I18n.t("pause_lang") % I18n.lang_name(),
+				"restart": I18n.t("pause_restart"), "menu": I18n.t("home")}
 			for n in menu_buttons:
 				var r: Rect2 = menu_buttons[n]
 				_rbox(r, ACCENT if n == "resume" else BTN, 24)
