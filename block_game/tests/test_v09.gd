@@ -247,12 +247,17 @@ func _test_goal_gift(g) -> void:
 	I18n.set_lang("ru")
 	check(I18n.t("goal_next") % [5, I18n.forms("shards_forms", 5)] == "До следующей вещи: 5 осколков", "текст цели по-русски")
 	I18n.set_lang("en")
-	# Подарок новичку: первая победа даже на 1 звезду — хватает на бантик (20)
+	# Подарок новичку: первая победа даже на 1 звезду — хватает на первую вещь любого друга (20)
 	g.start_level(1)
 	g.pieces_used = 99
 	g._win()
 	check(g.last_reward.get("gift", 0) == Assist.NEWBIE_GIFT and g.meta.shards == 10 + 5 + 10, "подарок новичку +10 за первую победу (осколков %d)" % g.meta.shards)
-	check(g.meta.shards >= Meta.item("bow").price, "после уровня 1 хватает на бантик")
+	var cheapest := 999
+	for h in Meta.HEROES:
+		var first: int = Meta.hero_items(h).filter(func(it): return it.has("price")).map(func(it): return int(it.price)).min()
+		cheapest = mini(cheapest, first)
+		check(g.meta.shards >= first, "после уровня 1 хватает на первую вещь (%s, %d)" % [h, first])
+	check(cheapest == 20, "самая дешёвая вещь каждого друга — 20")
 	var before: int = g.meta.shards
 	g.start_level(2)
 	g.pieces_used = 99

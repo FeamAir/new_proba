@@ -236,11 +236,35 @@ func tap_pick(pos: Vector2) -> void:
 			g.play("crystal")
 			return
 	if rects.get("ok", Rect2()).has_point(pos) and pick_choice != "":
-		g.meta.set_hero(pick_choice)
+		if g.meta.switch_asks(pick_choice):
+			g.notice_ui.ask_switch(pick_choice)  # 0.12b: смена друга — с возвратом осколков
+			return
+		g.meta.switch_hero(pick_choice)
 		g._save()
 		g.play("levelup")
 		fade = 1.0
 		g.go_home()
+
+
+## 0.12b: сменить друга. Если у прежнего есть вещи или украшения — сначала окно с возвратом
+## осколков (scripts/notice_ui.gd), иначе сразу.
+func request_switch(h: String) -> void:
+	if g.meta.switch_asks(h):
+		tryon.clear()
+		g.notice_ui.ask_switch(h)
+		return
+	switched(g.meta.switch_hero(h))
+
+
+## Смена состоялась (вызывается и из окна подтверждения): эффект, сохранение.
+func switched(refund: int) -> void:
+	tryon.clear()
+	page = 0
+	fade = 1.0
+	poke_hero()
+	g._save()
+	if refund > 0:
+		say(I18n.t("switch_done") % [refund, I18n.forms("shards_forms", refund)])
 
 
 # ---------- Дом ----------
@@ -345,7 +369,7 @@ func open_wardrobe(t := "head", focus_id := "") -> void:
 	tab = t
 	page = 0
 	if focus_id != "" and t != "home":
-		var i := Meta.items_in(t).map(func(it): return it.id).find(focus_id)
+		var i := Meta.items_in(t, _kind()).map(func(it): return it.id).find(focus_id)
 		page = maxi(0, i) / PAGE_SIZE
 	tryon.clear()
 	g._set_state(g.State.WARDROBE)
@@ -359,7 +383,11 @@ func wr_tabs() -> Array:
 
 
 func _wr_items(kind: String) -> Array:
-	return Meta.decor_for(kind, spot) if tab == "home" else Meta.items_in(tab)
+	return Meta.decor_for(kind, spot) if tab == "home" else Meta.items_in(tab, kind)
+
+
+func _kind() -> String:
+	return g.meta.hero if g.meta.hero != "" else "owl"
 
 
 func page_count(n: int) -> int:
@@ -405,7 +433,7 @@ func draw_wardrobe() -> void:
 		for k in 5:
 			g.draw_circle(st.get_center() + Vector2(0, 40), 260 - k * 45, Color(0.45, 0.25, 0.8, 0.05 + k * 0.015), true, -1.0, true)
 		g.draw_colored_polygon(_ellipse(Vector2(st.get_center().x, st.end.y - 60), 210, 26), Color(0.2, 0.12, 0.36, 0.9))
-		var sc: float = WR_SCALE.get(kind, 1.4) * (0.8 if tryon.outfit(g.meta).get("aura", "") == "wings_cascado" else 1.0)
+		var sc: float = WR_SCALE.get(kind, 1.4) * (0.86 if Meta.item(tryon.outfit(g.meta).get("aura", "")).has("covers") else 1.0)
 		var hp := Vector2(st.get_center().x, st.end.y - 60 - 112 * sc)
 		hero.draw(g, kind, hp, sc, tryon.outfit(g.meta), g.t_total, react)
 		rects["hero"] = Rect2(hp - Vector2(150, 170), Vector2(300, 320))
@@ -434,7 +462,7 @@ func draw_wardrobe() -> void:
 		g.draw_circle(pc, 11, OK_COL, true, -1.0, true)
 		g.draw_string(g.font, pc + Vector2(-11, 7), "!", HORIZONTAL_ALIGNMENT_CENTER, 22, 20, DARK_TEXT)
 	if tab != "home":
-		var col_lbl := I18n.t("collection") % [g.meta.collection_count(), Meta.collection_total()]
+		var col_lbl := I18n.t("collection") % [g.meta.collection_count(), Meta.collection_total(kind)]
 		var cw0: float = g.font.get_string_size(col_lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 30.0
 		var cpr := Rect2(st.end.x - cw0 - 12, st.position.y + 12, cw0, 36)
 		_pill(cpr, Color(0.1, 0.06, 0.2, 0.85))
@@ -465,7 +493,8 @@ func draw_wardrobe() -> void:
 			g._rbox(r, Color("#46307A") if sel else g.BTN, 22)
 			if sel:
 				g.draw_polyline(_rr_outline(r.grow(-1), 20), g.ACCENT, 3.0, true)
-			hero.draw_avatar(g, h, r.position + Vector2(29, 31), 20, tryon.outfit(g.meta), g.t_total, g.ACCENT if sel else g.DIM)
+			# 0.12b: вещи — только свои, другие друзья в чипах без нарядов
+			hero.draw_avatar(g, h, r.position + Vector2(29, 31), 20, tryon.outfit(g.meta) if sel else {}, g.t_total, g.ACCENT if sel else g.DIM)
 			var nm := Meta.hero_name(h)
 			_text(Vector2(r.position.x + 59, r.position.y + 40), nm, fit_size(nm, r.size.x - 66, 24), g.ACCENT if sel else g.TEXT)
 	# вкладки (0.12: значками — их восемь; название вкладки — на сцене)
@@ -570,33 +599,66 @@ func _tab_icon(name: String, c: Vector2, col: Color) -> void:
 			g.draw_rect(Rect2(c + Vector2(-4, 5), Vector2(8, 11)), Color("#2A1A4F") if col != DARK_TEXT else g.ACCENT)
 
 
-## 0.12: значок набора на карточке (в цвете набора)
+## 0.12: значок набора на карточке (в цвете набора; 0.12b — свой рисунок у каждого набора героя)
 func set_badge(n: int, c: Vector2, r: float) -> void:
-	var col: Color = Meta.set_info(n).col
+	var info: Dictionary = Meta.set_info(n)
+	if info.is_empty():
+		return
+	var col: Color = info.col
 	g.draw_circle(c, r + 3, Color(0.06, 0.03, 0.12, 0.9), true, -1.0, true)
 	g.draw_circle(c, r, Color(col, 0.28), true, -1.0, true)
 	g.draw_arc(c, r, 0, TAU, 20, col, 2.0, true)
-	match n:
-		1:  # светлячок
-			g.draw_circle(c, r * 0.6, Color(col, 0.35), true, -1.0, true)
-			g.draw_circle(c, r * 0.32, Color("#F5FF8A"), true, -1.0, true)
-		2:  # ракушка
-			var pts := PackedVector2Array([c + Vector2(0, r * 0.55)])
-			for i in 9:
-				var a := lerpf(PI * 1.1, PI * 1.9, i / 8.0)
-				pts.append(c + Vector2(cos(a), sin(a) + 0.3) * r * 0.62)
-			g.draw_colored_polygon(pts, col)
-		3:  # полумесяц
-			g.draw_circle(c, r * 0.55, col, true, -1.0, true)
-			g.draw_circle(c + Vector2(r * 0.25, -r * 0.12), r * 0.45, Color(0.09, 0.05, 0.18), true, -1.0, true)
-		4:  # планета
-			g.draw_circle(c, r * 0.36, col, true, -1.0, true)
+	var k := r
+	match info.icon:
+		"book":
+			g.draw_colored_polygon(PackedVector2Array([c + Vector2(-k * 0.6, -k * 0.35), c + Vector2(0, -k * 0.2), c + Vector2(0, k * 0.5), c + Vector2(-k * 0.6, k * 0.35)]), col)
+			g.draw_colored_polygon(PackedVector2Array([c + Vector2(k * 0.6, -k * 0.35), c + Vector2(0, -k * 0.2), c + Vector2(0, k * 0.5), c + Vector2(k * 0.6, k * 0.35)]), col.lightened(0.3))
+		"moon":
+			g.draw_circle(c, k * 0.55, col, true, -1.0, true)
+			g.draw_circle(c + Vector2(k * 0.25, -k * 0.12), k * 0.45, Color(0.09, 0.05, 0.18), true, -1.0, true)
+		"planet":
+			g.draw_circle(c, k * 0.36, col, true, -1.0, true)
 			g.draw_set_transform(c, -0.35, Vector2(1, 0.32))
-			g.draw_arc(Vector2.ZERO, r * 0.68, 0, TAU, 20, col, 3.0, true)
+			g.draw_arc(Vector2.ZERO, k * 0.68, 0, TAU, 20, col, 3.0, true)
 			g.draw_set_transform(Vector2.ZERO)
-		5:  # кристалл
-			g.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r * 0.62), c + Vector2(r * 0.45, -r * 0.1), c + Vector2(0, r * 0.62), c + Vector2(-r * 0.45, -r * 0.1)]), col)
-			g.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r * 0.62), c + Vector2(r * 0.45, -r * 0.1), c + Vector2(0, -r * 0.05)]), Color(1, 1, 1, 0.6))
+		"star":
+			g.draw_colored_polygon(_star(c, k * 0.68, k * 0.3, 5), col)
+		"pearl":
+			g.draw_circle(c, k * 0.45, col, true, -1.0, true)
+			g.draw_circle(c + Vector2(-k * 0.15, -k * 0.18), k * 0.14, Color(1, 1, 1, 0.9), true, -1.0, true)
+		"drop":
+			g.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -k * 0.65), c + Vector2(k * 0.42, k * 0.1), c + Vector2(0, k * 0.55), c + Vector2(-k * 0.42, k * 0.1)]), col)
+			g.draw_circle(c + Vector2(0, k * 0.15), k * 0.4, col, true, -1.0, true)
+		"ball":
+			g.draw_circle(c, k * 0.5, col, true, -1.0, true)
+			g.draw_arc(c + Vector2(-k * 0.55, 0), k * 0.45, -0.9, 0.9, 8, Color(1, 1, 1, 0.9), 1.6, true)
+			g.draw_arc(c + Vector2(k * 0.55, 0), k * 0.45, PI - 0.9, PI + 0.9, 8, Color(1, 1, 1, 0.9), 1.6, true)
+		"pine":
+			for m in 2:
+				g.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -k * 0.7 + m * k * 0.4), c + Vector2(k * 0.5, k * 0.0 + m * k * 0.4), c + Vector2(-k * 0.5, k * 0.0 + m * k * 0.4)]), col)
+		"bolt":
+			g.draw_colored_polygon(PackedVector2Array([c + Vector2(k * 0.15, -k * 0.7), c + Vector2(-k * 0.4, k * 0.1), c + Vector2(0, k * 0.1), c + Vector2(-k * 0.15, k * 0.7), c + Vector2(k * 0.4, -k * 0.1), c + Vector2(0, -k * 0.1)]), col)
+		"yarn":
+			g.draw_circle(c, k * 0.5, col, true, -1.0, true)
+			for m in 3:
+				g.draw_arc(c, k * (0.18 + m * 0.12), -0.6 + m, 1.6 + m, 8, Color(0.2, 0.05, 0.2, 0.6), 1.2, true)
+		"heart":
+			var hp := PackedVector2Array()
+			for i in 20:
+				var tt := TAU * i / 20.0
+				hp.append(c + Vector2(16.0 * pow(sin(tt), 3), -(13.0 * cos(tt) - 5.0 * cos(2 * tt) - 2.0 * cos(3 * tt) - cos(4 * tt)) - 2.0) * k * 0.035)
+			g.draw_colored_polygon(hp, col)
+		"mask":
+			for sx in [-1.0, 1.0]:
+				g.draw_circle(c + Vector2(sx * k * 0.3, 0), k * 0.3, col, true, -1.0, true)
+				g.draw_circle(c + Vector2(sx * k * 0.3, 0), k * 0.13, Color(0.09, 0.05, 0.18), true, -1.0, true)
+
+
+func _star(c: Vector2, ro: float, ri: float, n: int) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in n * 2:
+		pts.append(c + Vector2(0, -(ro if i % 2 == 0 else ri)).rotated(i * PI / n))
+	return pts
 
 
 func _card(it: Dictionary, r: Rect2, kind: String) -> void:
@@ -847,12 +909,9 @@ func tap_wardrobe(pos: Vector2) -> void:
 		return
 	for h in Meta.HEROES:
 		if tab != "home" and rects.get("chip_" + h, Rect2()).has_point(pos):
-			if g.meta.hero != h:
-				g.meta.set_hero(h)
-				fade = 1.0
-				poke_hero()
-				g._save()
 			g.play("click")
+			if g.meta.hero != h:
+				request_switch(h)
 			return
 	if tab == "home":
 		for sp in Meta.SPOTS:
@@ -866,7 +925,7 @@ func tap_wardrobe(pos: Vector2) -> void:
 		g.play("crystal", randf_range(0.9, 1.15), -6.0)
 		return
 	var kind: String = g.meta.hero if g.meta.hero != "" else "owl"
-	var items: Array = Meta.decor_for(kind, spot) if tab == "home" else Meta.items_in(tab)
+	var items: Array = _wr_items(kind)
 	for it in items:
 		if rects.get("item_" + it.id, Rect2()).has_point(pos):
 			tap_card(it.id, kind)

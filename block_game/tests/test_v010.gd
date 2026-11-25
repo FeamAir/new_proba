@@ -245,6 +245,10 @@ func _test_halls() -> void:
 	for it in Meta.ITEMS + Meta.DECOR:
 		if it.has("hall") and not it.get("forge", false):  # 0.12: награды кузницы куются, а не покупаются
 			var n: int = it.hall
+			if n == 0:  # 0.12b: первый набор героя открыт с начала
+				if Meta.lock_reason(it.id, 0, 1) != "":
+					cond_ok = false
+				continue
 			if n < 1 or n > Meta.HALL_COUNT:
 				cond_ok = false
 			if Meta.lock_reason(it.id, 999, n * Meta.HALL_SIZE) == "" or Meta.lock_reason(it.id, 999, n * Meta.HALL_SIZE + 1) != "":

@@ -1,7 +1,9 @@
 extends SceneTree
-## Тесты версии 0.12: редкости, новые слоты (спутник, сияние), пять наборов, Кристальная кузница
-## (рецепты, ковка не тратит вещи, супер-эксклюзив только после 5 легендарных), счётчик коллекции,
-## доход по залам и расчёт пути до Крыльев Каскада, сохранение, примерка, рисование всех вещей.
+## Тесты версии 0.12 / 0.12b: редкости, слоты «Спутник» и «Сияние», ГАРДЕРОБ ПО ГЕРОЯМ (у каждого
+## друга 19 своих вещей: 3 набора × 5, 3 легендарные, супер-эксклюзив), Кристальная кузница по героям,
+## нельзя надеть чужую вещь, смена друга с возвратом осколков (точная сумма, без двойного возврата,
+## «Отмена» ничего не меняет), обновление старых сохранений, доход и путь до супер-награды,
+## сохранение, примерка, рисование всех вещей на своих героях.
 ## Запуск: godot --headless --path block_game -s tests/test_v012.gd
 
 var failed := 0
@@ -34,10 +36,12 @@ func _initialize() -> void:
 	I18n.set_lang("ru")
 
 	_test_rarities()
-	_test_slots_and_sets()
+	_test_catalogs()
 	_test_forge_rules()
 	_test_collection()
 	_test_income(g)
+	_test_switch(g)
+	_test_migration(g)
 	_test_save()
 	_test_tryon()
 	_test_forge_screen(g)
@@ -62,21 +66,6 @@ func _test_rarities() -> void:
 			ok = false
 			printerr("    нет редкости: ", it.id)
 	check(ok, "у каждой вещи гардероба есть редкость из пяти")
-	var want := {"common": ["bow", "cap", "sunglasses", "crystal_glasses", "bowtie", "scarf", "backpack"],
-		"rare": ["miner", "wreath", "monocle", "necklace", "skin_mint", "skin_moon"],
-		"epic": ["crown", "cape", "skin_gold"]}
-	var old_ok := true
-	for r in want:
-		for id in want[r]:
-			if Meta.rarity(id) != r:
-				old_ok = false
-				printerr("    ", id, ": ", Meta.rarity(id), " вместо ", r)
-	check(old_ok, "16 старых вещей получили редкости по проекту (обычные / редкие / эпические)")
-	var leg := Meta.ITEMS.filter(func(it): return it.rarity == "legendary").map(func(it): return it.id)
-	leg.sort()
-	check(leg == ["firefly_crown", "fullmoon_mantle", "mountain_heart", "seahorse", "skin_constellation"], "легендарных — 5, по одной на набор")
-	var sup := Meta.ITEMS.filter(func(it): return it.rarity == "super")
-	check(sup.size() == 1 and sup[0].id == "wings_cascado" and sup[0].slot == "aura", "супер-эксклюзив один — Крылья Каскада (сияние)")
 	var forge_only := true
 	for it in Meta.ITEMS:
 		if (it.rarity in ["legendary", "super"]) != it.get("forge", false):
@@ -102,36 +91,49 @@ func _test_rarities() -> void:
 	check(dist, "цвета рамок редкостей хорошо различаются")
 
 
-func _test_slots_and_sets() -> void:
-	print("— новые слоты и наборы")
+## 0.12b: у каждого героя свой каталог
+func _test_catalogs() -> void:
+	print("— каталоги по героям")
 	check(Meta.SLOTS.has("companion") and Meta.SLOTS.has("aura"), "в гардеробе есть слоты «Спутник» и «Сияние»")
-	check(I18n.t("slot_companion") == "Спутник" and I18n.t("slot_aura") == "Сияние", "названия новых вкладок по-русски")
-	check(Meta.items_in("companion").size() == 6 and Meta.items_in("aura").size() == 6, "спутников 6 (5 + конёк-страж), сияний 6 (5 + Крылья)")
-	check(Meta.SETS.size() == 5, "наборов пять")
-	var sizes := []
-	for n in range(1, 6):
-		sizes.append(Meta.set_items(n).size())
-	check(sizes == [8, 8, 8, 8, 7], "в наборах 8/8/8/8/7 вещей (в 5-м рецепте ещё корона) (%s)" % [sizes])
-	var hall_ok := true
-	for n in range(1, 6):
-		for it in Meta.set_items(n):
-			if int(it.hall) != n:
-				hall_ok = false
-			# закрыты до прохождения зала N, открыты после
-			if Meta.lock_reason(it.id, 999, n * Meta.HALL_SIZE) == "" or Meta.lock_reason(it.id, 999, n * Meta.HALL_SIZE + 1) != "":
-				hall_ok = false
-	check(hall_ok, "вещи набора N видны с замком «пройди зал N» и открываются после зала N")
-	var prices := {"acorn_cap": 30, "leaf_scarf": 35, "daisy_glasses": 70, "firefly": 80, "dragonfly_wings": 90, "skin_moss": 150, "bluebell_hat": 160, "aura_pollen": 180,
-		"shell_clip": 40, "dive_mask": 45, "pearl_necklace": 90, "bubble_pet": 90, "fin_cape": 100, "skin_pearl": 180, "coral_tiara": 180, "aura_bubbles": 200,
-		"moth_tie": 40, "masquerade": 45, "top_hat": 100, "moon_moth": 100, "ball_cloak": 110, "star_lorgnette": 180, "skin_midnight": 200, "aura_moonbeam": 220,
-		"flight_goggles": 50, "comet_scarf": 50, "mini_planet": 110, "space_helmet": 120, "rocket_pack": 120, "star_compass": 200, "skin_nebula": 220, "aura_starfall": 240,
-		"amethyst_monocle": 60, "ermine_collar": 60, "float_crystal": 130, "crystal_diadem": 130, "royal_mantle": 140, "skin_amethyst": 240, "aura_facets": 260}
-	var pr_ok := true
-	for id in prices:
-		if int(Meta.item(id).get("price", -1)) != prices[id]:
-			pr_ok = false
-			printerr("    цена ", id)
-	check(pr_ok, "цены 39 вещей наборов — как в проекте сценариста")
+	check(Meta.ITEMS.size() == 76, "всего вещей 76 (19 × 4 друга)")
+	check(not Meta.ITEMS.any(func(it): return not it.has("hero") or not Meta.HEROES.has(it.hero)), "общих вещей нет: у каждой вещи свой друг")
+	check(not Meta.ITEMS.any(func(it): return it.id == "wings_cascado") and Meta.item("wings_cascado").is_empty(), "Крыльев Каскада больше нет")
+	for h in Meta.HEROES:
+		var its: Array = Meta.hero_items(h)
+		var sets: Array = Meta.hero_sets(h)
+		var buy := its.filter(func(it): return not it.get("forge", false))
+		var leg := its.filter(func(it): return it.rarity == "legendary")
+		var sup := its.filter(func(it): return it.rarity == "super")
+		check(its.size() == 19 and buy.size() == 15 and leg.size() == 3 and sup.size() == 1, "%s: 19 вещей — 15 в наборах, 3 легендарные, 1 супер" % h)
+		check(sets.size() == 3 and sets.all(func(n): return Meta.set_items(n).size() == 5), "%s: 3 набора по 5 вещей" % h)
+		var halls: Array = sets.map(func(n): return int(Meta.set_info(n).hall))
+		check(halls == [0, 3, 5], "%s: наборы открываются с начала / после зала 3 / после зала 5" % h)
+		var skins := its.filter(func(it): return it.slot == "skin").size()
+		check(skins >= 1 and skins <= 3, "%s: окрасок 1–3 (%d)" % [h, skins])
+		var slots_ok := true
+		for sl in Meta.SLOTS:
+			if Meta.items_in(sl, h).is_empty():
+				slots_ok = false
+		check(slots_ok, "%s: в каждой вкладке гардероба есть вещи" % h)
+		var rar_ok := true
+		for n in sets:
+			var rs: Array = Meta.set_items(n).map(func(it): return it.rarity)
+			if rs.count("common") != 2 or rs.count("rare") != 2 or rs.count("epic") != 1:
+				rar_ok = false
+		check(rar_ok, "%s: в наборе 2 обычные, 2 редкие, 1 эпическая" % h)
+		# рецепты: награда набора — из всех 5 его вещей; супер — из трёх легендарных
+		var rec_ok := true
+		for n in sets:
+			var rc: Dictionary = Meta.recipe_for_set(n)
+			var ids: Array = Meta.set_items(n).map(func(it): return it.id)
+			if rc.is_empty() or rc.needs != ids or rc.hero != h or Meta.item(rc.id).rarity != "legendary" or int(rc.hall) != int(Meta.set_info(n).hall):
+				rec_ok = false
+		var sr: Dictionary = Meta.super_recipe(h)
+		check(rec_ok, "%s: рецепт награды набора — все 5 вещей набора" % h)
+		var leg_ids: Array = leg.map(func(it): return it.id)
+		check(sr.needs == leg_ids and Meta.item(sr.id).rarity == "super" and Meta.item(sr.id).slot == "aura", "%s: супер-эксклюзив — из трёх легендарных" % h)
+		check(int(buy.map(func(it): return int(it.price)).min()) == 20, "%s: первая вещь — 20 осколков (хватает после подарка новичку)" % h)
+	check(Meta.SETS.size() == 12 and Meta.RECIPES.size() == 16, "наборов 12, рецептов 16")
 	var ids := {}
 	var uniq := true
 	for it in Meta.ITEMS + Meta.DECOR:
@@ -139,82 +141,109 @@ func _test_slots_and_sets() -> void:
 			uniq = false
 		ids[it.id] = true
 	check(uniq, "id всех вещей и украшений уникальны")
-	var en_ok := true
-	for n in range(1, 6):
-		for l in I18n.LANGS:
-			if not I18n.STR[l].has("set_" + Meta.SETS[n - 1].id):
-				en_ok = false
-	check(en_ok, "названия наборов есть на обоих языках")
+	var tr_ok := true
+	for l in I18n.LANGS:
+		for st in Meta.SETS:
+			if not I18n.STR[l].has("set_" + st.id):
+				tr_ok = false
+		for it in Meta.ITEMS:
+			if not I18n.STR[l].has("item_" + it.id):
+				tr_ok = false
+		for k in ["switch_title", "switch_text", "switch_refund", "switch_keep", "switch_yes", "switch_done", "migrate_title", "migrate_text", "migrate_refund", "forge_say_super", "forge_legends"]:
+			if not I18n.STR[l].has(k):
+				tr_ok = false
+		for h in Meta.HEROES:
+			if not I18n.STR[l].has("hero_gen_" + h) or not I18n.STR[l].has("forge_say_start_" + h):
+				tr_ok = false
+	check(tr_ok, "названия вещей, наборов и окон 0.12b — на обоих языках")
+	I18n.set_lang("ru")
+	check(Meta.item_name("ow_stargazer") == "Мантия звездочёта" and Meta.item_name("ax_abyssal") == "Сияние глубин" and Meta.item_name("pu_hero") == "Пёс-герой" and Meta.item_name("ki_starry") == "Звёздная кошка", "супер-награды: Мантия звездочёта, Сияние глубин, Пёс-герой, Звёздная кошка")
+	# чужую вещь нельзя купить и надеть
+	var m = Meta.new()
+	m.set_hero("puppy")
+	m.shards = 1000
+	check(m.buy_item("ki_pompom_hat", 0, 99) == "locked" and not m.is_owned("ki_pompom_hat"), "щенку не купить шапочку котика")
+	m.owned.append("ki_pompom_hat")  # даже если вещь как-то оказалась у игрока
+	check(not m.equip("ki_pompom_hat") and m.tap_item("ki_pompom_hat") == "locked" and m.outfit().is_empty(), "чужую вещь не надеть")
+	check(m.buy_item("pu_cap", 0, 1) == "bought" and m.is_equipped("pu_cap"), "свою — можно")
+	# супер-эксклюзив занимает свои слоты
+	var o := {"head": "ow_mortarboard", "eyes": "ow_halfglasses", "back": "ow_lantern"}
+	Meta.put_on(o, "ow_stargazer")
+	check(o == {"eyes": "ow_halfglasses", "aura": "ow_stargazer"}, "Мантия звездочёта снимает шапку и фонарь (голова, спина)")
+	Meta.put_on(o, "ow_quill")
+	check(o == {"eyes": "ow_halfglasses", "head": "ow_quill"}, "вещь на голову снимает Мантию звездочёта")
 
 
 func _test_forge_rules() -> void:
-	print("— кузница: рецепты")
+	print("— кузница по героям")
 	var m = Meta.new()
-	var r1: Dictionary = Meta.recipe("firefly_crown")
-	check(r1.needs == ["leaf_scarf", "daisy_glasses", "firefly"] and r1.cost == 50, "рецепт Венца: листик-шарф + очки-ромашки + светлячок + 50")
-	check(Meta.recipe("mountain_heart").needs.has("crown"), "в рецепт «Сердца горы» входит корона")
-	check(m.forge_status("firefly_crown", 1) == "hall", "до прохождения зала 1 — рецепт закрыт")
-	check(m.forge("firefly_crown", 1) == "hall" and m.forged.is_empty(), "без зала сковать нельзя")
+	m.set_hero("axolotl")
+	var r1: Dictionary = Meta.recipe("ax_seahorse")
+	check(r1.needs == ["ax_starfish", "ax_dive_mask", "ax_coral_beads", "ax_bubble_pet", "ax_coral_tiara"] and r1.cost == 120, "рецепт конька-стража: 5 вещей «Кораллового рифа» + 120")
+	check(m.forge_status("ax_seahorse", 1) == "items" and m.forge_status("ax_wave_cape", 1) == "hall", "набор 1 — с начала, набор 2 — после зала 3")
+	check(m.forge_status("ow_page_whirl", 99) == "hero" and m.forge("ow_page_whirl", 99) == "hero", "рецепт другого друга не куётся")
 	m.shards = 1000
-	check(m.forge("firefly_crown", 11) == "items", "без всех вещей сковать нельзя")
-	m.owned.append_array(["leaf_scarf", "daisy_glasses"])
-	check(m.forge("firefly_crown", 11) == "items" and m.recipe_have("firefly_crown") == 2, "двух вещей из трёх мало")
-	m.owned.append("firefly")
-	m.shards = 49
-	check(m.forge_status("firefly_crown", 11) == "poor" and m.forge("firefly_crown", 11) == "poor", "без осколков (49 из 50) сковать нельзя")
-	check(m.recipe_complete("firefly_crown", 11) and not m.forge_ready_any(11), "всё собрано, но осколков мало — силуэт пульсирует, метки «Можно сковать!» нет")
-	m.shards = 70
-	check(m.forge_ready_any(11), "хватает — метка «Можно сковать!»")
-	check(m.forge("firefly_crown", 11) == "forged", "сковано")
-	check(m.shards == 20, "списаны только осколки (70 - 50 = 20)")
-	check(m.owned.has("leaf_scarf") and m.owned.has("daisy_glasses") and m.owned.has("firefly"), "ковка не тратит вещи — они остаются у игрока")
-	check(m.forged == ["firefly_crown"] and m.is_owned("firefly_crown") and m.equipped.get("head", "") == "firefly_crown", "награда у игрока и сразу надета")
-	check(m.forge("firefly_crown", 11) == "done" and m.shards == 20, "второй раз не куётся и осколки не берутся")
-	check(m.buy("seahorse", 999, 999) == Meta.Buy.LOCKED and m.buy_item("seahorse", 999, 999) == "locked", "награду кузницы нельзя купить")
-	check(m.tap_item("seahorse") == "try", "нескованную награду можно примерить")
-	m.unequip("head")
-	check(m.tap_item("firefly_crown") == "on" and m.equipped.head == "firefly_crown", "скованную — надеть из гардероба")
+	check(m.forge("ax_seahorse", 1) == "items", "без всех вещей сковать нельзя")
+	m.owned.append_array(["ax_starfish", "ax_dive_mask", "ax_coral_beads", "ax_bubble_pet"])
+	check(m.forge("ax_seahorse", 1) == "items" and m.recipe_have("ax_seahorse") == 4, "четырёх вещей из пяти мало")
+	m.owned.append("ax_coral_tiara")
+	m.shards = 119
+	check(m.forge_status("ax_seahorse", 1) == "poor" and m.forge("ax_seahorse", 1) == "poor", "без осколков (119 из 120) сковать нельзя")
+	check(m.recipe_complete("ax_seahorse", 1) and not m.forge_ready_any(1), "всё собрано, но осколков мало — метки «Можно сковать!» нет")
+	m.shards = 140
+	check(m.forge_ready_any(1), "хватает — метка «Можно сковать!»")
+	check(m.forge("ax_seahorse", 1) == "forged" and m.shards == 20, "сковано, списано 120")
+	check(m.owned.size() == 5, "ковка не тратит вещи — они остаются у игрока")
+	check(m.forged == ["ax_seahorse"] and m.equipped.get("companion", "") == "ax_seahorse", "награда у игрока и сразу надета")
+	check(m.forge("ax_seahorse", 1) == "done" and m.shards == 20, "второй раз не куётся")
+	check(m.buy("ax_wave_cape", 999, 999) == Meta.Buy.LOCKED and m.tap_item("ax_wave_cape") == "try", "награду кузницы нельзя купить, но можно примерить")
+	# метка «Можно сковать!» — только по рецептам текущего героя
+	var k = Meta.new()
+	k.set_hero("kitten")
+	k.shards = 9999
+	k.owned.append_array(Meta.set_items(Meta.hero_sets("owl")[0]).map(func(it): return it.id))
+	check(not k.forge_ready_any(99), "вещи совёнка не включают метку у котика")
 	# супер-эксклюзив
 	var w = Meta.new()
+	w.set_hero("owl")
 	w.shards = 10000
-	w.owned.append_array(Meta.ITEMS.filter(func(it): return it.has("price")).map(func(it): return it.id))
-	check(w.forge("wings_cascado", 999) == "items", "Крылья нельзя сковать, пока нет пяти легендарных")
-	for rid in ["firefly_crown", "seahorse", "fullmoon_mantle", "skin_constellation"]:
-		check(w.forge(rid, 999) == "forged", "сковано: " + rid)
-		check(w.forge_status("wings_cascado", 999) == "items", "после %s Крылья ещё закрыты" % rid)
-	check(w.forge("wings_cascado", 999) == "items", "с четырьмя легендарными — нельзя")
-	check(w.forge("mountain_heart", 999) == "forged", "пятая легендарная")
-	check(w.forge_status("wings_cascado", 49) == "hall", "Крылья — только после зала 5")
-	check(w.forge("wings_cascado", 999) == "forged" and w.equipped.aura == "wings_cascado", "пять легендарных + 300 — Крылья Каскада скованы и надеты")
-	check(w.forged.size() == 6 and w.is_owned("seahorse") and w.is_owned("mountain_heart"), "легендарные не тратятся на Крылья")
-	# цель «до следующей вещи» не предлагает награды кузницы
+	w.owned.append_array(Meta.hero_items("owl").filter(func(it): return it.has("price")).map(func(it): return it.id))
+	check(w.forge("ow_stargazer", 999) == "items", "супер нельзя сковать без трёх легендарных")
+	check(w.forge("ow_page_whirl", 999) == "forged" and w.forge("ow_skin_starry", 999) == "forged", "две легендарные")
+	check(w.forge("ow_stargazer", 999) == "items" and w.legends_forged() == 2, "с двумя легендарными — нельзя")
+	check(w.forge("ow_comet", 999) == "forged" and w.legends_forged() == 3, "третья легендарная")
+	check(w.forge_status("ow_stargazer", 50) == "hall", "супер — только после зала 5")
+	check(w.forge("ow_stargazer", 999) == "forged" and w.equipped.aura == "ow_stargazer", "три легендарные + 450 — Мантия звездочёта скована и надета")
+	check(w.forged.size() == 4 and w.is_owned("ow_comet"), "легендарные не тратятся на супер-награду")
+	# цель «до следующей вещи» — только вещи своего героя и не награды кузницы
 	var a = Meta.new()
-	a.shards = 0
-	a.owned.append_array(Meta.ITEMS.filter(func(it): return it.has("price")).map(func(it): return it.id))
+	a.set_hero("owl")
+	var gl: Dictionary = Assist.next_goal(a, "owl", 0, 1)
+	check(Meta.owner_of(gl.id) == "owl" or gl.home == "owl", "цель на главном — вещь или украшение своего друга (%s)" % gl.id)
+	a.owned.append_array(Meta.hero_items("owl").filter(func(it): return it.has("price")).map(func(it): return it.id))
 	check(Assist.next_goal(a, "owl", 999, 999).get("slot", "home") == "home", "цель на главном — не награда кузницы (её не купить)")
 
 
 func _test_collection() -> void:
 	print("— коллекция")
 	var m = Meta.new()
-	check(Meta.collection_total() == Meta.ITEMS.size() and Meta.collection_total() == 61, "всего в коллекции 61 вещь (16 старых + 39 в наборах + 5 легендарных + Крылья)")
+	m.set_hero("puppy")
+	check(Meta.collection_total("puppy") == 19, "в коллекции друга 19 вещей")
 	check(m.collection_count() == 0, "у нового игрока 0")
-	m.owned.append_array(["bow", "cap", "acorn_cap"])
-	m.decor_owned.append("owl_nest")
-	check(m.collection_count() == 3, "украшения дома в коллекцию гардероба не входят (3)")
-	m.forged.append("seahorse")
-	check(m.collection_count() == 4, "скованные считаются (4)")
-	check(I18n.t("collection") % [34, 61] == "Коллекция: 34 из 61", "подпись счётчика: «Коллекция: 34 из 61»")
+	m.owned.append_array(["pu_cap", "pu_whistle"])
+	m.decor_owned.append("pup_ball")
+	check(m.collection_count() == 2, "украшения дома в коллекцию гардероба не входят (2)")
+	m.forged.append("pu_frisbee")
+	check(m.collection_count() == 3, "скованные считаются (3)")
+	check(I18n.t("collection") % [3, 19] == "Коллекция: 3 из 19", "подпись счётчика: «Коллекция: 3 из 19»")
 
 
 func _test_income(g) -> void:
-	print("— доход по залам")
+	print("— доход и путь до супер-награды")
 	check(Meta.win_reward(true, 0, 0, 0, 1).win == 10 and Meta.win_reward(true, 0, 0, 0, 10).win == 10, "зал 1: первая победа 10")
 	check(Meta.win_reward(true, 0, 0, 0, 11).win == 12 and Meta.win_reward(true, 0, 0, 0, 21).win == 14, "зал 2 — 12, зал 3 — 14")
 	check(Meta.win_reward(true, 0, 0, 0, 100).win == 28 and Meta.win_reward(true, 0, 0, 0, 250).win == 28, "зал 10 — 28, в глубинах — как в зале 10")
 	check(Meta.win_reward(false, 3, 3, 0, 95).win == Meta.WIN_REPEAT, "повторная победа — по-прежнему +3")
-	check(Meta.win_reward(true, 0, 1, 0).total == 15, "без номера уровня — как раньше (зал 1)")
-	# в игре номер уровня передаётся
 	g.meta = Meta.new()
 	g.stars = {}
 	g.assist.gift_given = true
@@ -222,20 +251,134 @@ func _test_income(g) -> void:
 	g.pieces_used = 999
 	g._win()
 	check(g.last_reward.win == 14 and g.last_reward.first, "победа на уровне 21 (зал 3): +14 за первую победу")
-	# расчёт пути до Крыльев Каскада
-	var path := 0
-	for r in Meta.RECIPES:
-		path += int(r.cost)
-		if int(r.set) > 0:
-			for id in r.needs:
-				path += int(Meta.item(id).get("price", 0))
-	check(path == 2645, "путь до Крыльев: вещи рецептов 1795 + ковка 850 = 2645 (%d)" % path)
-	var base := 0
-	for lv in range(1, 101):
-		base += Meta.win_reward(true, 0, 0, 0, lv).win
-	check(base == 1900, "за 100 первых побед без звёзд — 1900 (было бы 1000 без надбавки)")
-	var two_stars := base + 100 * 2 * Meta.PER_NEW_STAR
-	check(two_stars >= path and base + 100 * Meta.PER_NEW_STAR < path, "с двумя звёздами в среднем (2900) путь укладывается в 100 уровней, с одной (2400) — нет")
+	# путь одного друга до супер-награды: 15 вещей + ковка трёх легендарных + ковка супер
+	for h in Meta.HEROES:
+		var path := 0
+		for it in Meta.hero_items(h):
+			path += int(it.get("price", 0))
+		for r in Meta.RECIPES:
+			if r.hero == h:
+				path += int(r.cost)
+		check(path == 2395, "%s: путь до супер-награды — вещи 1395 + ковка 1000 = 2395 (%d)" % [h, path])
+	var path := 2395
+	# доход за первые прохождения L уровней при s звёздах в среднем
+	var inc := func(L: int, s: float) -> float:
+		var n := 0.0
+		for lv in range(1, L + 1):
+			n += Meta.win_reward(true, 0, 0, 0, lv).win + s * Meta.PER_NEW_STAR
+		return n
+	check(inc.call(80, 2.0) < path and inc.call(90, 2.0) >= path, "при 2 звёздах в среднем путь — между 80 и 90 уровнями (%d / %d)" % [inc.call(80, 2.0), inc.call(90, 2.0)])
+	check(inc.call(90, 1.5) < path and inc.call(100, 1.5) >= path, "при 1,5 звезды — между 90 и 100 уровнями")
+	check(inc.call(100, 1.0) >= path, "даже при 1 звезде — укладывается в 100 уровней (%d)" % inc.call(100, 1.0))
+	# набор 3 открывается после зала 5: на уровнях 51–100 хватает на него, его ковку и супер
+	var late := 0.0
+	for lv in range(51, 101):
+		late += Meta.win_reward(true, 0, 0, 0, lv).win + 2.0 * Meta.PER_NEW_STAR
+	var tail := 0
+	for it in Meta.set_items(Meta.hero_sets("owl")[2]):
+		tail += int(it.price)
+	tail += int(Meta.recipe_for_set(Meta.hero_sets("owl")[2]).cost) + int(Meta.super_recipe("owl").cost)
+	check(late >= tail, "уровни 51–100 (%d) покрывают набор 3, его ковку и супер (%d)" % [late, tail])
+
+
+## 0.12b: смена друга — потраченное на прежнего возвращается осколками
+func _test_switch(g) -> void:
+	print("— смена друга с возвратом")
+	var m = Meta.new()
+	check(not m.switch_asks("owl") and m.switch_hero("owl") == 0 and m.hero == "owl", "первый выбор новичка — без окна и без возврата")
+	m.shards = 1000
+	for id in ["ow_mortarboard", "ow_halfglasses", "ow_scholar_scarf", "ow_book", "ow_skin_snowy"]:
+		m.buy_item(id, 0, 1)
+	check(m.forge("ow_page_whirl", 1) == "forged", "сковано: Вихрь страниц")
+	m.buy_decor("owl", "near", "owl_nest", 0, 1)
+	m.buy_decor("owl", "hang", "owl_lantern", 0, 1)
+	m.buy_decor("puppy", "near", "pup_ball", 0, 1)  # украшение другого дома остаётся
+	var spent := 290 + 120 + 10 + 15
+	check(m.shards == 1000 - spent - 10, "потрачено 445 на совёнка и 10 на дом щенка (%d)" % m.shards)
+	check(m.refund_value("owl") == spent and m.switch_asks("kitten"), "вернётся ровно 435: вещи 290 + ковка 120 + украшения 25")
+	var before: int = m.shards
+	check(m.switch_hero("kitten") == spent and m.shards == before + spent and m.hero == "kitten", "смена на котика: +435 осколков")
+	check(m.owned.is_empty() and m.forged.is_empty() and m.equipped.is_empty() and m.decor_placed.owl.is_empty(), "у совёнка сняты вещи, наряд, скованное и украшения дома")
+	check(m.decor_owned == ["pup_ball"] and m.placed_at("puppy", "near") == "pup_ball", "украшения другого дома не тронуты")
+	check(not m.switch_asks("owl") and m.switch_hero("owl") == 0 and m.shards == before + spent, "обратно на совёнка — котик ничего не купил, второго возврата нет")
+	check(m.collection_count() == 0, "совёнок наряжается заново")
+	check(m.switch_hero("owl") == 0 and m.switch_hero("dragon") == -1, "тот же друг / неизвестный — ничего")
+	# через экран: окно подтверждения, «Отмена» ничего не меняет
+	if g.screens == null:
+		g.screens = load("res://scripts/screens.gd").new(g)
+	if g.notice_ui == null:
+		g.notice_ui = load("res://scripts/notice_ui.gd").new(g)
+	var w = Meta.new()
+	w.switch_hero("puppy")
+	w.shards = 500
+	w.buy_item("pu_cap", 0, 1)
+	w.buy_item("pu_whistle", 0, 1)
+	g.meta = w
+	g.max_level = 1
+	g.stars = {}
+	g._set_state(g.State.WARDROBE)
+	g.screens.request_switch("axolotl")
+	check(g.notice_ui.active() and g.notice_ui.mode == "switch" and g.notice_ui.refund == 50 and w.hero == "puppy", "в гардеробе — окно «Сменить друга?», вернётся 50")
+	g.notice_ui.t = 1.0
+	g.notice_ui.back()
+	check(not g.notice_ui.active() and w.hero == "puppy" and w.shards == 450 and w.owned.size() == 2 and w.is_equipped("pu_whistle"), "«Отмена» — ничего не изменилось")
+	g.screens.request_switch("axolotl")
+	g.notice_ui.t = 1.0
+	g.notice_ui.confirm()
+	check(not g.notice_ui.active() and w.hero == "axolotl" and w.shards == 500 and w.owned.is_empty(), "«Сменить» — аксолотль, 50 осколков вернулись")
+	g.screens.request_switch("kitten")
+	check(not g.notice_ui.active() and w.hero == "kitten" and w.shards == 500, "нечего снимать — смена сразу, без окна")
+	I18n.set_lang("ru")
+	check(I18n.t("switch_text") % I18n.t("hero_gen_owl") == "Вещи и украшения Совёнка будут сняты" and I18n.t("switch_refund") % [435, I18n.forms("shards_forms", 435)] == "Вернётся 435 осколков", "текст окна по-русски")
+	I18n.set_lang("en")
+	check(I18n.t("switch_text") % I18n.t("hero_gen_puppy") == "Puppy's items and decorations will be taken off", "текст окна по-английски")
+	I18n.set_lang("ru")
+
+
+## 0.12b: старые сохранения (0.6–0.12) — общие вещи возвращаются осколками, один раз сообщение
+func _test_migration(g) -> void:
+	print("— обновление старого сохранения")
+	var old := ConfigFile.new()
+	old.set_value("progress", "max_level", 33)
+	old.set_value("progress", "stars", {1: 3, 2: 3})
+	old.set_value("meta", "hero", "owl")
+	old.set_value("meta", "shards", 100)
+	old.set_value("meta", "owned", ["bow", "crown", "firefly", "nope"])
+	old.set_value("meta", "forged", ["firefly_crown", "wings_cascado"])
+	old.set_value("meta", "equipped", {"head": "crown", "aura": "wings_cascado"})
+	old.set_value("meta", "decor_owned", ["owl_nest"])
+	old.set_value("meta", "decor_placed", {"owl": {"near": "owl_nest"}})
+	var m = Meta.new()
+	m.load_from(old)
+	var back := 20 + 150 + 80 + 50 + 300
+	check(m.migrated == back and m.shards == 100 + back and m.notice_refund == back, "вернулось %d: вещи 250 + ковка 350" % back)
+	check(m.owned.is_empty() and m.forged.is_empty() and m.equipped.is_empty() and m.hero == "owl", "старые вещи сняты, друг тот же")
+	check(m.decor_owned == ["owl_nest"] and m.placed_at("owl", "near") == "owl_nest", "украшения домов не тронуты")
+	var cfg := ConfigFile.new()
+	m.save_to(cfg)
+	var m2 = Meta.new()
+	m2.load_from(cfg)
+	check(m2.migrated == 0 and m2.shards == 100 + back and m2.notice_refund == back, "после сохранения второго возврата нет, сообщение ещё ждёт")
+	# через игру: сразу сохраняется, сообщение один раз
+	old.save(SAVE)
+	g.meta = Meta.new()
+	g._load()
+	check(g.meta.shards == 100 + back and g.meta.owned.is_empty(), "игра: старое сохранение обновлено")
+	var cfg2 := ConfigFile.new()
+	cfg2.load(SAVE)
+	check(cfg2.get_value("meta", "owned", ["x"]) == [] and int(cfg2.get_value("meta", "shards", 0)) == 100 + back, "игра: обновлённое сохранение сразу записано")
+	if g.notice_ui == null:
+		g.notice_ui = load("res://scripts/notice_ui.gd").new(g)
+	g._set_state(g.State.HOME)
+	g.notice_ui.mode = ""
+	g.notice_ui.update(0.1)
+	check(g.notice_ui.mode == "migrated" and g.notice_ui.refund == back, "на главном экране — «Гардероб обновлён!»")
+	g.notice_ui.back()
+	g.notice_ui.update(0.1)
+	check(not g.notice_ui.active() and g.meta.notice_refund == 0, "сообщение закрыто и больше не показывается")
+	g.meta = Meta.new()
+	g._load()
+	check(g.meta.notice_refund == 0 and g.meta.shards == 100 + back, "после перезапуска — ни сообщения, ни второго возврата")
 
 
 func _test_save() -> void:
@@ -243,53 +386,46 @@ func _test_save() -> void:
 	var m = Meta.new()
 	m.set_hero("kitten")
 	m.shards = 77
-	m.owned.append_array(["firefly", "leaf_scarf"])
-	m.forged.append("firefly_crown")
-	m.equip("firefly")
-	m.equip("firefly_crown")
+	m.owned.append_array(["ki_yarn", "ki_bell_bow"])
+	m.forged.append("ki_teacup")
+	m.equip("ki_bell_bow")
+	m.equip("ki_teacup")
 	var cfg := ConfigFile.new()
 	m.save_to(cfg)
 	var m2 = Meta.new()
 	m2.load_from(cfg)
-	check(m2.forged == ["firefly_crown"] and m2.owned.size() == 2, "скованные вещи сохраняются отдельно (поле forged)")
-	check(m2.equipped.get("head", "") == "firefly_crown" and m2.equipped.get("companion", "") == "firefly", "надетые награда и спутник восстанавливаются")
-	# старое сохранение (0.11): нет поля forged
-	var old := ConfigFile.new()
-	old.set_value("meta", "hero", "owl")
-	old.set_value("meta", "shards", 120)
-	old.set_value("meta", "owned", ["bow", "crown"])
-	old.set_value("meta", "equipped", {"head": "crown"})
-	var m3 = Meta.new()
-	m3.load_from(old)
-	check(m3.forged.is_empty() and m3.owned == ["bow", "crown"] and m3.equipped.head == "crown" and m3.shards == 120, "старое сохранение без [meta] forged грузится")
-	# подделка: награда кузницы в купленных, чужое в forged
+	check(m2.forged == ["ki_teacup"] and m2.owned.size() == 2 and m2.migrated == 0, "скованные вещи сохраняются отдельно (поле forged)")
+	check(m2.equipped.get("companion", "") == "ki_teacup" and m2.equipped.get("neck", "") == "ki_bell_bow", "надетые награда и бант восстанавливаются")
+	# подделка: награда кузницы в купленных, мусор в forged
 	var bad := ConfigFile.new()
-	bad.set_value("meta", "owned", ["seahorse", "bow"])
-	bad.set_value("meta", "forged", ["bow", "nope", "seahorse", 5])
-	bad.set_value("meta", "equipped", {"companion": "seahorse", "aura": "wings_cascado"})
+	bad.set_value("meta", "hero", "kitten")
+	bad.set_value("meta", "owned", ["ki_teacup", "ki_yarn"])
+	bad.set_value("meta", "forged", ["ki_yarn", "nope", "ki_teacup", 5])
+	bad.set_value("meta", "equipped", {"companion": "ki_teacup", "aura": "ki_starry"})
 	var m4 = Meta.new()
 	m4.load_from(bad)
-	check(m4.owned == ["bow"] and m4.forged == ["seahorse"], "награда кузницы не попадает в «купленные», мусор в forged отброшен")
-	check(m4.equipped.get("companion", "") == "seahorse" and not m4.equipped.has("aura"), "надеть можно только то, что есть")
+	check(m4.owned == ["ki_yarn"] and m4.forged == ["ki_teacup"], "награда кузницы не попадает в «купленные», мусор в forged отброшен")
+	check(m4.equipped.get("companion", "") == "ki_teacup" and not m4.equipped.has("aura"), "надеть можно только то, что есть")
 
 
 func _test_tryon() -> void:
 	print("— примерка")
 	var m = Meta.new()
+	m.set_hero("owl")
 	m.shards = 500
 	var tr = TryOn.new()
-	tr.start_item("firefly")
-	check(tr.outfit(m).get("companion", "") == "firefly", "примерка спутника — в слоте «спутник»")
-	check(tr.status(m, 0, 1) == "locked" and tr.status(m, 0, 11) == "ok", "вещь набора 1: до зала 1 закрыта, после — можно купить")
-	check(tr.confirm(m, 0, 11) == "bought" and m.equipped.companion == "firefly" and not tr.active(), "покупка спутника и сразу надет")
-	tr.start_item("aura_pollen")
-	check(tr.outfit(m).get("aura", "") == "aura_pollen" and tr.confirm(m, 0, 11) == "bought", "сияние примеряется и покупается")
-	tr.start_item("skin_moss")
-	check(tr.outfit(m).get("skin", "") == "skin_moss", "окраска набора примеряется")
-	tr.clear()
-	tr.start_item("wings_cascado")
-	check(tr.outfit(m).get("aura", "") == "wings_cascado" and tr.status(m, 999, 999) == "locked", "Крылья можно примерить, но не купить")
-	check(tr.confirm(m, 999, 999) == "locked" and not m.is_owned("wings_cascado"), "«Купить» для награды кузницы не срабатывает")
+	tr.start_item("ow_book")
+	check(tr.outfit(m).get("companion", "") == "ow_book", "примерка спутника — в слоте «спутник»")
+	check(tr.confirm(m, 0, 1) == "bought" and m.equipped.companion == "ow_book" and not tr.active(), "покупка спутника и сразу надет")
+	tr.start_item("ow_aura_starfall")
+	check(tr.status(m, 0, 50) == "locked" and tr.status(m, 0, 51) == "ok", "вещь набора 3: до зала 5 закрыта, после — можно купить")
+	tr.start_item("ax_starfish")
+	check(tr.status(m, 0, 99) == "locked", "вещь другого друга — не купить")
+	m.owned.append("ow_mortarboard")
+	m.equip("ow_mortarboard")
+	tr.start_item("ow_stargazer")
+	check(tr.outfit(m).get("aura", "") == "ow_stargazer" and not tr.outfit(m).has("head") and m.equipped.head == "ow_mortarboard", "примерка супер-награды: шапочка на время снята, наряд не тронут")
+	check(tr.status(m, 999, 999) == "locked" and tr.confirm(m, 999, 999) == "locked" and not m.is_owned("ow_stargazer"), "супер-награду можно примерить, но не купить")
 
 
 func _test_forge_screen(g) -> void:
@@ -300,14 +436,15 @@ func _test_forge_screen(g) -> void:
 		g.forge_ui = load("res://scripts/forge_ui.gd").new(g)
 	var f = g.forge_ui
 	g.meta = Meta.new()
-	g.meta.set_hero("owl")
-	g.max_level = 11
-	g.meta.shards = 60
-	g.meta.owned.append_array(["leaf_scarf", "daisy_glasses", "firefly"])
+	g.meta.set_hero("puppy")
+	g.max_level = 1
+	g.meta.shards = 130
+	g.meta.owned.append_array(Meta.set_items(Meta.hero_sets("puppy")[0]).map(func(it): return it.id))
 	f.open()
 	check(g.state == g.State.FORGE, "кузница открывается")
-	f._try_forge("firefly_crown", 1)
-	check(f.anim_id == "firefly_crown" and g.meta.forged.has("firefly_crown") and g.meta.shards == 10, "кнопка «Сковать» запускает анимацию, награда сохранена")
+	check(f.kind() == "puppy" and Meta.super_recipe(f.kind()).id == "pu_hero", "кузница щенка: главная цель — Пёс-герой")
+	f._try_forge("pu_frisbee", Meta.hero_sets("puppy")[0])
+	check(f.anim_id == "pu_frisbee" and g.meta.forged.has("pu_frisbee") and g.meta.shards == 10, "«Сковать» запускает анимацию, награда сохранена")
 	f.update(1.0)
 	check(f.anim_id != "" and not f.result, "через 1 с анимация ещё идёт")
 	f.tap(Vector2(360, 640))
@@ -315,17 +452,19 @@ func _test_forge_screen(g) -> void:
 	f.update(1.0)
 	f.tap(Vector2(10, 10))
 	check(not f.result, "касание закрывает показ")
-	f.start_try("seahorse")
-	check(f.try_id == "seahorse", "примерка нескованной награды")
-	f.update(Meta.RECIPES.size() * 0.0 + 5.2)
+	f.start_try("pu_hero")
+	check(f.try_id == "pu_hero", "примерка супер-награды")
+	f.update(5.2)
 	check(f.try_id == "", "примерка заканчивается сама через 5 секунд")
-	f._try_forge("seahorse", 2)
-	check(f.anim_id == "" and not g.meta.forged.has("seahorse"), "без зала 2 и вещей — не куётся")
+	f._try_forge("pu_kite", Meta.hero_sets("puppy")[1])
+	check(f.anim_id == "" and not g.meta.forged.has("pu_kite"), "без зала 3 и вещей — не куётся")
+	f._try_forge("ow_page_whirl", 1)
+	check(f.anim_id == "" and not g.meta.forged.has("ow_page_whirl"), "рецепт другого друга не куётся")
 	f.back()
 	check(g.state == g.State.HOME, "«Назад» — на главный экран")
 
 
-## Рисование: все новые вещи на всех героях и все значки — без ошибок скрипта
+## Рисование: все вещи на своих героях, аватарки и значки — без ошибок скрипта
 func _test_drawing() -> void:
 	print("— рисование")
 	var Hero = load("res://scripts/hero.gd")
@@ -334,20 +473,23 @@ func _test_drawing() -> void:
 	node.draw.connect(func():
 		var h = Hero.new()
 		for kind in Meta.HEROES:
-			for it in Meta.ITEMS:
+			var full := {}
+			for it in Meta.hero_items(kind):
 				var o := {it.slot: it.id}
 				h.draw(node, kind, Vector2(360, 600), 1.0, o, 1.7, 0.3)
 				h.draw(node, kind, Vector2(360, 600), 1.0, o, 1.7, 0.3, true)
 				h.draw_item_icon(node, it.id, it.slot, kind, Vector2(100, 100), 120, 1.7)
-			h.draw(node, kind, Vector2(360, 600), 1.0, {"head": "firefly_crown", "eyes": "star_lorgnette", "neck": "mountain_heart", "back": "fullmoon_mantle",
-				"skin": "skin_constellation", "companion": "seahorse", "aura": "wings_cascado"}, 2.3, 0.5)
+				h.draw_item_icon(node, it.id, it.slot, kind, Vector2(100, 100), 60, 0.0)
+				Meta.put_on(full, it.id)
+			h.draw(node, kind, Vector2(360, 600), 1.0, full, 2.3, 0.5)
+			h.draw_avatar(node, kind, Vector2(200, 200), 80, full, 2.3, Color.WHITE, 0.4)
 		h.draw_master(node, Vector2(100, 300), 0.6, 1.0)
 		drawn += 1)
 	node.queue_redraw()
 	for i in 4:
 		await process_frame
 	if drawn > 0:
-		check(true, "все вещи нарисованы на всех героях и значками без ошибок")
+		check(true, "все вещи нарисованы на своих героях и значками без ошибок")
 	else:
 		print("  (рисование в режиме без экрана пропущено)")
 	node.free()

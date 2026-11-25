@@ -9,8 +9,6 @@ const Meta := preload("res://scripts/meta.gd")
 const Rarity := preload("res://scripts/rarity.gd")
 const Sets := preload("res://scripts/hero_sets.gd")
 
-## Цвета пяти наборов (по перьям Крыльев Каскада бегут они)
-const SET_COLS := [Color("#C6F04A"), Color("#3FE0D0"), Color("#B9C4FF"), Color("#FF7AD9"), Color("#B46CFF")]
 
 ## Узоры окрасок: где на теле героя (включить эллипсы) и где нельзя (мордочка)
 const SKIN_ZONES := {
@@ -94,7 +92,7 @@ static func _skin_pts_now(kind: String, a: Dictionary) -> Array:
 # ==================== Узоры окрасок ====================
 
 static func skin_fx(h, outfit: Dictionary, a: Dictionary, t: float, head_only: bool) -> void:
-	var sk: String = outfit.get("skin", "")
+	var sk: String = Meta.draw_key(outfit.get("skin", ""))
 	if sk == "" or a.kind == "icon":
 		return
 	var kind: String = a.kind
@@ -108,14 +106,6 @@ static func skin_fx(h, outfit: Dictionary, a: Dictionary, t: float, head_only: b
 		pts = hp
 	h._T = Transform2D.IDENTITY
 	match sk:
-		"skin_moss":
-			for i in mini(pts.size(), 14):
-				var bl := maxf(0.0, sin(t * 1.6 + i * 2.3))
-				var p: Vector2 = pts[i]
-				h._dot(p, 6.0, Color("#2E7A2A", 0.25))
-				if bl > 0.05:
-					h._glow(p, 9 + 9 * bl, 9 + 9 * bl, Color(0.95, 1.0, 0.35, snappedf(0.5 * bl, 0.05)))
-				h._dot(p, 3.4, Color("#EFFF6A", 0.35 + 0.65 * bl))
 		"skin_pearl":
 			for i in mini(pts.size(), 6):
 				var hh := fposmod(t * 0.1 + i * 0.13, 1.0)
@@ -132,23 +122,18 @@ static func skin_fx(h, outfit: Dictionary, a: Dictionary, t: float, head_only: b
 				var r := 2.5 + 4.0 * tw * (0.6 + hs(i, 4) * 0.6)
 				h._sparkle(pts[i], r, Color(1.0, 0.96, 0.75, 0.35 + 0.65 * tw))
 				h._dot(pts[i], 1.2, Color(1, 1, 1, 0.9))
-		"skin_nebula":
-			for i in mini(pts.size(), 7):
-				var hh := fposmod(t * 0.08 + i * 0.17, 1.0)
-				var c := Color("#FF7AD9").lerp(Color("#9A5CE8"), 0.5 + 0.5 * sin(hh * TAU)).lerp(Color("#5A8BFF"), 0.5 + 0.5 * sin(hh * TAU + 2.0))
-				h._glow(pts[i], 34, 28, Sets.q(Color(c, 0.4)))
-			for i in range(7, pts.size()):
-				var tw := 0.5 + 0.5 * sin(t * 2.4 + i * 1.3)
-				h._sparkle(pts[i], 2.0 + 3.0 * tw, Color(1, 1, 1, 0.4 + 0.6 * tw))
-		"skin_amethyst":
-			for i in mini(pts.size(), 9):
-				var p: Vector2 = pts[i]
-				h._gem(p, 5.5, Color("#C79BFF") if i % 2 == 0 else Color("#8A4FE0"))
-				var ph := fposmod(t * 0.7 - i * 0.37, 3.0)
-				if ph < 0.4:
-					h._sparkle(p + Vector2(-2, -3), 9.0 * sin(ph / 0.4 * PI), Color.WHITE)
 		"skin_constellation":
 			_constellation(h, pts, t, kind, not head_only)
+		"ow_skin_snowy":
+			# 0.12b: полярная сова — тёмные крапинки-«галочки» и редкие снежинки-искры
+			for i in pts.size():
+				var p: Vector2 = pts[i]
+				h._T = Transform2D(-0.1 + hs(i, 5) * 0.2, p)
+				h._arc(Vector2.ZERO, 5.5, 3.5, 0.15 * PI, 0.85 * PI, Color("#3A3550", 0.7), 2.6, 6)
+				h._T = Transform2D.IDENTITY
+				var ph := fposmod(t * 0.35 + hs(i, 6) * 3.0, 3.0)
+				if i % 3 == 0 and ph < 0.5:
+					h._sparkle(p + Vector2(4, -6), 6.0 * sin(ph / 0.5 * PI), Color(0.85, 0.95, 1.0, 0.9))
 
 
 ## Окраска СОЗВЕЗДИЕ: линии созвездий по телу, звёзды загораются по очереди
@@ -183,8 +168,6 @@ static func comp_pos(id: String, a: Dictionary, t: float) -> Vector2:
 		"mini_planet":
 			var ang := t * 0.8
 			return a.center + Vector2(cos(ang) * a.size * 1.25, a.size * 0.42 + sin(ang) * a.size * 0.22)
-		"float_crystal":
-			return b + Vector2(0, sin(t * 1.6) * 8)
 		"seahorse":
 			return b + Vector2(sin(t * 0.8) * 8, sin(t * 1.4) * 9)
 	return b
@@ -205,7 +188,6 @@ static func companion(h, id: String, a: Dictionary, t: float, react: float, fron
 		"bubble_pet": _bubble_pet(h, p, t)
 		"moon_moth": _moon_moth(h, p, t)
 		"mini_planet": _mini_planet(h, p, t)
-		"float_crystal": _float_crystal(h, p, t)
 		"seahorse": _seahorse(h, p, t, react)
 	h._T = Transform2D.IDENTITY
 
@@ -310,50 +292,6 @@ static func _mini_planet(h, p: Vector2, t: float) -> void:
 	h._T = Transform2D.IDENTITY
 
 
-## Парящий кристалл: вращающаяся гранёная двойная пирамида
-static func _float_crystal(h, p: Vector2, t: float) -> void:
-	h._glow(p + Vector2(0, 34), 24, 7, Color(0.7, 0.45, 1.0, 0.35))
-	h._glow(p, 34, 40, Color(0.75, 0.55, 1.0, snappedf(0.2 + 0.1 * sin(t * 2.0), 0.04)))
-	var spin := t * 1.2
-	var w := 15.0
-	var top := p + Vector2(0, -30)
-	var bot := p + Vector2(0, 26)
-	var vs: Array = []
-	var ds: Array = []
-	for k in 6:
-		var ang := spin + k * TAU / 6.0
-		vs.append(p + Vector2(sin(ang) * w, cos(ang) * w * 0.22 - 2))
-		ds.append(cos(ang))
-	var base := Color("#B46CFF")
-	for k in 6:
-		var j := (k + 1) % 6
-		if ds[k] + ds[j] <= 0.0:
-			continue
-		var mid := spin + (k + 0.5) * TAU / 6.0
-		var light := 0.5 - 0.5 * sin(mid)
-		h.ci.draw_colored_polygon(PackedVector2Array([top, vs[k], vs[j]]), base.lerp(Color("#F0E0FF"), light * 0.8))
-		h.ci.draw_colored_polygon(PackedVector2Array([vs[k], bot, vs[j]]), base.darkened(0.25).lerp(Color("#D8B8FF"), light * 0.6))
-		h.ci.draw_line(vs[k], top, Color(1, 1, 1, 0.3), 1.0, true)
-	var outl := PackedVector2Array([top])
-	var right := -INF
-	var left := INF
-	var vr := p
-	var vl := p
-	for v in vs:
-		if v.x > right:
-			right = v.x
-			vr = v
-		if v.x < left:
-			left = v.x
-			vl = v
-	outl.append_array([vr, bot, vl, top])
-	h.ci.draw_polyline(outl, Color("#4A1F8A"), 1.8, true)
-	h._sparkle(p + Vector2(-5, -14), 3 + 4 * (0.5 + 0.5 * sin(t * 4.0)), Color.WHITE)
-	for i in 3:
-		var ang := t * 1.6 + i * TAU / 3.0
-		h._dot(p + Vector2(cos(ang) * 28, sin(ang) * 8 + 6), 2.0, Color(0.9, 0.8, 1.0, 0.5 + 0.5 * sin(ang)))
-
-
 ## МОРСКОЙ КОНЁК-СТРАЖ (легендарный): золотой конёк с плавником-веером и следом пузырьков;
 ## при победе (касании) делает сальто
 static func _seahorse(h, p: Vector2, t: float, react: float) -> void:
@@ -408,21 +346,15 @@ static func aura(h, id: String, a: Dictionary, t: float, react: float, front: bo
 	var c: Vector2 = a.center
 	var R: float = a.size
 	match id:
-		"aura_pollen": _rising(h, c, R, t, front, "pollen")
-		"aura_bubbles": _rising(h, c, R, t, front, "bubbles")
-		"aura_moonbeam": _moonbeam(h, c, R, t, front)
+		"aura_bubbles": _bubbles(h, c, R, t, front)
 		"aura_starfall": _starfall(h, c, R, t, front)
-		"aura_facets": _facets(h, c, R, t, front)
-		"wings_cascado": _wings(h, a, c, R, t, react, front)
 
 
-## Пыльца (золотые точки поднимаются) и Пузырьки
-static func _rising(h, c: Vector2, R: float, t: float, front: bool, kind: String) -> void:
+## Пузырьки поднимаются вокруг героя (сияние аксолотля «Пузырьки»)
+static func _bubbles(h, c: Vector2, R: float, t: float, front: bool) -> void:
 	if not front:
-		var col := Color(1.0, 0.82, 0.3, 0.2) if kind == "pollen" else Color(0.45, 0.9, 1.0, 0.18)
-		h._glow(c, R * 1.3, R * 1.35, col)
-	var n := 18 if kind == "pollen" else 12
-	for i in n:
+		h._glow(c, R * 1.3, R * 1.35, Color(0.45, 0.9, 1.0, 0.18))
+	for i in 12:
 		if (i % 2 == 1) != front:
 			continue
 		var per := 3.5 + hs(i, 1) * 2.5
@@ -431,54 +363,10 @@ static func _rising(h, c: Vector2, R: float, t: float, front: bool, kind: String
 		var y := c.y + R * 1.05 - ph * R * 2.5
 		var al := sin(ph * PI)
 		var p := Vector2(x, y)
-		if kind == "pollen":
-			var r := 2.4 + hs(i, 4) * 2.6
-			h._glow(p, r * 4, r * 4, Color(1.0, 0.85, 0.3, snappedf(0.35 * al, 0.05)))
-			h._dot(p, r, Color(1.0, 0.88, 0.35, al))
-			h._dot(p + Vector2(-r * 0.3, -r * 0.3), r * 0.4, Color(1, 1, 1, al))
-			if i % 5 == 0:
-				h._sparkle(p, r * 2.2 * al, Color(1, 1, 0.85, al))
-		else:
-			var r := 4.0 + hs(i, 4) * 8.0
-			h._arc(p, r, r, 0, TAU, Color(0.8, 0.97, 1.0, 0.75 * al), 1.8, 16)
-			h.ci.draw_circle(p, r, Color(0.6, 0.9, 1.0, 0.1 * al), true, -1.0, true)
-			h._oval(p + Vector2(-r * 0.4, -r * 0.4), r * 0.3, r * 0.18, Color(1, 1, 1, 0.85 * al), -0.6)
-
-
-## Лунный луч: столб серебристого света сверху, в нём медленно опускаются искры
-static func _moonbeam(h, c: Vector2, R: float, t: float, front: bool) -> void:
-	if not front:
-		var top := c.y - R * (1.5 if h._icon else 3.6)
-		var bot := c.y + R * 1.05
-		var pulse := 0.85 + 0.15 * sin(t * 1.3)
-		# столб света: мягкие края по бокам, сверху и снизу (сетка 5×3 с прозрачной каймой)
-		var cols_x := [-1.0, -0.45, 0.0, 0.45, 1.0]
-		var rows_y := [top, c.y - R * 0.6, bot]
-		var row_a := [0.0, 0.26 * pulse, 0.0]
-		var bp := PackedVector2Array()
-		var bc := PackedColorArray()
-		for ry in 3:
-			var yy: float = rows_y[ry]
-			var half := lerpf(R * 0.35, R * 1.2, (yy - top) / (bot - top))
-			for cx in cols_x:
-				bp.append(Vector2(c.x + cx * half, yy))
-				var ax: float = 1.0 - absf(cx)
-				bc.append(Color(0.88, 0.93, 1.0, row_a[ry] * (ax * 1.4 if absf(cx) < 0.9 else 0.0)))
-		var bi := PackedInt32Array()
-		for ry in 2:
-			for cx in 4:
-				var a0 := ry * 5 + cx
-				bi.append_array([a0, a0 + 1, a0 + 6, a0, a0 + 6, a0 + 5])
-		RenderingServer.canvas_item_add_triangle_array(h._rid, bi, bp, bc)
-		h._glow(c + Vector2(0, R * 1.0), R * 1.2, R * 0.22, Color(0.85, 0.92, 1.0, 0.4))
-		h._glow(c, R * 1.15, R * 1.25, Color(0.75, 0.82, 1.0, 0.16))
-	for i in 10:
-		if (i % 2 == 1) != front:
-			continue
-		var ph := fposmod(t * 0.12 + hs(i, 1), 1.0)
-		var p := Vector2(c.x + (hs(i, 2) - 0.5) * R * 1.6 * (0.4 + ph * 0.6), c.y - R * 1.6 + ph * R * 2.6)
-		var al := sin(ph * PI)
-		h._sparkle(p, (2.5 + hs(i, 3) * 3.5) * al + 0.5, Color(0.92, 0.96, 1.0, al))
+		var r := 4.0 + hs(i, 4) * 8.0
+		h._arc(p, r, r, 0, TAU, Color(0.8, 0.97, 1.0, 0.75 * al), 1.8, 16)
+		h.ci.draw_circle(p, r, Color(0.6, 0.9, 1.0, 0.1 * al), true, -1.0, true)
+		h._oval(p + Vector2(-r * 0.4, -r * 0.4), r * 0.3, r * 0.18, Color(1, 1, 1, 0.85 * al), -0.6)
 
 
 ## Звездопад: косые падающие звёзды с хвостами
@@ -502,139 +390,10 @@ static func _starfall(h, c: Vector2, R: float, t: float, front: bool) -> void:
 		h._dot(p, 2.5 * al + 0.5, Color.WHITE)
 
 
-## Грани: хоровод кристальных осколков вокруг героя
-static func _facets(h, c: Vector2, R: float, t: float, front: bool) -> void:
-	if not front:
-		h._glow(c, R * 1.25, R * 1.3, Color(0.7, 0.45, 1.0, 0.16))
-	var cols := [Color("#B46CFF"), Color("#FF7AD9"), Color("#7FE3FF")]
-	for i in 8:
-		var ang := t * 0.6 + i * TAU / 8.0
-		var z := sin(ang)
-		if (z > 0.0) != front:
-			continue
-		var p := c + Vector2(cos(ang) * R * 1.28, R * 0.25 + z * R * 0.3 + sin(t * 1.5 + i) * 6.0)
-		var s := (11.0 + 3.0 * z) * (0.9 + 0.2 * hs(i, 1))
-		var rot := t * 1.3 + i
-		var col: Color = cols[i % 3]
-		var tp := p + Vector2(0, -s * 1.5).rotated(rot)
-		var bt := p + Vector2(0, s * 1.2).rotated(rot)
-		var lf := p + Vector2(-s * 0.7, 0).rotated(rot)
-		var rt := p + Vector2(s * 0.7, 0).rotated(rot)
-		var al := 0.65 + 0.35 * z
-		h._glow(p, s * 2.2, s * 2.2, Sets.q(Color(col, 0.25 * al)))
-		h.ci.draw_colored_polygon(PackedVector2Array([tp, rt, p]), Color(col.lightened(0.5), al))
-		h.ci.draw_colored_polygon(PackedVector2Array([tp, p, lf]), Color(col.lightened(0.2), al))
-		h.ci.draw_colored_polygon(PackedVector2Array([lf, p, bt]), Color(col, al))
-		h.ci.draw_colored_polygon(PackedVector2Array([p, rt, bt]), Color(col.darkened(0.3), al))
-		h.ci.draw_polyline(PackedVector2Array([tp, rt, bt, lf, tp]), Color(col.darkened(0.5), al), 1.4, true)
-		if hs(i, 2) > 0.5:
-			h._sparkle(tp, s * 0.4 * (0.5 + 0.5 * sin(t * 4.0 + i)), Color(1, 1, 1, al))
-
-
-## Цвет пяти наборов, плавно бегущий по кругу (u — 0..5)
-static func set_flow(u: float) -> Color:
-	var i := int(floorf(u)) % 5
-	var k := u - floorf(u)
-	return (SET_COLS[i] as Color).lerp(SET_COLS[(i + 1) % 5], smoothstep(0.0, 1.0, k))
-
-
-## КРЫЛЬЯ КАСКАДА (супер-эксклюзив): большие полупрозрачные крылья из кристальных перьев,
-## по перьям бегут цвета пяти наборов, над головой вращается кольцо из 5 самоцветов;
-## при победе (касании) крылья взмахивают и осыпают искрами
-static func _wings(h, a: Dictionary, c: Vector2, R: float, t: float, react: float, front: bool) -> void:
-	var env := 0.0
-	if react >= 0.0 and react < 1.4:
-		env = sin(react / 1.4 * PI)
-	var flap := 0.06 * sin(t * 1.6) + env * 0.42 * sin(react * 11.0)
-	var top: Vector2 = a.top
-	var ring_c := top + Vector2(0, -R * 0.42)
-	if not front:
-		h._glow(c + Vector2(0, -R * 0.2), R * 1.9, R * 1.3, Sets.q(Color(set_flow(fposmod(t * 0.3, 5.0)), 0.13)))
-		# три ряда перьев: маховые (длинные) — сзади, кроющие (короткие) — спереди
-		var rows := [[6, 1.78, 0.68], [5, 1.28, 0.76], [4, 0.82, 0.88]]
-		for sx in [-1.0, 1.0]:
-			var root := c + Vector2(sx * R * 0.3, -R * 0.5)
-			# мягкое сияние под крылом, чтобы перья читались единым крылом
-			var wd := Vector2(cos(-0.35) * sx, sin(-0.35))
-			h._glow(root + wd * R * 0.95, R * 1.05, R * 0.7, Sets.q(Color(set_flow(fposmod(t * 0.4 + (0.0 if sx < 0 else 2.5), 5.0)), 0.3)), -0.35 * sx)
-			# «косточка» крыла: светлая кристальная дуга по верхнему краю
-			for ri in rows.size():
-				var cnt: int = rows[ri][0]
-				var L0: float = R * rows[ri][1]
-				for i in cnt:
-					var s := float(i) / (cnt - 1)
-					var ang := lerpf(-1.08, 0.62, s) - flap * (1.0 - s * 0.6)
-					var L := L0 * (1.0 - 0.36 * s) * (0.9 + 0.1 * sin(s * PI))
-					var d := Vector2(cos(ang), sin(ang))
-					d.x *= sx
-					var col := set_flow(fposmod(t * 0.5 - s * 1.6 - ri * 0.7 + (0.0 if sx < 0 else 0.3), 5.0))
-					var off := Vector2(sx * R * 0.1 * ri, -R * 0.02 * ri)
-					_feather(h, root + off, d, L, L * (0.22 - ri * 0.012), col, rows[ri][2])
-					if env > 0.05 and ri == 0:
-						var tip := root + d * L
-						for m in 2:
-							var fall := fposmod(react * 1.4 + m * 0.5 + i * 0.13, 1.0)
-							var sp := tip + Vector2(sin(i * 3.0 + m) * 10.0, fall * R * 0.8)
-							h._sparkle(sp, 5.0 * env * (1.0 - fall) + 0.5, Color(set_flow(i * 0.6 + m), env * (1.0 - fall)))
-			# «косточка» крыла: светлая кристальная дуга по верхнему краю, на сгибе — самоцвет
-			var a0 := -1.08 - flap
-			var d0 := Vector2(cos(a0) * sx, sin(a0))
-			var bone := PackedVector2Array()
-			for m in 9:
-				var u := m / 8.0
-				bone.append(root + d0 * R * 1.5 * u + Vector2(sx * sin(u * PI) * R * 0.12, -sin(u * PI) * R * 0.05))
-			h.ci.draw_polyline(bone, Color(1, 1, 1, 0.35), R * 0.07, true)
-			h.ci.draw_polyline(bone, Color(1, 0.97, 1.0, 0.9), R * 0.025, true)
-			var knee: Vector2 = bone[4]
-			h._glow(knee, R * 0.18, R * 0.18, Sets.q(Color(set_flow(fposmod(t * 0.6, 5.0)), 0.5)))
-			h._gem(knee, R * 0.06, set_flow(fposmod(t * 0.6, 5.0)))
-			h._ball(root, R * 0.1, R * 0.08, Color("#F4ECFF"), 0.0, 1.1, 0.9, 1.0)
-		_gem_ring(h, ring_c, R, t, false)
-	else:
-		_gem_ring(h, ring_c, R, t, true)
-
-
-## Кристальное перо: от корня p вдоль d длиной L
-static func _feather(h, p: Vector2, d: Vector2, L: float, W: float, col: Color, alpha: float) -> void:
-	var n := d.orthogonal()
-	var pts := PackedVector2Array([p, p + d * L * 0.3 + n * W, p + d * L * 0.8 + n * W * 0.75, p + d * L,
-		p + d * L * 0.82 - n * W * 0.6, p + d * L * 0.3 - n * W * 0.8])
-	var cols := PackedColorArray([Color(1, 1, 1, alpha * 0.45), Color(col.lerp(Color.WHITE, 0.4), alpha * 0.7), Color(col, alpha),
-		Color(col.lerp(Color.WHITE, 0.5), alpha), Color(col, alpha * 0.95), Color(col.lerp(Color.WHITE, 0.3), alpha * 0.7)])
-	h.ci.draw_polygon(pts, cols)
-	h.ci.draw_polyline(closed(pts), Color(1, 1, 1, 0.65), 1.6, true)
-	h.ci.draw_line(p + d * L * 0.1, p + d * L * 0.9, Color(1, 1, 1, 0.5), 1.4, true)
-	if alpha < 0.75:
-		h.ci.draw_line(p + d * L * 0.35 + n * W * 0.45, p + d * L * 0.7 + n * W * 0.4, Color(1, 1, 1, 0.55), 2.0, true)
-
-
 static func closed(p: PackedVector2Array) -> PackedVector2Array:
 	var o := p.duplicate()
 	o.append(p[0])
 	return o
-
-
-## Кольцо из пяти самоцветов наборов над головой (задняя половина — за героем)
-static func _gem_ring(h, rc: Vector2, R: float, t: float, front: bool) -> void:
-	var rx := R * 0.45
-	var ry := R * 0.11
-	var half := PackedVector2Array()
-	for i in 17:
-		var ang := (0.0 if front else PI) + PI * i / 16.0
-		half.append(rc + Vector2(cos(ang) * rx, sin(ang) * ry))
-	h.ci.draw_polyline(half, Color("#B8771A", 0.9), 4.0, true)
-	h.ci.draw_polyline(half, Color("#FFE27A", 0.95), 2.0, true)
-	for k in 5:
-		var ang := t * 1.1 + k * TAU / 5.0
-		var z := sin(ang)
-		if (z > 0.0) != front:
-			continue
-		var p := rc + Vector2(cos(ang) * rx, z * ry)
-		var s := R * 0.075 * (0.85 + 0.2 * z)
-		h._glow(p, s * 2.4, s * 2.4, Sets.q(Color(SET_COLS[k], 0.4)))
-		h._gem(p, s, SET_COLS[k])
-		if fposmod(t * 0.8 + k * 0.4, 2.0) < 0.3:
-			h._sparkle(p + Vector2(-s * 0.3, -s * 0.5), s * 0.9, Color.WHITE)
 
 
 # ==================== Эффект редкости на герое ====================
@@ -667,7 +426,7 @@ static func rarity_fx(h, outfit: Dictionary, a: Dictionary, t: float) -> void:
 				c = a.back + Vector2(-a.back_w * 0.62, a.back_w * 0.28)
 				rad = a.back_w * 0.22
 			"companion":
-				c = comp_pos(id, a, t)
+				c = comp_pos(Meta.draw_key(id), a, t)
 				rad = 26.0
 		var seed := float(slot.hash() % 97) * 0.1
 		if rar == "epic":

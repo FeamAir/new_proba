@@ -144,6 +144,8 @@ static func next_goal(meta, hero: String, total_stars: int, max_level: int) -> D
 	for it in Meta.ITEMS + Meta.DECOR:
 		if it.has("home") and it.home != hero:
 			continue
+		if it.has("hero") and it.hero != hero:
+			continue  # 0.12b: у каждого друга свои вещи
 		if meta.is_owned(it.id) or Meta.lock_reason(it.id, total_stars, max_level) != "":
 			continue
 		if best.is_empty() or int(it.price) < int(best.price):

@@ -40,7 +40,7 @@ func clear() -> void:
 func outfit(meta) -> Dictionary:
 	var o: Dictionary = meta.outfit()
 	if active() and not is_decor():
-		o[Meta.item(id).slot] = id
+		Meta.put_on(o, id)  # 0.12b: супер-эксклюзив снимает вещи своих слотов, и наоборот
 	return o
 
 
@@ -58,6 +58,8 @@ func status(meta, total_stars: int, max_level: int) -> String:
 		return "locked"
 	if Meta.lock_reason(id, total_stars, max_level) != "":
 		return "locked"
+	if Meta.owner_of(id) != "" and Meta.owner_of(id) != meta.hero:
+		return "locked"  # 0.12b: чужую вещь не купить
 	if meta.shards < price():
 		return "poor"
 	return "ok"

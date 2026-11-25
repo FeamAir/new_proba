@@ -15,102 +15,153 @@ const SLOTS := ["head", "eyes", "neck", "back", "skin", "companion", "aura"]
 ## 0.12: редкости вещей (от простой к самой ценной). Цвета рамок и эффекты — scripts/rarity.gd.
 const RARITIES := ["common", "rare", "epic", "legendary", "super"]
 
-## Вещи гардероба. price — цена в осколках; stars — нужно звёзд всего;
-## hall — нужно пройти зал с этим номером (1 = Аметистовый, ... 10 = Корона кристаллов).
-## Названия вещей, украшений, залов, героев — в scripts/i18n.gd (ключи item_<id>, hall_<n>...).
-## rarity — редкость (RARITIES); set — номер набора 1..5 (SETS); forge — награда кузницы
-## (не продаётся, куётся по рецепту RECIPES; hall у неё — зал, после которого открыт рецепт).
+## 0.12b: ГАРДЕРОБ ПО ГЕРОЯМ. Общих вещей нет: у каждого героя свой каталог из 19 вещей —
+## 3 тематических набора по 5 покупаемых вещей, 3 легендарные награды кузницы (по одной за набор)
+## и супер-эксклюзив (из трёх легендарных). Вещь надевается только на своего героя.
+## Поля: hero — чей; slot; price — цена в осколках; rarity — RARITIES; set — id набора (SETS);
+## hall — после какого зала открыта (0 — с начала); forge — награда кузницы (не продаётся);
+## draw — общий рисунок/палитра (вещь нарисована раньше, но теперь только у этого героя);
+## covers — у супер-эксклюзива: какие слоты он занимает целиком (их вещи снимаются).
+## Названия — scripts/i18n.gd, ключи item_<id>; рисунки — scripts/wardrobe_*.gd.
 const ITEMS := [
-	{"id": "bow", "slot": "head", "price": 20, "rarity": "common"},
-	{"id": "cap", "slot": "head", "price": 30, "rarity": "common"},
-	{"id": "miner", "slot": "head", "price": 60, "rarity": "rare"},
-	{"id": "wreath", "slot": "head", "price": 80, "hall": 2, "rarity": "rare"},
-	{"id": "crown", "slot": "head", "price": 150, "stars": 60, "rarity": "epic"},
-	{"id": "sunglasses", "slot": "eyes", "price": 40, "rarity": "common"},
-	{"id": "crystal_glasses", "slot": "eyes", "price": 50, "rarity": "common"},
-	{"id": "monocle", "slot": "eyes", "price": 70, "stars": 30, "rarity": "rare"},
-	{"id": "bowtie", "slot": "neck", "price": 30, "rarity": "common"},
-	{"id": "scarf", "slot": "neck", "price": 35, "rarity": "common"},
-	{"id": "necklace", "slot": "neck", "price": 90, "hall": 1, "rarity": "rare"},
-	{"id": "backpack", "slot": "back", "price": 45, "rarity": "common"},
-	{"id": "cape", "slot": "back", "price": 120, "hall": 3, "rarity": "epic"},
-	{"id": "skin_mint", "slot": "skin", "price": 60, "rarity": "rare"},
-	{"id": "skin_moon", "slot": "skin", "price": 80, "rarity": "rare"},
-	{"id": "skin_gold", "slot": "skin", "price": 200, "stars": 100, "rarity": "epic"},
-	# 0.12: набор 1 «Сад светлячков» (после зала 1)
-	{"id": "acorn_cap", "slot": "head", "price": 30, "hall": 1, "set": 1, "rarity": "common"},
-	{"id": "leaf_scarf", "slot": "neck", "price": 35, "hall": 1, "set": 1, "rarity": "common"},
-	{"id": "daisy_glasses", "slot": "eyes", "price": 70, "hall": 1, "set": 1, "rarity": "rare"},
-	{"id": "firefly", "slot": "companion", "price": 80, "hall": 1, "set": 1, "rarity": "rare"},
-	{"id": "dragonfly_wings", "slot": "back", "price": 90, "hall": 1, "set": 1, "rarity": "rare"},
-	{"id": "skin_moss", "slot": "skin", "price": 150, "hall": 1, "set": 1, "rarity": "epic"},
-	{"id": "bluebell_hat", "slot": "head", "price": 160, "hall": 1, "set": 1, "rarity": "epic"},
-	{"id": "aura_pollen", "slot": "aura", "price": 180, "hall": 1, "set": 1, "rarity": "epic"},
-	# набор 2 «Подводные сокровища» (после зала 2)
-	{"id": "shell_clip", "slot": "head", "price": 40, "hall": 2, "set": 2, "rarity": "common"},
-	{"id": "dive_mask", "slot": "eyes", "price": 45, "hall": 2, "set": 2, "rarity": "common"},
-	{"id": "pearl_necklace", "slot": "neck", "price": 90, "hall": 2, "set": 2, "rarity": "rare"},
-	{"id": "bubble_pet", "slot": "companion", "price": 90, "hall": 2, "set": 2, "rarity": "rare"},
-	{"id": "fin_cape", "slot": "back", "price": 100, "hall": 2, "set": 2, "rarity": "rare"},
-	{"id": "skin_pearl", "slot": "skin", "price": 180, "hall": 2, "set": 2, "rarity": "epic"},
-	{"id": "coral_tiara", "slot": "head", "price": 180, "hall": 2, "set": 2, "rarity": "epic"},
-	{"id": "aura_bubbles", "slot": "aura", "price": 200, "hall": 2, "set": 2, "rarity": "epic"},
-	# набор 3 «Лунный бал» (после зала 3)
-	{"id": "moth_tie", "slot": "neck", "price": 40, "hall": 3, "set": 3, "rarity": "common"},
-	{"id": "masquerade", "slot": "eyes", "price": 45, "hall": 3, "set": 3, "rarity": "common"},
-	{"id": "top_hat", "slot": "head", "price": 100, "hall": 3, "set": 3, "rarity": "rare"},
-	{"id": "moon_moth", "slot": "companion", "price": 100, "hall": 3, "set": 3, "rarity": "rare"},
-	{"id": "ball_cloak", "slot": "back", "price": 110, "hall": 3, "set": 3, "rarity": "rare"},
-	{"id": "star_lorgnette", "slot": "eyes", "price": 180, "hall": 3, "set": 3, "rarity": "epic"},
-	{"id": "skin_midnight", "slot": "skin", "price": 200, "hall": 3, "set": 3, "rarity": "epic"},
-	{"id": "aura_moonbeam", "slot": "aura", "price": 220, "hall": 3, "set": 3, "rarity": "epic"},
-	# набор 4 «Звёздный путешественник» (после зала 4)
-	{"id": "flight_goggles", "slot": "eyes", "price": 50, "hall": 4, "set": 4, "rarity": "common"},
-	{"id": "comet_scarf", "slot": "neck", "price": 50, "hall": 4, "set": 4, "rarity": "common"},
-	{"id": "mini_planet", "slot": "companion", "price": 110, "hall": 4, "set": 4, "rarity": "rare"},
-	{"id": "space_helmet", "slot": "head", "price": 120, "hall": 4, "set": 4, "rarity": "rare"},
-	{"id": "rocket_pack", "slot": "back", "price": 120, "hall": 4, "set": 4, "rarity": "rare"},
-	{"id": "star_compass", "slot": "neck", "price": 200, "hall": 4, "set": 4, "rarity": "epic"},
-	{"id": "skin_nebula", "slot": "skin", "price": 220, "hall": 4, "set": 4, "rarity": "epic"},
-	{"id": "aura_starfall", "slot": "aura", "price": 240, "hall": 4, "set": 4, "rarity": "epic"},
-	# набор 5 «Кристальный король» (после зала 5; в рецепт входит и корона)
-	{"id": "amethyst_monocle", "slot": "eyes", "price": 60, "hall": 5, "set": 5, "rarity": "common"},
-	{"id": "ermine_collar", "slot": "neck", "price": 60, "hall": 5, "set": 5, "rarity": "common"},
-	{"id": "float_crystal", "slot": "companion", "price": 130, "hall": 5, "set": 5, "rarity": "rare"},
-	{"id": "crystal_diadem", "slot": "head", "price": 130, "hall": 5, "set": 5, "rarity": "rare"},
-	{"id": "royal_mantle", "slot": "back", "price": 140, "hall": 5, "set": 5, "rarity": "rare"},
-	{"id": "skin_amethyst", "slot": "skin", "price": 240, "hall": 5, "set": 5, "rarity": "epic"},
-	{"id": "aura_facets", "slot": "aura", "price": 260, "hall": 5, "set": 5, "rarity": "epic"},
-	# награды Кристальной кузницы: легендарные и супер-эксклюзив (не продаются)
-	{"id": "firefly_crown", "slot": "head", "hall": 1, "set": 1, "rarity": "legendary", "forge": true},
-	{"id": "seahorse", "slot": "companion", "hall": 2, "set": 2, "rarity": "legendary", "forge": true},
-	{"id": "fullmoon_mantle", "slot": "back", "hall": 3, "set": 3, "rarity": "legendary", "forge": true},
-	{"id": "skin_constellation", "slot": "skin", "hall": 4, "set": 4, "rarity": "legendary", "forge": true},
-	{"id": "mountain_heart", "slot": "neck", "hall": 5, "set": 5, "rarity": "legendary", "forge": true},
-	{"id": "wings_cascado", "slot": "aura", "hall": 5, "rarity": "super", "forge": true},
+	# ---------- Совёнок: учёный и ночной волшебник ----------
+	{"id": "ow_mortarboard", "hero": "owl", "slot": "head", "price": 20, "rarity": "common", "set": "owl_library", "hall": 0},
+	{"id": "ow_halfglasses", "hero": "owl", "slot": "eyes", "price": 30, "rarity": "common", "set": "owl_library", "hall": 0},
+	{"id": "ow_scholar_scarf", "hero": "owl", "slot": "neck", "price": 50, "rarity": "rare", "set": "owl_library", "hall": 0},
+	{"id": "ow_book", "hero": "owl", "slot": "companion", "price": 70, "rarity": "rare", "set": "owl_library", "hall": 0},
+	{"id": "ow_skin_snowy", "hero": "owl", "slot": "skin", "price": 120, "rarity": "epic", "set": "owl_library", "hall": 0},
+	{"id": "ow_quill", "hero": "owl", "slot": "head", "price": 45, "rarity": "common", "set": "owl_night", "hall": 3},
+	{"id": "ow_star_scarf", "hero": "owl", "slot": "neck", "price": 60, "rarity": "common", "set": "owl_night", "hall": 3, "draw": "comet_scarf"},
+	{"id": "ow_lantern", "hero": "owl", "slot": "back", "price": 85, "rarity": "rare", "set": "owl_night", "hall": 3},
+	{"id": "ow_moth", "hero": "owl", "slot": "companion", "price": 110, "rarity": "rare", "set": "owl_night", "hall": 3, "draw": "moon_moth"},
+	{"id": "ow_night_goggles", "hero": "owl", "slot": "eyes", "price": 160, "rarity": "epic", "set": "owl_night", "hall": 3},
+	{"id": "ow_astrolabe", "hero": "owl", "slot": "neck", "price": 65, "rarity": "common", "set": "owl_observatory", "hall": 5, "draw": "star_compass"},
+	{"id": "ow_lorgnette", "hero": "owl", "slot": "eyes", "price": 85, "rarity": "common", "set": "owl_observatory", "hall": 5, "draw": "star_lorgnette"},
+	{"id": "ow_dome_hat", "hero": "owl", "slot": "head", "price": 115, "rarity": "rare", "set": "owl_observatory", "hall": 5},
+	{"id": "ow_planet", "hero": "owl", "slot": "companion", "price": 150, "rarity": "rare", "set": "owl_observatory", "hall": 5, "draw": "mini_planet"},
+	{"id": "ow_aura_starfall", "hero": "owl", "slot": "aura", "price": 230, "rarity": "epic", "set": "owl_observatory", "hall": 5, "draw": "aura_starfall"},
+	{"id": "ow_page_whirl", "hero": "owl", "slot": "aura", "rarity": "legendary", "set": "owl_library", "hall": 0, "forge": true},
+	{"id": "ow_skin_starry", "hero": "owl", "slot": "skin", "rarity": "legendary", "set": "owl_night", "hall": 3, "forge": true, "draw": "skin_constellation"},
+	{"id": "ow_comet", "hero": "owl", "slot": "companion", "rarity": "legendary", "set": "owl_observatory", "hall": 5, "forge": true},
+	{"id": "ow_stargazer", "hero": "owl", "slot": "aura", "rarity": "super", "hall": 5, "forge": true, "covers": ["head", "back"]},
+	# ---------- Аксолотль: житель глубин ----------
+	{"id": "ax_starfish", "hero": "axolotl", "slot": "head", "price": 20, "rarity": "common", "set": "axo_reef", "hall": 0},
+	{"id": "ax_dive_mask", "hero": "axolotl", "slot": "eyes", "price": 30, "rarity": "common", "set": "axo_reef", "hall": 0, "draw": "dive_mask"},
+	{"id": "ax_coral_beads", "hero": "axolotl", "slot": "neck", "price": 50, "rarity": "rare", "set": "axo_reef", "hall": 0},
+	{"id": "ax_bubble_pet", "hero": "axolotl", "slot": "companion", "price": 70, "rarity": "rare", "set": "axo_reef", "hall": 0, "draw": "bubble_pet"},
+	{"id": "ax_coral_tiara", "hero": "axolotl", "slot": "head", "price": 120, "rarity": "epic", "set": "axo_reef", "hall": 0, "draw": "coral_tiara"},
+	{"id": "ax_gill_pearls", "hero": "axolotl", "slot": "head", "price": 45, "rarity": "common", "set": "axo_lagoon", "hall": 3},
+	{"id": "ax_pearls", "hero": "axolotl", "slot": "neck", "price": 60, "rarity": "common", "set": "axo_lagoon", "hall": 3, "draw": "pearl_necklace"},
+	{"id": "ax_shell_pack", "hero": "axolotl", "slot": "back", "price": 85, "rarity": "rare", "set": "axo_lagoon", "hall": 3},
+	{"id": "ax_aura_bubbles", "hero": "axolotl", "slot": "aura", "price": 110, "rarity": "rare", "set": "axo_lagoon", "hall": 3, "draw": "aura_bubbles"},
+	{"id": "ax_skin_pearl", "hero": "axolotl", "slot": "skin", "price": 160, "rarity": "epic", "set": "axo_lagoon", "hall": 3, "draw": "skin_pearl"},
+	{"id": "ax_black_pearl", "hero": "axolotl", "slot": "neck", "price": 65, "rarity": "common", "set": "axo_abyss", "hall": 5},
+	{"id": "ax_porthole", "hero": "axolotl", "slot": "eyes", "price": 85, "rarity": "common", "set": "axo_abyss", "hall": 5},
+	{"id": "ax_angler", "hero": "axolotl", "slot": "head", "price": 115, "rarity": "rare", "set": "axo_abyss", "hall": 5},
+	{"id": "ax_squid", "hero": "axolotl", "slot": "companion", "price": 150, "rarity": "rare", "set": "axo_abyss", "hall": 5},
+	{"id": "ax_skin_abyss", "hero": "axolotl", "slot": "skin", "price": 230, "rarity": "epic", "set": "axo_abyss", "hall": 5, "draw": "skin_midnight"},
+	{"id": "ax_seahorse", "hero": "axolotl", "slot": "companion", "rarity": "legendary", "set": "axo_reef", "hall": 0, "forge": true, "draw": "seahorse"},
+	{"id": "ax_wave_cape", "hero": "axolotl", "slot": "back", "rarity": "legendary", "set": "axo_lagoon", "hall": 3, "forge": true, "draw": "fin_cape"},
+	{"id": "ax_plankton", "hero": "axolotl", "slot": "aura", "rarity": "legendary", "set": "axo_abyss", "hall": 5, "forge": true},
+	{"id": "ax_abyssal", "hero": "axolotl", "slot": "aura", "rarity": "super", "hall": 5, "forge": true, "covers": ["head"]},
+	# ---------- Щенок: весёлый спортсмен и приключенец ----------
+	{"id": "pu_cap", "hero": "puppy", "slot": "head", "price": 20, "rarity": "common", "set": "pup_playground", "hall": 0},
+	{"id": "pu_whistle", "hero": "puppy", "slot": "neck", "price": 30, "rarity": "common", "set": "pup_playground", "hall": 0},
+	{"id": "pu_visor", "hero": "puppy", "slot": "eyes", "price": 50, "rarity": "rare", "set": "pup_playground", "hall": 0},
+	{"id": "pu_ball", "hero": "puppy", "slot": "companion", "price": 70, "rarity": "rare", "set": "pup_playground", "hall": 0},
+	{"id": "pu_skin_corgi", "hero": "puppy", "slot": "skin", "price": 120, "rarity": "epic", "set": "pup_playground", "hall": 0, "draw": "skin_moon"},
+	{"id": "pu_explorer_hat", "hero": "puppy", "slot": "head", "price": 45, "rarity": "common", "set": "pup_hike", "hall": 3},
+	{"id": "pu_bone_collar", "hero": "puppy", "slot": "neck", "price": 60, "rarity": "common", "set": "pup_hike", "hall": 3},
+	{"id": "pu_aviators", "hero": "puppy", "slot": "eyes", "price": 85, "rarity": "rare", "set": "pup_hike", "hall": 3},
+	{"id": "pu_firefly", "hero": "puppy", "slot": "companion", "price": 110, "rarity": "rare", "set": "pup_hike", "hall": 3, "draw": "firefly"},
+	{"id": "pu_backpack", "hero": "puppy", "slot": "back", "price": 160, "rarity": "epic", "set": "pup_hike", "hall": 3},
+	{"id": "pu_bolt_band", "hero": "puppy", "slot": "head", "price": 65, "rarity": "common", "set": "pup_hero", "hall": 5},
+	{"id": "pu_hero_bandana", "hero": "puppy", "slot": "neck", "price": 85, "rarity": "common", "set": "pup_hero", "hall": 5},
+	{"id": "pu_jetpack", "hero": "puppy", "slot": "back", "price": 115, "rarity": "rare", "set": "pup_hero", "hall": 5, "draw": "rocket_pack"},
+	{"id": "pu_robo", "hero": "puppy", "slot": "companion", "price": 150, "rarity": "rare", "set": "pup_hero", "hall": 5},
+	{"id": "pu_skin_dalmatian", "hero": "puppy", "slot": "skin", "price": 230, "rarity": "epic", "set": "pup_hero", "hall": 5, "draw": "skin_gold"},
+	{"id": "pu_frisbee", "hero": "puppy", "slot": "companion", "rarity": "legendary", "set": "pup_playground", "hall": 0, "forge": true},
+	{"id": "pu_kite", "hero": "puppy", "slot": "back", "rarity": "legendary", "set": "pup_hike", "hall": 3, "forge": true},
+	{"id": "pu_aura_bolts", "hero": "puppy", "slot": "aura", "rarity": "legendary", "set": "pup_hero", "hall": 5, "forge": true},
+	{"id": "pu_hero", "hero": "puppy", "slot": "aura", "rarity": "super", "hall": 5, "forge": true, "covers": ["back", "eyes", "neck"]},
+	# ---------- Котик: уютный модник ----------
+	{"id": "ki_pompom_hat", "hero": "kitten", "slot": "head", "price": 20, "rarity": "common", "set": "kit_cozy", "hall": 0},
+	{"id": "ki_bell_bow", "hero": "kitten", "slot": "neck", "price": 30, "rarity": "common", "set": "kit_cozy", "hall": 0},
+	{"id": "ki_yarn", "hero": "kitten", "slot": "companion", "price": 50, "rarity": "rare", "set": "kit_cozy", "hall": 0},
+	{"id": "ki_sweater", "hero": "kitten", "slot": "back", "price": 70, "rarity": "rare", "set": "kit_cozy", "hall": 0},
+	{"id": "ki_skin_tabby", "hero": "kitten", "slot": "skin", "price": 120, "rarity": "epic", "set": "kit_cozy", "hall": 0, "draw": "skin_mint"},
+	{"id": "ki_beret", "hero": "kitten", "slot": "head", "price": 45, "rarity": "common", "set": "kit_paris", "hall": 3},
+	{"id": "ki_heart_glasses", "hero": "kitten", "slot": "eyes", "price": 60, "rarity": "common", "set": "kit_paris", "hall": 3, "draw": "sunglasses"},
+	{"id": "ki_lace_collar", "hero": "kitten", "slot": "neck", "price": 85, "rarity": "rare", "set": "kit_paris", "hall": 3},
+	{"id": "ki_tail_bow", "hero": "kitten", "slot": "back", "price": 110, "rarity": "rare", "set": "kit_paris", "hall": 3},
+	{"id": "ki_aura_petals", "hero": "kitten", "slot": "aura", "price": 160, "rarity": "epic", "set": "kit_paris", "hall": 3},
+	{"id": "ki_masquerade", "hero": "kitten", "slot": "eyes", "price": 65, "rarity": "common", "set": "kit_ball", "hall": 5, "draw": "masquerade"},
+	{"id": "ki_cameo", "hero": "kitten", "slot": "neck", "price": 85, "rarity": "common", "set": "kit_ball", "hall": 5},
+	{"id": "ki_feather_hat", "hero": "kitten", "slot": "head", "price": 115, "rarity": "rare", "set": "kit_ball", "hall": 5},
+	{"id": "ki_ball_cloak", "hero": "kitten", "slot": "back", "price": 150, "rarity": "rare", "set": "kit_ball", "hall": 5, "draw": "ball_cloak"},
+	{"id": "ki_skin_siamese", "hero": "kitten", "slot": "skin", "price": 230, "rarity": "epic", "set": "kit_ball", "hall": 5, "draw": "skin_moon"},
+	{"id": "ki_teacup", "hero": "kitten", "slot": "companion", "rarity": "legendary", "set": "kit_cozy", "hall": 0, "forge": true},
+	{"id": "ki_parasol", "hero": "kitten", "slot": "back", "rarity": "legendary", "set": "kit_paris", "hall": 3, "forge": true},
+	{"id": "ki_aura_fireworks", "hero": "kitten", "slot": "aura", "rarity": "legendary", "set": "kit_ball", "hall": 5, "forge": true},
+	{"id": "ki_starry", "hero": "kitten", "slot": "aura", "rarity": "super", "hall": 5, "forge": true, "covers": ["head"]},
 ]
 
-## 0.12: наборы (названия — i18n set_<id>); col — цвет значка набора.
+## Наборы героев (названия — i18n set_<id>): n — номер набора у героя (1..3), hall — после какого
+## зала открыт (0 — с начала), col — цвет значка, icon — рисунок значка (screens.gd, set_badge).
 const SETS := [
-	{"id": "firefly", "hall": 1, "col": Color("#C6F04A")},
-	{"id": "sunken", "hall": 2, "col": Color("#3FE0D0")},
-	{"id": "moon", "hall": 3, "col": Color("#B9C4FF")},
-	{"id": "voyager", "hall": 4, "col": Color("#FF7AD9")},
-	{"id": "crystal", "hall": 5, "col": Color("#C08BFF")},
+	{"id": "owl_library", "hero": "owl", "n": 1, "hall": 0, "col": Color("#FFCB6B"), "icon": "book"},
+	{"id": "owl_night", "hero": "owl", "n": 2, "hall": 3, "col": Color("#9FB4FF"), "icon": "moon"},
+	{"id": "owl_observatory", "hero": "owl", "n": 3, "hall": 5, "col": Color("#C08BFF"), "icon": "planet"},
+	{"id": "axo_reef", "hero": "axolotl", "n": 1, "hall": 0, "col": Color("#FF8A6B"), "icon": "star"},
+	{"id": "axo_lagoon", "hero": "axolotl", "n": 2, "hall": 3, "col": Color("#FFC2E4"), "icon": "pearl"},
+	{"id": "axo_abyss", "hero": "axolotl", "n": 3, "hall": 5, "col": Color("#3FE0D0"), "icon": "drop"},
+	{"id": "pup_playground", "hero": "puppy", "n": 1, "hall": 0, "col": Color("#FFB547"), "icon": "ball"},
+	{"id": "pup_hike", "hero": "puppy", "n": 2, "hall": 3, "col": Color("#7CD86B"), "icon": "pine"},
+	{"id": "pup_hero", "hero": "puppy", "n": 3, "hall": 5, "col": Color("#FF5F6D"), "icon": "bolt"},
+	{"id": "kit_cozy", "hero": "kitten", "n": 1, "hall": 0, "col": Color("#FF9FC0"), "icon": "yarn"},
+	{"id": "kit_paris", "hero": "kitten", "n": 2, "hall": 3, "col": Color("#FF7AD9"), "icon": "heart"},
+	{"id": "kit_ball", "hero": "kitten", "n": 3, "hall": 5, "col": Color("#B9A4FF"), "icon": "mask"},
 ]
 
-## Рецепты кузницы: needs — вещи (не тратятся, остаются у игрока), cost — осколки,
-## hall — нужно пройти зал. Последний — супер-эксклюзив из пяти легендарных.
+## Рецепты кузницы: needs — вещи (не тратятся, остаются у игрока), cost — осколки, hall — нужно
+## пройти зал. Награда набора — из всех 5 его вещей; супер-эксклюзив героя (set "") — из трёх легендарных.
 const RECIPES := [
-	{"id": "firefly_crown", "set": 1, "hall": 1, "cost": 50, "needs": ["leaf_scarf", "daisy_glasses", "firefly"]},
-	{"id": "seahorse", "set": 2, "hall": 2, "cost": 80, "needs": ["shell_clip", "dive_mask", "pearl_necklace", "bubble_pet"]},
-	{"id": "fullmoon_mantle", "set": 3, "hall": 3, "cost": 100, "needs": ["masquerade", "top_hat", "moon_moth", "ball_cloak"]},
-	{"id": "skin_constellation", "set": 4, "hall": 4, "cost": 140, "needs": ["flight_goggles", "comet_scarf", "mini_planet", "space_helmet", "rocket_pack"]},
-	{"id": "mountain_heart", "set": 5, "hall": 5, "cost": 180, "needs": ["amethyst_monocle", "ermine_collar", "float_crystal", "royal_mantle", "crown"]},
-	{"id": "wings_cascado", "set": 0, "hall": 5, "cost": 300, "needs": ["firefly_crown", "seahorse", "fullmoon_mantle", "skin_constellation", "mountain_heart"]},
+	{"id": "ow_page_whirl", "hero": "owl", "set": "owl_library", "hall": 0, "cost": 120, "needs": ["ow_mortarboard", "ow_halfglasses", "ow_scholar_scarf", "ow_book", "ow_skin_snowy"]},
+	{"id": "ow_skin_starry", "hero": "owl", "set": "owl_night", "hall": 3, "cost": 180, "needs": ["ow_quill", "ow_star_scarf", "ow_lantern", "ow_moth", "ow_night_goggles"]},
+	{"id": "ow_comet", "hero": "owl", "set": "owl_observatory", "hall": 5, "cost": 250, "needs": ["ow_astrolabe", "ow_lorgnette", "ow_dome_hat", "ow_planet", "ow_aura_starfall"]},
+	{"id": "ow_stargazer", "hero": "owl", "set": "", "hall": 5, "cost": 450, "needs": ["ow_page_whirl", "ow_skin_starry", "ow_comet"]},
+	{"id": "ax_seahorse", "hero": "axolotl", "set": "axo_reef", "hall": 0, "cost": 120, "needs": ["ax_starfish", "ax_dive_mask", "ax_coral_beads", "ax_bubble_pet", "ax_coral_tiara"]},
+	{"id": "ax_wave_cape", "hero": "axolotl", "set": "axo_lagoon", "hall": 3, "cost": 180, "needs": ["ax_gill_pearls", "ax_pearls", "ax_shell_pack", "ax_aura_bubbles", "ax_skin_pearl"]},
+	{"id": "ax_plankton", "hero": "axolotl", "set": "axo_abyss", "hall": 5, "cost": 250, "needs": ["ax_black_pearl", "ax_porthole", "ax_angler", "ax_squid", "ax_skin_abyss"]},
+	{"id": "ax_abyssal", "hero": "axolotl", "set": "", "hall": 5, "cost": 450, "needs": ["ax_seahorse", "ax_wave_cape", "ax_plankton"]},
+	{"id": "pu_frisbee", "hero": "puppy", "set": "pup_playground", "hall": 0, "cost": 120, "needs": ["pu_cap", "pu_whistle", "pu_visor", "pu_ball", "pu_skin_corgi"]},
+	{"id": "pu_kite", "hero": "puppy", "set": "pup_hike", "hall": 3, "cost": 180, "needs": ["pu_explorer_hat", "pu_bone_collar", "pu_aviators", "pu_firefly", "pu_backpack"]},
+	{"id": "pu_aura_bolts", "hero": "puppy", "set": "pup_hero", "hall": 5, "cost": 250, "needs": ["pu_bolt_band", "pu_hero_bandana", "pu_jetpack", "pu_robo", "pu_skin_dalmatian"]},
+	{"id": "pu_hero", "hero": "puppy", "set": "", "hall": 5, "cost": 450, "needs": ["pu_frisbee", "pu_kite", "pu_aura_bolts"]},
+	{"id": "ki_teacup", "hero": "kitten", "set": "kit_cozy", "hall": 0, "cost": 120, "needs": ["ki_pompom_hat", "ki_bell_bow", "ki_yarn", "ki_sweater", "ki_skin_tabby"]},
+	{"id": "ki_parasol", "hero": "kitten", "set": "kit_paris", "hall": 3, "cost": 180, "needs": ["ki_beret", "ki_heart_glasses", "ki_lace_collar", "ki_tail_bow", "ki_aura_petals"]},
+	{"id": "ki_aura_fireworks", "hero": "kitten", "set": "kit_ball", "hall": 5, "cost": 250, "needs": ["ki_masquerade", "ki_cameo", "ki_feather_hat", "ki_ball_cloak", "ki_skin_siamese"]},
+	{"id": "ki_starry", "hero": "kitten", "set": "", "hall": 5, "cost": 450, "needs": ["ki_teacup", "ki_parasol", "ki_aura_fireworks"]},
 ]
 ## 0.12: доход за глубокие залы — +2 осколка к первой победе за каждый зал глубже первого
 const HALL_BONUS := 2
+
+## 0.12b: цены старых общих вещей (версии 0.6–0.12) и плата за ковку старых наград — по ним
+## при загрузке старого сохранения возвращаются осколки (вещей больше нет).
+const LEGACY_PRICES := {
+	"bow": 20, "cap": 30, "miner": 60, "wreath": 80, "crown": 150, "sunglasses": 40, "crystal_glasses": 50,
+	"monocle": 70, "bowtie": 30, "scarf": 35, "necklace": 90, "backpack": 45, "cape": 120,
+	"skin_mint": 60, "skin_moon": 80, "skin_gold": 200,
+	"acorn_cap": 30, "leaf_scarf": 35, "daisy_glasses": 70, "firefly": 80, "dragonfly_wings": 90, "skin_moss": 150,
+	"bluebell_hat": 160, "aura_pollen": 180, "shell_clip": 40, "dive_mask": 45, "pearl_necklace": 90, "bubble_pet": 90,
+	"fin_cape": 100, "skin_pearl": 180, "coral_tiara": 180, "aura_bubbles": 200, "moth_tie": 40, "masquerade": 45,
+	"top_hat": 100, "moon_moth": 100, "ball_cloak": 110, "star_lorgnette": 180, "skin_midnight": 200, "aura_moonbeam": 220,
+	"flight_goggles": 50, "comet_scarf": 50, "mini_planet": 110, "space_helmet": 120, "rocket_pack": 120,
+	"star_compass": 200, "skin_nebula": 220, "aura_starfall": 240, "amethyst_monocle": 60, "ermine_collar": 60,
+	"float_crystal": 130, "crystal_diadem": 130, "royal_mantle": 140, "skin_amethyst": 240, "aura_facets": 260,
+}
+const LEGACY_FORGE := {"firefly_crown": 50, "seahorse": 80, "fullmoon_mantle": 100, "skin_constellation": 140,
+	"mountain_heart": 180, "wings_cascado": 300}
 
 ## Украшения дома: у каждого героя свой дом и свой набор. spots — куда можно поставить:
 ## floor (пол слева/справа), wall (стена или ветка слева/справа), hang (подвес сверху;
@@ -200,6 +251,11 @@ var equipped: Dictionary = {}  # слот -> id
 var decor_owned: Array = []    # id купленных украшений (свои для каждого дома)
 var decor_placed: Dictionary = {"owl": {}, "axolotl": {}, "puppy": {}, "kitten": {}}  # дом -> {место -> id}
 var forged: Array = []         # 0.12: id скованных в кузнице вещей
+## 0.12b: осколки, вернувшиеся при обновлении старого сохранения (общие вещи убраны);
+## пока не 0 — один раз показывается сообщение «Гардероб обновлён» (scripts/notice_ui.gd).
+var notice_refund := 0
+## Сколько осколков вернула последняя загрузка (старые вещи); не 0 — игра сразу сохраняется.
+var migrated := 0
 
 
 # ---------- Залы ----------
@@ -298,8 +354,39 @@ static func home_stage(max_level: int) -> int:
 	return stage
 
 
-static func items_in(slot: String) -> Array:
-	return ITEMS.filter(func(it): return it.slot == slot)
+## Вещи героя в слоте (0.12b: у каждого героя свои), в порядке таблицы.
+static func items_in(slot: String, kind: String) -> Array:
+	return ITEMS.filter(func(it): return it.slot == slot and it.hero == kind)
+
+
+## Все 19 вещей героя.
+static func hero_items(kind: String) -> Array:
+	return ITEMS.filter(func(it): return it.hero == kind)
+
+
+## Чья вещь ("" — украшение дома или нет такой).
+static func owner_of(id: String) -> String:
+	return item(id).get("hero", "")
+
+
+## Какой рисунок/палитра у вещи (поле draw — вещь, нарисованная раньше; иначе сам id).
+static func draw_key(id: String) -> String:
+	return item(id).get("draw", id) if id != "" else ""
+
+
+## Надеть вещь id в наряд o (словарь слот -> id) с учётом супер-эксклюзива: он занимает
+## слоты covers (их вещи снимаются), а вещь в занятый слот снимает его. Меняет o.
+static func put_on(o: Dictionary, id: String) -> void:
+	var it := item(id)
+	if not it.has("slot"):
+		return
+	for s in it.get("covers", []):
+		o.erase(s)
+	for s in o.keys():
+		var cv: Array = item(o[s]).get("covers", [])
+		if cv.has(it.slot):
+			o.erase(s)
+	o[it.slot] = id
 
 
 ## Пустая строка — условие выполнено; иначе — почему вещь закрыта.
@@ -316,7 +403,7 @@ static func lock_reason(id: String, total_stars: int, max_level: int) -> String:
 	return ""
 
 
-# ---------- 0.12: редкости, наборы, кузница, коллекция ----------
+# ---------- 0.12: редкости, наборы, кузница, коллекция (0.12b — у каждого героя свои) ----------
 
 static func rarity(id: String) -> String:
 	return item(id).get("rarity", "common")
@@ -330,9 +417,16 @@ static func is_forge(id: String) -> bool:
 	return item(id).get("forge", false)
 
 
-## Номер набора вещи (0 — не из набора).
+## Номер набора вещи в общем списке SETS (1..12; 0 — не из набора: супер-эксклюзив).
 static func set_of(id: String) -> int:
-	return int(item(id).get("set", 0))
+	return set_index(item(id).get("set", ""))
+
+
+static func set_index(sid: String) -> int:
+	for i in SETS.size():
+		if SETS[i].id == sid:
+			return i + 1
+	return 0
 
 
 static func set_info(n: int) -> Dictionary:
@@ -343,9 +437,19 @@ static func set_title(n: int) -> String:
 	return I18n.t("set_" + SETS[n - 1].id) if n >= 1 and n <= SETS.size() else ""
 
 
+## Наборы героя (номера в SETS), по порядку 1..3.
+static func hero_sets(kind: String) -> Array:
+	var out: Array = []
+	for i in SETS.size():
+		if SETS[i].hero == kind:
+			out.append(i + 1)
+	return out
+
+
 ## Вещи набора n (без награды кузницы), в порядке таблицы.
 static func set_items(n: int) -> Array:
-	return ITEMS.filter(func(it): return int(it.get("set", 0)) == n and not it.get("forge", false))
+	var sid: String = set_info(n).get("id", "?")
+	return ITEMS.filter(func(it): return it.get("set", "") == sid and not it.get("forge", false))
 
 
 static func recipe(id: String) -> Dictionary:
@@ -355,23 +459,32 @@ static func recipe(id: String) -> Dictionary:
 	return {}
 
 
-## Рецепт набора n (1..5); 0 — супер-эксклюзив «Крылья Каскада».
+## Рецепт награды набора n (номер в SETS).
 static func recipe_for_set(n: int) -> Dictionary:
+	var sid: String = set_info(n).get("id", "?")
 	for r in RECIPES:
-		if int(r.set) == n:
+		if r.set == sid:
 			return r
 	return {}
 
 
-## Всего вещей в коллекции (гардероб, без украшений дома).
-static func collection_total() -> int:
-	return ITEMS.size()
+## Рецепт супер-эксклюзива героя (из трёх легендарных).
+static func super_recipe(kind: String) -> Dictionary:
+	for r in RECIPES:
+		if r.hero == kind and r.set == "":
+			return r
+	return {}
 
 
-## Сколько вещей коллекции у игрока (купленные и скованные).
+## Всего вещей в коллекции героя (19).
+static func collection_total(kind := "owl") -> int:
+	return hero_items(kind).size()
+
+
+## Сколько вещей коллекции текущего героя у игрока (купленные и скованные).
 func collection_count() -> int:
 	var n := 0
-	for it in ITEMS:
+	for it in hero_items(hero if hero != "" else "owl"):
 		if is_owned(it.id):
 			n += 1
 	return n
@@ -386,14 +499,16 @@ func recipe_have(id: String) -> int:
 	return n
 
 
-## Состояние рецепта: "done" — уже скован, "hall" — зал не пройден, "items" — не хватает вещей,
-## "poor" — не хватает осколков, "ok" — можно ковать, "unknown" — нет такого рецепта.
+## Состояние рецепта: "done" — уже скован, "hero" — рецепт другого героя, "hall" — зал не пройден,
+## "items" — не хватает вещей, "poor" — не хватает осколков, "ok" — можно ковать, "unknown" — нет такого.
 func forge_status(id: String, max_level: int) -> String:
 	var r := recipe(id)
 	if r.is_empty():
 		return "unknown"
 	if forged.has(id):
 		return "done"
+	if r.hero != hero:
+		return "hero"
 	if not hall_done(int(r.hall), max_level):
 		return "hall"
 	if recipe_have(id) < r.needs.size():
@@ -408,12 +523,21 @@ func recipe_complete(id: String, max_level: int) -> bool:
 	return forge_status(id, max_level) in ["ok", "poor"]
 
 
-## Есть ли рецепт, который можно сковать прямо сейчас (метка «Можно сковать!»).
+## Есть ли у текущего героя рецепт, который можно сковать прямо сейчас (метка «Можно сковать!»).
 func forge_ready_any(max_level: int) -> bool:
 	for r in RECIPES:
-		if forge_status(r.id, max_level) == "ok":
+		if r.hero == hero and forge_status(r.id, max_level) == "ok":
 			return true
 	return false
+
+
+## Сколько легендарных наград героя уже скованы (для супер-эксклюзива).
+func legends_forged() -> int:
+	var n := 0
+	for r in RECIPES:
+		if r.hero == hero and r.set != "" and forged.has(r.id):
+			n += 1
+	return n
 
 
 ## Сковать награду: тратятся только осколки, вещи рецепта остаются у игрока; награда сразу надевается.
@@ -426,6 +550,51 @@ func forge(id: String, max_level: int) -> String:
 	forged.append(id)
 	equip(id)
 	return "forged"
+
+
+# ---------- 0.12b: смена героя с возвратом осколков ----------
+
+## Сколько осколков вернётся, если сменить героя kind: цены его вещей + плата за ковку его наград
+## + цены купленных украшений его дома (всё это снимется).
+func refund_value(kind: String) -> int:
+	var n := 0
+	for id in owned:
+		if owner_of(id) == kind:
+			n += int(item(id).get("price", 0))
+	for id in forged:
+		if owner_of(id) == kind:
+			n += int(recipe(id).get("cost", 0))
+	for id in decor_owned:
+		if item(id).get("home", "") == kind:
+			n += int(item(id).get("price", 0))
+	return n
+
+
+## Нужно ли спрашивать при смене на героя h (есть что снимать с прежнего).
+func switch_asks(h: String) -> bool:
+	return hero != "" and h != hero and HEROES.has(h) and (refund_value(hero) > 0 or not equipped.is_empty())
+
+
+## Сменить героя: всё прежнего (вещи, наряд, скованное, украшения его дома) снимается,
+## потраченное возвращается осколками; новый герой наряжается с нуля.
+## Возвращает число вернувшихся осколков (-1 — нет такого героя). Тот же герой — ничего не меняется.
+func switch_hero(h: String) -> int:
+	if not HEROES.has(h):
+		return -1
+	if h == hero:
+		return 0
+	var n := 0
+	if hero != "":
+		var old := hero
+		n = refund_value(old)
+		owned = owned.filter(func(id): return owner_of(id) != old)
+		forged = forged.filter(func(id): return owner_of(id) != old)
+		decor_owned = decor_owned.filter(func(id): return item(id).get("home", "") != old)
+		decor_placed[old] = {}
+		shards += n
+	equipped = {}
+	hero = h
+	return n
 
 
 func is_owned(id: String) -> bool:
@@ -445,6 +614,8 @@ func buy(id: String, total_stars: int, max_level: int) -> int:
 		return Buy.OWNED
 	if lock_reason(id, total_stars, max_level) != "" or it.get("forge", false):
 		return Buy.LOCKED
+	if it.has("hero") and it.hero != hero:
+		return Buy.LOCKED  # 0.12b: чужую вещь не купить
 	if shards < int(it.price):
 		return Buy.POOR
 	shards -= int(it.price)
@@ -455,10 +626,11 @@ func buy(id: String, total_stars: int, max_level: int) -> int:
 	return Buy.OK
 
 
+## Надеть купленную/скованную вещь своего героя (0.12b: чужую — нельзя).
 func equip(id: String) -> bool:
-	if not (owned.has(id) or forged.has(id)):
+	if not (owned.has(id) or forged.has(id)) or owner_of(id) != hero:
 		return false
-	equipped[item(id).slot] = id
+	put_on(equipped, id)
 	return true
 
 
@@ -470,7 +642,7 @@ func unequip(slot: String) -> void:
 ## (примерка: ничего не покупается, решает игрок в панели — buy_item()).
 ## Возвращает: "off", "on", "try", "locked" (не вещь гардероба).
 func tap_item(id: String) -> String:
-	if not item(id).has("slot"):
+	if not item(id).has("slot") or owner_of(id) != hero:
 		return "locked"
 	if is_equipped(id):
 		unequip(item(id).slot)
@@ -557,11 +729,9 @@ func buy_decor(home: String, spot: String, id: String, total_stars: int, max_lev
 	return "locked"
 
 
+## Выбрать героя (первый выбор или смена — с возвратом за прежнего, см. switch_hero).
 func set_hero(h: String) -> bool:
-	if not HEROES.has(h):
-		return false
-	hero = h
-	return true
+	return switch_hero(h) >= 0
 
 
 ## Наряд для рисования: слот -> id (без героя).
@@ -579,6 +749,7 @@ func save_to(cfg: ConfigFile) -> void:
 	cfg.set_value("meta", "decor_owned", decor_owned)
 	cfg.set_value("meta", "decor_placed", decor_placed)
 	cfg.set_value("meta", "forged", forged)
+	cfg.set_value("meta", "notice_refund", notice_refund)
 
 
 func load_from(cfg: ConfigFile) -> void:
@@ -586,19 +757,39 @@ func load_from(cfg: ConfigFile) -> void:
 	hero = h if h is String and HEROES.has(h) else ""
 	var s = cfg.get_value("meta", "shards", 0)
 	shards = maxi(0, int(s)) if (s is int or s is float) else 0
+	# 0.12b: вещи — только своего героя. Старые общие вещи (0.6–0.12) и скованные награды
+	# возвращаются осколками по прежним ценам; вещи другого героя (не должно быть) — по новым.
+	migrated = 0
 	owned = []
 	var o = cfg.get_value("meta", "owned", [])
 	if o is Array:
 		for id in o:
-			if id is String and not item(id).is_empty() and not item(id).has("home") and not is_forge(id) and not owned.has(id):
-				owned.append(id)
-	# 0.12: скованные в кузнице; в старом сохранении поля нет — пусто
+			if not (id is String) or owned.has(id):
+				continue
+			var it := item(id)
+			if it.is_empty() and LEGACY_PRICES.has(id):
+				migrated += int(LEGACY_PRICES[id])
+			elif it.has("hero") and not it.get("forge", false):
+				if it.hero == hero:
+					owned.append(id)
+				else:
+					migrated += int(it.price)
 	forged = []
 	var fg = cfg.get_value("meta", "forged", [])
 	if fg is Array:
 		for id in fg:
-			if id is String and is_forge(id) and not forged.has(id):
-				forged.append(id)
+			if not (id is String) or forged.has(id):
+				continue
+			if item(id).is_empty() and LEGACY_FORGE.has(id):
+				migrated += int(LEGACY_FORGE[id])
+			elif is_forge(id):
+				if owner_of(id) == hero:
+					forged.append(id)
+				else:
+					migrated += int(recipe(id).get("cost", 0))
+	shards += migrated
+	var nr = cfg.get_value("meta", "notice_refund", 0)
+	notice_refund = (maxi(0, int(nr)) if (nr is int or nr is float) else 0) + migrated
 	decor_owned = []
 	var dow = cfg.get_value("meta", "decor_owned", [])
 	if dow is Array:
@@ -622,4 +813,4 @@ func load_from(cfg: ConfigFile) -> void:
 		for slot in e:
 			var id = e[slot]
 			if id is String and (owned.has(id) or forged.has(id)) and item(id).get("slot", "") == slot:
-				equipped[slot] = id
+				put_on(equipped, id)

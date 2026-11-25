@@ -35,6 +35,8 @@ const Assist := preload("res://scripts/assist.gd")
 const AssistUI := preload("res://scripts/assist_ui.gd")
 ## 0.12: Кристальная кузница (scripts/forge_ui.gd)
 const ForgeUI := preload("res://scripts/forge_ui.gd")
+## 0.12b: окна «Сменить друга?» и «Гардероб обновлён» поверх экранов (scripts/notice_ui.gd)
+const NoticeUI := preload("res://scripts/notice_ui.gd")
 ## true — после очистки падают все группы поля (и камень уровня над дырами ниже линии);
 ## false — только то, что выше нижней очищенной линии (ниже неё поле не трогается).
 const FALL_ALL := false
@@ -105,6 +107,7 @@ var tut = Tutorial.new()      # 0.9: обучение
 var assist = Assist.new()     # 0.9: помощь, попытки, подарок новичку
 var assist_ui
 var forge_ui                  # 0.12: Кристальная кузница
+var notice_ui                 # 0.12b: смена друга с возвратом, сообщение об обновлении гардероба
 
 var fall_timer := 0.0
 var lock_timer := 0.0
@@ -158,6 +161,7 @@ func _ready() -> void:
 	screens = Screens.new(self)
 	assist_ui = AssistUI.new(self)
 	forge_ui = ForgeUI.new(self)
+	notice_ui = NoticeUI.new(self)
 	_load()
 	_setup_audio()
 	for i in 28:
@@ -635,6 +639,8 @@ func _load() -> void:
 	if not cfg.has_section("meta") and max_level > 1:
 		meta.shards += legacy_gift(total_stars())
 		_save()
+	elif meta.migrated > 0:
+		_save()  # 0.12b: старые общие вещи вернулись осколками — сразу запомнить
 	level = max_level
 
 
@@ -721,6 +727,8 @@ func _process(delta: float) -> void:
 	assist_ui.update(delta)
 	if forge_ui:
 		forge_ui.update(delta)
+	if notice_ui:
+		notice_ui.update(delta)
 	for idx in held.keys():
 		var n: String = held[idx]
 		if n in ["left", "right", "soft"]:
@@ -736,6 +744,9 @@ func _notification(what: int) -> void:
 		if state == State.PLAYING:
 			_set_state(State.PAUSED)
 	elif what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		if notice_ui and notice_ui.active():
+			notice_ui.back()
+			return
 		match state:
 			State.PLAYING, State.CLEARING, State.SETTLE:
 				_set_state(State.PAUSED)
@@ -798,6 +809,9 @@ func _press(n: String) -> void:
 
 
 func _touch_down(idx: int, pos: Vector2) -> void:
+	if notice_ui and notice_ui.active():
+		notice_ui.tap(pos)  # 0.12b: открытое окно забирает касания
+		return
 	match state:
 		State.SPLASH:
 			go_home()

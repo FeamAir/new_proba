@@ -8,3 +8,9 @@
 спутники, сияния, узоры окрасок, рамки редкостей, мастер-филин Ух, наковальня и анимация ковки
 нарисованы кодом (`scripts/hero_sets.gd`, `scripts/hero_magic.gd`, `scripts/rarity.gd`,
 `scripts/forge_ui.gd`) — собственная работа проекта.
+
+## Версия 0.12b (гардероб по героям)
+Сторонних ассетов не добавлено. Все 76 вещей (по 19 у каждого друга), супер-награды, окна
+«Сменить друга?» и «Гардероб обновлён» нарисованы кодом (`scripts/wardrobe_owl.gd`,
+`scripts/wardrobe_axolotl.gd`, `scripts/wardrobe_puppy.gd`, `scripts/wardrobe_kitten.gd`,
+`scripts/notice_ui.gd`) — собственная работа проекта.

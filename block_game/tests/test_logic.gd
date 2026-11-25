@@ -370,36 +370,35 @@ func _test_meta(g, _chain3: int) -> void:
 	run(g, 2.0)
 	check(g.big_chains == 1, "цепочка ×3 засчитана для осколков (big_chains = %d)" % g.big_chains)
 
-	# Покупка
+	# Покупка (0.12b: у каждого друга свои вещи — покупаются только вещи своего героя)
 	var m = Meta.new()
+	check(m.hero == "" and m.set_hero("owl") and m.hero == "owl", "выбор совёнка")
+	check(not m.set_hero("dragon") and m.hero == "owl", "неизвестный герой не выбирается")
 	m.shards = 25
-	check(m.buy("bow", 0, 1) == Meta.Buy.OK and m.shards == 5 and m.is_owned("bow"), "покупка: хватает осколков")
-	check(m.buy("cap", 0, 1) == Meta.Buy.POOR and m.shards == 5 and not m.is_owned("cap"), "покупка: не хватает — ничего не списано")
-	check(m.buy("bow", 0, 1) == Meta.Buy.OWNED, "второй раз не покупается")
+	check(m.buy("ow_mortarboard", 0, 1) == Meta.Buy.OK and m.shards == 5 and m.is_owned("ow_mortarboard"), "покупка: хватает осколков")
+	check(m.buy("ow_halfglasses", 0, 1) == Meta.Buy.POOR and m.shards == 5 and not m.is_owned("ow_halfglasses"), "покупка: не хватает — ничего не списано")
+	check(m.buy("ow_mortarboard", 0, 1) == Meta.Buy.OWNED, "второй раз не покупается")
 	m.shards = 500
-	check(m.buy("crown", 59, 99) == Meta.Buy.LOCKED and m.shards == 500, "корона закрыта до 60 звёзд")
-	check(m.buy("crown", 60, 1) == Meta.Buy.OK, "корона открыта с 60 звёздами")
-	check(m.buy("wreath", 999, 20) == Meta.Buy.LOCKED and m.buy("wreath", 0, 21) == Meta.Buy.OK, "венок — после Изумрудного зала (2-го)")
+	check(m.buy("ow_quill", 999, 30) == Meta.Buy.LOCKED and m.shards == 500, "перо закрыто до прохождения 3-го зала")
+	check(m.buy("ow_quill", 0, 31) == Meta.Buy.OK, "перо открыто после 3-го зала")
+	check(m.buy("ow_dome_hat", 999, 50) == Meta.Buy.LOCKED and m.buy("ow_dome_hat", 0, 51) == Meta.Buy.OK, "шапка-обсерватория — после 5-го зала")
+	check(m.buy("ax_starfish", 0, 99) == Meta.Buy.LOCKED and not m.is_owned("ax_starfish"), "вещь другого друга не покупается")
 	check(m.buy("nope", 0, 1) == Meta.Buy.UNKNOWN, "неизвестная вещь не покупается")
 
 	# Надеть / снять
-	check(not m.equip("cap"), "некупленное не надевается")
-	check(m.equip("bow") and m.is_equipped("bow"), "надеть бантик")
-	check(m.equip("crown") and m.is_equipped("crown") and not m.is_equipped("bow"), "корона заменяет бантик в слоте головы")
+	check(not m.equip("ow_halfglasses"), "некупленное не надевается")
+	check(m.equip("ow_mortarboard") and m.is_equipped("ow_mortarboard"), "надеть шапочку")
+	check(m.equip("ow_quill") and m.is_equipped("ow_quill") and not m.is_equipped("ow_mortarboard"), "перо заменяет шапочку в слоте головы")
 	m.unequip("head")
-	check(not m.is_equipped("crown") and m.outfit().is_empty(), "снять")
-	m.shards = 40
-	check(m.tap_item("sunglasses") == "try" and not m.is_owned("sunglasses") and m.shards == 40, "нажатие на некупленное — примерка, осколки целы")
-	check(m.buy_item("sunglasses", 0, 1) == "bought" and m.is_equipped("sunglasses") and m.shards == 0, "купить и сразу надеть")
-	check(m.tap_item("sunglasses") == "off" and not m.is_equipped("sunglasses"), "нажатие на надетое — снять")
-	check(m.tap_item("sunglasses") == "on", "нажатие на купленное — надеть")
-	check(m.buy_item("monocle", 0, 1) == "locked" and m.buy_item("scarf", 0, 1) == "poor" and not m.is_owned("scarf"), "покупка: закрыто / не хватает")
+	check(not m.is_equipped("ow_quill") and m.outfit().is_empty(), "снять")
+	m.shards = 30
+	check(m.tap_item("ow_halfglasses") == "try" and not m.is_owned("ow_halfglasses") and m.shards == 30, "нажатие на некупленное — примерка, осколки целы")
+	check(m.buy_item("ow_halfglasses", 0, 1) == "bought" and m.is_equipped("ow_halfglasses") and m.shards == 0, "купить и сразу надеть")
+	check(m.tap_item("ow_halfglasses") == "off" and not m.is_equipped("ow_halfglasses"), "нажатие на надетое — снять")
+	check(m.tap_item("ow_halfglasses") == "on", "нажатие на купленное — надеть")
+	check(m.buy_item("ow_night_goggles", 0, 1) == "locked" and m.buy_item("ow_scholar_scarf", 0, 1) == "poor" and not m.is_owned("ow_scholar_scarf"), "покупка: закрыто / не хватает")
 	check(m.tap_item("owl_lantern") == "locked", "украшение не надевается")
-
-	# Смена героя (вещи общие)
-	check(m.hero == "" and m.set_hero("axolotl") and m.hero == "axolotl", "выбор аксолотля")
-	check(not m.set_hero("dragon") and m.hero == "axolotl", "неизвестный герой не выбирается")
-	check(m.set_hero("owl") and m.is_equipped("sunglasses"), "смена героя: наряд остаётся")
+	check(m.tap_item("ax_starfish") == "locked" and not m.equip("ax_starfish"), "вещь другого друга не надевается")
 
 	# Украшения дома
 	m.shards = 100
@@ -434,7 +433,7 @@ func _test_meta(g, _chain3: int) -> void:
 	g._save()
 	g.meta = Meta.new()
 	g._load()
-	check(g.meta.hero == "owl" and g.meta.shards == m.shards and g.meta.is_equipped("sunglasses") and g.max_level == 7, "игра: сохранение в save.cfg и загрузка")
+	check(g.meta.hero == "owl" and g.meta.shards == m.shards and g.meta.is_equipped("ow_halfglasses") and g.max_level == 7, "игра: сохранение в save.cfg и загрузка")
 	# Старое сохранение без раздела [meta]
 	var old := ConfigFile.new()
 	old.set_value("progress", "max_level", 12)
@@ -456,12 +455,13 @@ func _test_meta(g, _chain3: int) -> void:
 	var bad := ConfigFile.new()
 	bad.set_value("meta", "hero", 5)
 	bad.set_value("meta", "shards", "много")
-	bad.set_value("meta", "owned", ["bow", "bow", "nope", 3])
-	bad.set_value("meta", "equipped", {"head": "crown", "eyes": "bow"})
+	bad.set_value("meta", "owned", ["ow_mortarboard", "nope", 3])
+	bad.set_value("meta", "equipped", {"head": "ow_quill", "eyes": "ow_mortarboard"})
 	bad.set_value("meta", "decor_placed", {"owl": {"hang": "axo_lily"}})
 	var m3 = Meta.new()
 	m3.load_from(bad)
-	check(m3.hero == "" and m3.shards == 0 and m3.owned == ["bow"] and m3.equipped.is_empty() and m3.decor_placed.owl.is_empty(), "испорченные мета-данные отбрасываются")
+	check(m3.hero == "" and m3.owned.is_empty() and m3.equipped.is_empty() and m3.decor_placed.owl.is_empty(), "испорченные мета-данные отбрасываются")
+	check(m3.shards == 20 and m3.migrated == 20, "вещь без своего героя возвращается осколками (20)")
 
 
 # ---------- Примерка 0.7 (scripts/tryon.gd + экран гардероба) ----------
@@ -472,10 +472,10 @@ func _test_tryon(g) -> void:
 	var keep_stars: Dictionary = g.stars
 	var keep_max: int = g.max_level
 	var m = Meta.new()
-	m.set_hero("owl")
-	m.shards = 100
-	m.owned = ["bow"]
-	m.equip("bow")
+	m.set_hero("axolotl")
+	m.shards = 150
+	m.owned = ["ax_starfish"]
+	m.equip("ax_starfish")
 	g.meta = m
 	g.stars = {}
 	g.max_level = 1
@@ -484,41 +484,42 @@ func _test_tryon(g) -> void:
 	var sc = g.screens
 	sc.open_wardrobe("head")
 	# примерка некупленной вещи: ничего не тратится, герой показан в ней
-	sc.tap_card("miner", "owl")
-	check(sc.tryon.id == "miner" and m.shards == 100 and not m.is_owned("miner") and m.owned == ["bow"], "примерка: осколки и покупки не меняются")
-	check(sc.tryon.outfit(m).head == "miner" and m.equipped.head == "bow", "примерка: на герое каска поверх бантика, наряд не тронут")
+	sc.tap_card("ax_coral_tiara", "axolotl")
+	check(sc.tryon.id == "ax_coral_tiara" and m.shards == 150 and not m.is_owned("ax_coral_tiara") and m.owned == ["ax_starfish"], "примерка: осколки и покупки не меняются")
+	check(sc.tryon.outfit(m).head == "ax_coral_tiara" and m.equipped.head == "ax_starfish", "примерка: на герое тиара вместо заколки, наряд не тронут")
 	check(sc.tryon.status(m, 0, 1) == "ok", "примерка: хватает — можно купить")
 	# отмена — прежний наряд
-	check(sc.cancel_try() and not sc.tryon.active() and sc.tryon.outfit(m) == {"head": "bow"} and m.shards == 100, "отмена: снова бантик, осколки целы")
+	check(sc.cancel_try() and not sc.tryon.active() and sc.tryon.outfit(m) == {"head": "ax_starfish"} and m.shards == 150, "отмена: снова заколка, осколки целы")
 	check(not sc.cancel_try(), "нечего отменять — false")
 	# «Назад» на телефоне сначала снимает примерку
 	g._set_state(g.State.WARDROBE)
-	sc.tap_card("cap", "owl")
+	sc.tap_card("ax_dive_mask", "axolotl")
 	g._notification(Node.NOTIFICATION_WM_GO_BACK_REQUEST)
-	check(g.state == g.State.WARDROBE and not sc.tryon.active() and not m.is_owned("cap"), "«Назад»: примерка снята, остаёмся в гардеробе")
+	check(g.state == g.State.WARDROBE and not sc.tryon.active() and not m.is_owned("ax_dive_mask"), "«Назад»: примерка снята, остаёмся в гардеробе")
 	# повторное нажатие на примеряемую — снять примерку
-	sc.tap_card("cap", "owl")
-	sc.tap_card("cap", "owl")
+	sc.tap_card("ax_dive_mask", "axolotl")
+	sc.tap_card("ax_dive_mask", "axolotl")
 	check(not sc.tryon.active(), "повторное нажатие снимает примерку")
 	# другая вещь — переключение примерки
-	sc.tap_card("cap", "owl")
-	sc.tap_card("miner", "owl")
-	check(sc.tryon.id == "miner" and sc.tryon.outfit(m).head == "miner", "нажатие на другую вещь — примеряется она")
+	sc.tap_card("ax_dive_mask", "axolotl")
+	sc.tap_card("ax_coral_tiara", "axolotl")
+	check(sc.tryon.id == "ax_coral_tiara" and sc.tryon.outfit(m).head == "ax_coral_tiara", "нажатие на другую вещь — примеряется она")
 	# подтверждение — покупка и надеть
 	sc._confirm_try()
-	check(m.is_owned("miner") and m.is_equipped("miner") and m.shards == 40 and not sc.tryon.active(), "«Купить»: куплено и надето, −60")
+	check(m.is_owned("ax_coral_tiara") and m.is_equipped("ax_coral_tiara") and m.shards == 30 and not sc.tryon.active(), "«Купить»: куплено и надето, −120")
 	# купленное — без подтверждения
-	sc.tap_card("bow", "owl")
-	check(m.is_equipped("bow") and not sc.tryon.active() and m.shards == 40, "купленное надевается сразу")
-	# нехватка осколков
-	sc.tap_card("crown", "owl")
-	check(sc.tryon.status(m, 0, 1) == "locked", "корона без звёзд: примерить можно, купить нельзя")
-	sc.tap_card("skin_moon", "owl")
+	sc.tap_card("ax_starfish", "axolotl")
+	check(m.is_equipped("ax_starfish") and not sc.tryon.active() and m.shards == 30, "купленное надевается сразу")
+	# закрытая залом и нехватка осколков
+	sc.tap_card("ax_angler", "axolotl")
+	check(sc.tryon.status(m, 0, 1) == "locked", "фонарик до 5-го зала: примерить можно, купить нельзя")
+	sc.tap_card("ax_bubble_pet", "axolotl")
 	check(sc.tryon.status(m, 0, 1) == "poor" and sc.tryon.shortage(m) == 40, "не хватает 40 осколков")
 	sc._confirm_try()
-	check(not m.is_owned("skin_moon") and m.shards == 40 and not m.equipped.has("skin") and sc.tryon.active(), "нехватка: покупки нет, примерка остаётся")
+	check(not m.is_owned("ax_bubble_pet") and m.shards == 30 and not m.equipped.has("companion") and sc.tryon.active(), "нехватка: покупки нет, примерка остаётся")
 	check(sc.tryon.confirm(m, 999, 99) == "poor", "confirm при нехватке — poor")
 	sc.cancel_try()
+	m.shards = 40
 	# украшения дома
 	sc.open_wardrobe("home")
 	check(not sc.tryon.active(), "открытие гардероба сбрасывает примерку")
@@ -594,7 +595,7 @@ func _test_i18n(g) -> void:
 	check(names_ok, "названия всех вещей, украшений, залов, героев и мест переведены")
 	# Переключение языка
 	check(I18n.set_lang("en") and I18n.t("cascade") % 3 == "CASCADE ×3" and Meta.hall_name(10) == "Endless Depths", "английский: CASCADE ×3, Endless Depths")
-	check(Meta.lock_reason("necklace", 999, 1) == "Clear Amethyst Hall first" and Meta.item_name("cape") == "Starry cape", "английский: причина замка и название вещи")
+	check(Meta.lock_reason("ow_quill", 999, 1) == "Clear Fire Hall first" and Meta.item_name("ow_stargazer") == "Stargazer's Mantle", "английский: причина замка и название вещи")
 	check(Screens.shards_word(1) == "shard" and Screens.shards_word(5) == "shards", "английский: shard / shards")
 	check(I18n.set_lang("ru") and I18n.t("cascade") % 3 == "КАСКАД ×3" and Meta.hall_name(0) == "Аметистовый зал", "русский: КАСКАД ×3, Аметистовый зал")
 	check(Screens.shards_word(1) == "осколок" and Screens.shards_word(3) == "осколка" and Screens.shards_word(11) == "осколков" and Screens.shards_word(21) == "осколок", "русский: осколок / осколка / осколков")
@@ -659,20 +660,20 @@ func _test_new_heroes(g) -> void:
 				draw_ok = false
 		check(draw_ok, "%s: у каждого украшения задана высота для рисования" % h)
 		var pal: Dictionary = HeroS.PALETTES.get(h, {})
-		check(pal.has("") and Meta.items_in("skin").all(func(it): return pal.has(it.id)), "%s: своя палитра для каждой окраски" % h)
-	# Свои названия окрасок
+		check(pal.has("") and Meta.items_in("skin", h).all(func(it): return pal.has(Meta.draw_key(it.id))), "%s: своя палитра для каждой окраски" % h)
+	# Свои названия окрасок (0.12b: у каждого друга свои окраски)
 	var keep_lang: String = I18n.lang
 	I18n.set_lang("en")
-	check(Meta.item_name("skin_gold", "puppy") == "Dalmatian" and Meta.item_name("skin_moon", "kitten") == "Siamese" and Meta.item_name("skin_gold", "owl") == "Golden" and Meta.item_name("skin_gold") == "Golden", "окраски: у щенка и котика свои названия, у совёнка прежние")
+	check(Meta.item_name("pu_skin_dalmatian") == "Dalmatian" and Meta.item_name("ki_skin_siamese") == "Siamese", "окраски: далматинец у щенка, сиамская у котика")
 	I18n.set_lang("ru")
-	check(Meta.item_name("skin_mint", "puppy") == "Шоколадный" and Meta.item_name("skin_mint", "kitten") == "Полосатик" and Meta.hero_name("puppy") == "Щенок" and Meta.hero_name("kitten") == "Котик", "русский: Щенок, Котик, Шоколадный, Полосатик")
+	check(Meta.item_name("pu_skin_corgi") == "Корги" and Meta.item_name("ki_skin_tabby") == "Полосатик" and Meta.hero_name("puppy") == "Щенок" and Meta.hero_name("kitten") == "Котик", "русский: Щенок, Котик, Корги, Полосатик")
 	I18n.set_lang(keep_lang)
-	# Вещи общие: надетое остаётся при смене друга
+	# 0.12b: вещи свои — при смене друга вещи прежнего снимаются и возвращаются осколками
 	m.shards = 500
 	m.set_hero("puppy")
-	check(m.buy_item("cap", 0, 1) == "bought" and m.buy_item("skin_moon", 0, 1) == "bought", "щенок: купить колпак и окраску")
+	check(m.buy_item("pu_cap", 0, 1) == "bought" and m.buy_item("pu_skin_corgi", 0, 1) == "bought" and m.shards == 360, "щенок: купить бейсболку и окраску")
 	m.set_hero("kitten")
-	check(m.is_equipped("cap") and m.outfit().get("skin", "") == "skin_moon", "смена на котика: вещи и окраска остаются (рисуются по-кошачьи)")
+	check(m.outfit().is_empty() and m.owned.is_empty() and m.shards == 500, "смена на котика: вещи щенка сняты, 140 осколков вернулись")
 	# Украшения: у каждого дома свои
 	check(m.tap_decor("puppy", "hang", "pup_kite") == "try" and m.buy_decor("puppy", "hang", "pup_kite", 0, 1) == "locked", "змей: примерить можно, купить — за 25 звёзд")
 	check(m.buy_decor("puppy", "hang", "pup_lamp", 0, 1) == "bought" and m.placed_at("puppy", "hang") == "pup_lamp", "щенок: фонарь повешен")
@@ -689,9 +690,10 @@ func _test_new_heroes(g) -> void:
 	m2.load_from(cfg)
 	check(m2.hero == "kitten" and m2.placed_at("puppy", "hang") == "pup_lamp" and m2.placed_at("kitten", "near") == "kit_box" and m2.placed_at("kitten", "floor_l") == "kit_tree", "щенок и котик: герой и украшения домов сохраняются")
 	m.set_hero("puppy")
+	m.buy_item("pu_cap", 0, 1)
 	m.save_to(cfg)
 	m2.load_from(cfg)
-	check(m2.hero == "puppy" and m2.is_equipped("cap"), "сохранение: выбран щенок")
+	check(m2.hero == "puppy" and m2.is_equipped("pu_cap"), "сохранение: выбран щенок в бейсболке")
 	# Старое сохранение 0.8: в decor_placed только совёнок и аксолотль
 	var old := ConfigFile.new()
 	old.set_value("meta", "hero", "owl")

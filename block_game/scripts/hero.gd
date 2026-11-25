@@ -22,66 +22,45 @@ const EYE_DARK := Color("#1A0E30")
 ## 0.12: вещи наборов (голова/глаза/шея/спина) и «живые» вещи (спутники, сияния, узоры окрасок)
 const Sets := preload("res://scripts/hero_sets.gd")
 const Magic := preload("res://scripts/hero_magic.gd")
+## 0.12b: гардероб по героям — вещи каждого героя рисуются в своём файле (только под него)
+const Meta := preload("res://scripts/meta.gd")
+const W := {
+	"owl": preload("res://scripts/wardrobe_owl.gd"),
+	"axolotl": preload("res://scripts/wardrobe_axolotl.gd"),
+	"puppy": preload("res://scripts/wardrobe_puppy.gd"),
+	"kitten": preload("res://scripts/wardrobe_kitten.gd"),
+}
 
 const PALETTES := {
 	"owl": {
 		"": {"body": Color("#9270E0"), "dark": Color("#6446B8"), "belly": Color("#E2D6FF"), "face": Color("#F6F0FF"), "iris": Color("#FFB23E")},
-		"skin_mint": {"body": Color("#4CC79E"), "dark": Color("#2C9474"), "belly": Color("#D2F8E8"), "face": Color("#F0FFF8"), "iris": Color("#FFC24A")},
-		"skin_moon": {"body": Color("#9DB0E4"), "dark": Color("#6A7CB8"), "belly": Color("#EBF0FF"), "face": Color("#FAFBFF"), "iris": Color("#7FD8FF")},
-		"skin_gold": {"body": Color("#F2B240"), "dark": Color("#C27E1E"), "belly": Color("#FFEBB5"), "face": Color("#FFF9E6"), "iris": Color("#FF8A3D")},
-		# 0.12: окраски наборов (узоры и мерцание — scripts/hero_magic.gd, skin_fx)
-		"skin_moss": {"body": Color("#5DBB4A"), "dark": Color("#3A8A34"), "belly": Color("#DDF5B8"), "face": Color("#F4FFE6"), "iris": Color("#FFD23C")},
-		"skin_pearl": {"body": Color("#F2E2F2"), "dark": Color("#CDB0D8"), "belly": Color("#FFFFFF"), "face": Color("#FFFDFE"), "iris": Color("#7FD8FF")},
-		"skin_midnight": {"body": Color("#34409A"), "dark": Color("#222A6E"), "belly": Color("#7A88E0"), "face": Color("#D0D8FF"), "iris": Color("#FFE066")},
-		"skin_nebula": {"body": Color("#B05BD8"), "dark": Color("#6A3AB0"), "belly": Color("#FFC2EC"), "face": Color("#FFF0FB"), "iris": Color("#6FE3FF")},
-		"skin_amethyst": {"body": Color("#9A5CE8"), "dark": Color("#6A34B8"), "belly": Color("#E8D4FF"), "face": Color("#F8F0FF"), "iris": Color("#FF7AD9")},
+		# 0.12b: окраски — ключ = поле draw вещи (meta.gd); узоры — scripts/hero_magic.gd, skin_fx.
+		# «Ночное небо» (легендарная)
 		"skin_constellation": {"body": Color("#24319A"), "dark": Color("#141A48"), "belly": Color("#46549E"), "face": Color("#B4C2FF"), "iris": Color("#FFD23C")},
+		# 0.12b: «Полярная сова» (набор «Библиотека совы»): белоснежная, крапинки — hero_magic.gd
+		"ow_skin_snowy": {"body": Color("#F4F6FF"), "dark": Color("#B8BCD8"), "belly": Color("#FFFFFF"), "face": Color("#FFFFFF"), "iris": Color("#FFC23A")},
 		# мастер-филин Ух (кузница): седой, серебристо-лиловый
 		"_elder": {"body": Color("#9C93B4"), "dark": Color("#6A6084"), "belly": Color("#EEEAF6"), "face": Color("#FAF8FF"), "iris": Color("#FFB23E")},
 	},
 	"axolotl": {
 		"": {"body": Color("#FFB5D0"), "dark": Color("#EE86AC"), "belly": Color("#FFE9F2"), "gill": Color("#FF4E92"), "tip": Color("#FFC4DC")},
-		"skin_mint": {"body": Color("#97E8C6"), "dark": Color("#5FC49D"), "belly": Color("#E8FFF6"), "gill": Color("#16B58A"), "tip": Color("#B8F7DF")},
-		"skin_moon": {"body": Color("#D8DEFA"), "dark": Color("#A6B0E0"), "belly": Color("#F9FAFF"), "gill": Color("#7682FF"), "tip": Color("#D6DAFF")},
-		"skin_gold": {"body": Color("#FFCF70"), "dark": Color("#E8A848"), "belly": Color("#FFF3D2"), "gill": Color("#FF7428"), "tip": Color("#FFD6A6")},
-		"skin_moss": {"body": Color("#8FD86E"), "dark": Color("#5DAF45"), "belly": Color("#E8FFD6"), "gill": Color("#2E9E4A"), "tip": Color("#D9F77A")},
+		# «Перламутр» и «Окраска бездны» (поле draw вещей ax_skin_pearl / ax_skin_abyss)
 		"skin_pearl": {"body": Color("#FBEFF6"), "dark": Color("#E2C8DC"), "belly": Color("#FFFFFF"), "gill": Color("#7FC8FF"), "tip": Color("#FFD1EC")},
 		"skin_midnight": {"body": Color("#3B4BA8"), "dark": Color("#283478"), "belly": Color("#7C8BE0"), "gill": Color("#FFD95A"), "tip": Color("#FFF2B0")},
-		"skin_nebula": {"body": Color("#E79BE8"), "dark": Color("#B866C8"), "belly": Color("#FFE4FA"), "gill": Color("#6A6BFF"), "tip": Color("#8FE6FF")},
-		"skin_amethyst": {"body": Color("#B98AF5"), "dark": Color("#8A5ED0"), "belly": Color("#F1E6FF"), "gill": Color("#FF5FC8"), "tip": Color("#FFC4F0")},
-		"skin_constellation": {"body": Color("#2A38A4"), "dark": Color("#18205A"), "belly": Color("#4A5AB8"), "gill": Color("#FFC83A"), "tip": Color("#FFF0A8")},
 	},
-	## Щенок: у тех же вещей окраски — свои, «собачьи» (названия — i18n: item_skin_*_puppy).
-	##   ""  — золотистый ретривер; skin_mint — шоколадный; skin_moon — рыжий корги (белая проточина);
-	##   skin_gold — далматинец (пятна, тёмные ушки).
+	## Щенок: ""  — золотистый ретривер; skin_moon — рыжий корги с белой проточиной (pu_skin_corgi);
+	##   skin_gold — далматинец: пятна, тёмные ушки (pu_skin_dalmatian).
 	"puppy": {
 		"": {"body": Color("#F5CB8C"), "dark": Color("#DE9F57"), "belly": Color("#FFF2DE"), "nose": Color("#3F2622"), "eye": Color("#6B3E26")},
-		"skin_mint": {"body": Color("#AE7149"), "dark": Color("#7E482B"), "belly": Color("#EDCDA8"), "nose": Color("#2C1814"), "eye": Color("#4A2618")},
 		"skin_moon": {"body": Color("#F59A4A"), "dark": Color("#DC7430"), "belly": Color("#FFF7EE"), "nose": Color("#33201C"), "eye": Color("#6B3A22"), "blaze": true},
 		"skin_gold": {"body": Color("#F8F6FB"), "dark": Color("#463E52"), "belly": Color("#FFFFFF"), "nose": Color("#2C2433"), "eye": Color("#4A3A5E"), "spots": Color("#3A3346")},
-		## 0.12: «мох» — зелёный с жёлтыми огоньками; «перламутр» — белый с серыми ушками;
-		##   «полночь» — с белой проточиной; «туманность», «аметист», «созвездие» — сказочные
-		"skin_moss": {"body": Color("#7CC45E"), "dark": Color("#4E9A3C"), "belly": Color("#E6FAD0"), "nose": Color("#2C3A22"), "eye": Color("#3E5A24")},
-		"skin_pearl": {"body": Color("#FFF4FA"), "dark": Color("#C8B4D4"), "belly": Color("#FFFFFF"), "nose": Color("#6A4A5E"), "eye": Color("#5A6AA8")},
-		"skin_midnight": {"body": Color("#3A47A0"), "dark": Color("#232B6C"), "belly": Color("#C8D0FF"), "nose": Color("#12152E"), "eye": Color("#2A2458"), "blaze": true},
-		"skin_nebula": {"body": Color("#D98BE6"), "dark": Color("#9C5AC8"), "belly": Color("#FFE0F6"), "nose": Color("#4A2A5E"), "eye": Color("#5A2A7A")},
-		"skin_amethyst": {"body": Color("#A877EE"), "dark": Color("#7446C2"), "belly": Color("#EEDDFF"), "nose": Color("#3A1E5E"), "eye": Color("#4A2A7A")},
-		"skin_constellation": {"body": Color("#2A37A0"), "dark": Color("#161C4C"), "belly": Color("#4E5CA8"), "nose": Color("#0E1030"), "eye": Color("#262860")},
 	},
-	## Котик: ""  — рыжий/персиковый; skin_mint — серый полосатый (полоски);
-	##   skin_moon — сиамский (тёмные ушки, мордочка, лапки и хвост); skin_gold — чёрный с белой манишкой.
+	## Котик: ""  — рыжий/персиковый; skin_mint — серый полосатый (ki_skin_tabby);
+	##   skin_moon — сиамский: тёмные ушки, мордочка, лапки и хвост (ki_skin_siamese).
 	"kitten": {
 		"": {"body": Color("#FFB47E"), "dark": Color("#EE8A4E"), "belly": Color("#FFF3E6"), "inner": Color("#FFA3BE"), "iris": Color("#8CD56A"), "nose": Color("#FF7FA4"), "whisk": Color(1, 1, 1, 0.8)},
 		"skin_mint": {"body": Color("#B2AFC2"), "dark": Color("#6C6882"), "belly": Color("#F3F1F8"), "inner": Color("#FFB0C6"), "iris": Color("#F4C34E"), "nose": Color("#FF8FB0"), "whisk": Color(1, 1, 1, 0.85), "stripes": true},
 		"skin_moon": {"body": Color("#F8F0E4"), "dark": Color("#7A5A50"), "belly": Color("#FFFCF6"), "inner": Color("#E8A0A8"), "iris": Color("#62C2FF"), "nose": Color("#C9707E"), "whisk": Color(1, 1, 1, 0.85), "points": true},
-		"skin_gold": {"body": Color("#4E465E"), "dark": Color("#332D40"), "belly": Color("#FFFFFF"), "inner": Color("#F49AB6"), "iris": Color("#FFD23C"), "nose": Color("#FF8FB0"), "whisk": Color(1, 1, 1, 0.9), "socks": true},
-		## 0.12: «мох» — полосатый зелёный; «перламутр» — сиамский лилового окраса; «полночь» — в белых носочках
-		"skin_moss": {"body": Color("#7ACB5C"), "dark": Color("#3F8A34"), "belly": Color("#EAFBD8"), "inner": Color("#FFB0C6"), "iris": Color("#FFD23C"), "nose": Color("#FF8FB0"), "whisk": Color(1, 1, 1, 0.85), "stripes": true},
-		"skin_pearl": {"body": Color("#FFF4FA"), "dark": Color("#B9A0CC"), "belly": Color("#FFFFFF"), "inner": Color("#FFB8D0"), "iris": Color("#7FD8FF"), "nose": Color("#E890B0"), "whisk": Color(1, 1, 1, 0.9), "points": true},
-		"skin_midnight": {"body": Color("#34409A"), "dark": Color("#1E2660"), "belly": Color("#C8D0FF"), "inner": Color("#8C7CE0"), "iris": Color("#FFE066"), "nose": Color("#B49CFF"), "whisk": Color(1, 1, 1, 0.9), "socks": true},
-		"skin_nebula": {"body": Color("#C77BE0"), "dark": Color("#8C4FBF"), "belly": Color("#FFE4F8"), "inner": Color("#FF9FD8"), "iris": Color("#6FE3FF"), "nose": Color("#FF7FC0"), "whisk": Color(1, 1, 1, 0.85)},
-		"skin_amethyst": {"body": Color("#A06FE8"), "dark": Color("#6E3FBF"), "belly": Color("#F0E4FF"), "inner": Color("#FFB0E0"), "iris": Color("#FF7AD9"), "nose": Color("#FF8FC0"), "whisk": Color(1, 1, 1, 0.85)},
-		"skin_constellation": {"body": Color("#26339C"), "dark": Color("#141A48"), "belly": Color("#46549E"), "inner": Color("#7A6CD0"), "iris": Color("#FFD23C"), "nose": Color("#B49CFF"), "whisk": Color(1, 1, 1, 0.9)},
 	},
 }
 
@@ -96,6 +75,10 @@ var _T := Transform2D.IDENTITY
 var _react := 99.0
 var _head_only := false
 var _icon := false   # рисуется значок для карточки (сияние — компактнее)
+## 0.12b: части тела для вещей «по анатомии» (заполняются при рисовании героя)
+var _gills: Array = []                   # жабры аксолотля: 6 ломаных по 7 точек (от головы к кончику)
+var _tail_mid := PackedVector2Array()    # ось хвоста котика (16 точек от тела к кончику)
+var _tail_w: Array = []                  # толщина хвоста котика по точкам
 
 
 # ---------- Объёмные сетки ----------
@@ -383,9 +366,10 @@ func _heart(c: Vector2, half_w: float, n := 28) -> PackedVector2Array:
 	return pts
 
 
+## Палитра героя в окраске (0.12b: окраска героя может брать готовую палитру — поле draw вещи).
 static func palette(kind: String, outfit: Dictionary) -> Dictionary:
 	var p: Dictionary = PALETTES.get(kind, PALETTES.owl)
-	return p.get(outfit.get("skin", ""), p[""])
+	return p.get(Meta.draw_key(outfit.get("skin", "")), p[""])
 
 
 ## 0..1: огибающая реакции на касание
@@ -411,13 +395,15 @@ func draw(target: CanvasItem, kind: String, pos: Vector2, sc: float, outfit: Dic
 	_T = Transform2D.IDENTITY
 	_react = react
 	_head_only = head_only
-	if outfit.get("aura", "") == "wings_cascado" and not head_only:
-		pos.y -= (7.0 + 6.0 * sin(t * 1.7)) * sc  # 0.12: с Крыльями Каскада герой слегка парит
 	var breath := 1.0 + 0.018 * sin(t * 2.2)
 	var sway := 0.025 * sin(t * 1.25)
 	if kind == "puppy" and not head_only:
-		# при касании щенок радостно подпрыгивает (два прыжка)
-		pos.y -= absf(sin(clampf(react / REACT_TIME, 0.0, 1.0) * TAU)) * 14.0 * sc * react_env(react)
+		if outfit.get("aura", "") == "pu_hero":
+			# 0.12b: Пёс-герой — один высокий геройский прыжок (плащ развевается)
+			pos.y -= sin(clampf(react / REACT_TIME, 0.0, 1.0) * PI) * 46.0 * sc
+		else:
+			# при касании щенок радостно подпрыгивает (два прыжка)
+			pos.y -= absf(sin(clampf(react / REACT_TIME, 0.0, 1.0) * TAU)) * 14.0 * sc * react_env(react)
 	ci.draw_set_transform(pos, sway, Vector2(sc, sc * breath))
 	var p := palette(kind, outfit)
 	if kind == "puppy":
@@ -434,9 +420,6 @@ func draw(target: CanvasItem, kind: String, pos: Vector2, sc: float, outfit: Dic
 
 ## Аватарка: голова героя в наряде, в круге.
 func draw_avatar(target: CanvasItem, kind: String, c: Vector2, r: float, outfit: Dictionary, t: float, ring: Color, react := 99.0) -> void:
-	# 0.12: Крылья Каскада видны и за аватаркой (на экране победы — взмахивают и сыплют искры)
-	if outfit.get("aura", "") == "wings_cascado" and r >= 30.0:
-		_avatar_extra(target, "wings", c, r, t, react)
 	target.draw_circle(c, r + 4, OUT, true, -1.0, true)
 	target.draw_circle(c, r, Color("#2A1A4F"), true, -1.0, true)
 	target.draw_circle(c + Vector2(0, r * 0.35), r * 0.7, Color(ring, 0.18), true, -1.0, true)
@@ -448,24 +431,16 @@ func draw_avatar(target: CanvasItem, kind: String, c: Vector2, r: float, outfit:
 		draw(target, kind, c + Vector2(0, r * 0.12), r / 125.0, outfit, t, react, true)
 	target.draw_arc(c, r + 2, 0, TAU, 64, ring, 5.0, true)
 	# 0.12: морской конёк-страж рядом с аватаркой (на экране победы делает сальто)
-	if outfit.get("companion", "") == "seahorse" and r >= 30.0:
-		_avatar_extra(target, "seahorse", c, r, t, react)
-
-
-func _avatar_extra(target: CanvasItem, what: String, c: Vector2, r: float, t: float, react: float) -> void:
-	ci = target
-	_rid = target.get_canvas_item()
-	_T = Transform2D.IDENTITY
-	var k := r / 78.0
-	var a := {"top": Vector2(0, -72), "center": Vector2.ZERO, "size": 52.0, "comp": Vector2.ZERO, "kind": "avatar", "tilt": 0.0, "top_w": 100.0}
-	if what == "wings":
-		target.draw_set_transform(c, 0.0, Vector2(k, k))
-		Magic.aura(self, "wings_cascado", a, t, react, false)
-	else:
+	if Meta.draw_key(outfit.get("companion", "")) == "seahorse" and r >= 30.0:
+		ci = target
+		_rid = target.get_canvas_item()
+		_T = Transform2D.IDENTITY
+		var k := r / 78.0
+		var a := {"top": Vector2(0, -72), "center": Vector2.ZERO, "size": 52.0, "comp": Vector2.ZERO, "kind": "avatar", "tilt": 0.0, "top_w": 100.0}
 		target.draw_set_transform(c + Vector2(r * 1.08, -r * 0.25), 0.0, Vector2(k, k) * 0.8)
 		Magic.companion(self, "seahorse", a, t, react, true)
-	_T = Transform2D.IDENTITY
-	target.draw_set_transform(Vector2.ZERO)
+		_T = Transform2D.IDENTITY
+		target.draw_set_transform(Vector2.ZERO)
 
 
 # ---------- Точки крепления ----------
@@ -710,6 +685,10 @@ func _axolotl(p: Dictionary, outfit: Dictionary, t: float, react: float, head_on
 		_line(hl, Color(gill.lerp(Color.WHITE, 0.5), 0.8), 2.2)
 		var tg: Vector2 = (pts[6] - pts[5]).normalized()
 		_ball(pts[6] + tg * 3.0, 6.5, 6.5, tipc, 0.0, 1.1, 0.45, 1.0)
+
+	# 0.12b: украшения на жабрах (жемчуг, свечение глубин) — по кончикам жабр
+	_gills = gills
+	_part(outfit, "gills", a, t)
 
 	# Голова — широкая, мягкая
 	_ball(Vector2(0, -22), 102, 75, body, 0.0, 1.15, 0.45)
@@ -1111,6 +1090,7 @@ func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_onl
 		_glow(Vector2(0, 122), 96, 15, Color(0.03, 0.0, 0.1, 0.5))
 		_back_items(outfit, a, t, true)
 		_kit_tail(p, t, env, react)
+		_part(outfit, "tail", a, t)  # 0.12b: бантик на хвосте, хвост из звёздной пыли
 		# Задние лапки и туловище
 		for sx in [-1.0, 1.0]:
 			_ball(Vector2(sx * 48, 96), 30, 25, body.darkened(0.04), sx * 0.3, 1.1)
@@ -1126,6 +1106,7 @@ func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_onl
 				for k in 3:
 					var y := 46.0 + k * 16.0
 					_line(PackedVector2Array([Vector2(sx * 56, y), Vector2(sx * 46, y + 4), Vector2(sx * 38, y + 2)]), Color(dark, 0.6), 4.5)
+		_part(outfit, "body", a, t)  # 0.12b: вязаный свитер — на туловище, под лапками
 		# Передние лапки с пальчиками
 		for sx in [-1.0, 1.0]:
 			_ball(Vector2(sx * 22, 90), 15, 24, body, 0.0, 1.1, 0.35)
@@ -1329,6 +1310,8 @@ func _kit_tail(p: Dictionary, t: float, env: float, react: float) -> void:
 			var a0 := i * 5 + j
 			tidx.append_array([a0, a0 + 5, a0 + 6, a0, a0 + 6, a0 + 1])
 	RenderingServer.canvas_item_add_triangle_array(_rid, tidx, _T * tpts, cc)
+	_tail_mid = mid
+	_tail_w = ws
 	# пушистый круглый кончик
 	var tg2 := (mid[n - 1] - mid[n - 2]).normalized()
 	_ball(mid[n - 1] + tg2 * 3.0, 15, 15, tipc, 0.0, 1.2, 0.35)
@@ -1337,52 +1320,88 @@ func _kit_tail(p: Dictionary, t: float, env: float, react: float) -> void:
 
 # ---------- Вещи ----------
 
+## 0.12b: модуль рисунков героя-владельца вещи (scripts/wardrobe_*.gd) или null
+func _w(id: String):
+	return W.get(Meta.owner_of(id))
+
+
+## Нарисовать вещь своего героя на этапе stage: back_b / back_f (спина позади / спереди), neck,
+## eyes, head, worn (части супер-эксклюзива на голове и груди), part_<часть тела> (хвост, жабры...)
+func _witem(id: String, stage: String, a: Dictionary, t: float) -> void:
+	if id == "":
+		return
+	var m = _w(id)
+	if m != null:
+		m.item(self, id, stage, a, t)
+	_T = Transform2D.IDENTITY
+
+
+## Вещи, которые садятся на часть тела (хвост, жабры, туловище): вызывается из рисунка героя
+func _part(outfit: Dictionary, part: String, a: Dictionary, t: float) -> void:
+	for s in outfit:
+		_witem(outfit[s], "part_" + part, a, t)
+
+
+func _comp(id: String, a: Dictionary, t: float, front: bool) -> void:
+	if id == "":
+		return
+	Magic.companion(self, Meta.draw_key(id), a, t, _react, front)
+	var m = _w(id)
+	if m != null:
+		m.companion(self, id, a, t, _react, front)
+	_T = Transform2D.IDENTITY
+
+
+func _aura(id: String, a: Dictionary, t: float, front: bool) -> void:
+	if id == "":
+		return
+	Magic.aura(self, Meta.draw_key(id), a, t, _react, front)
+	var m = _w(id)
+	if m != null:
+		m.aura(self, id, a, t, _react, front)
+	_T = Transform2D.IDENTITY
+
+
 func _back_items(outfit: Dictionary, a: Dictionary, t: float, behind: bool) -> void:
 	var live: bool = behind and not _head_only and a.kind != "icon"
 	if live:
 		# 0.12: сияние и спутник позади героя
-		Magic.aura(self, outfit.get("aura", ""), a, t, _react, false)
-		Magic.companion(self, outfit.get("companion", ""), a, t, _react, false)
+		_aura(outfit.get("aura", ""), a, t, false)
+		_comp(outfit.get("companion", ""), a, t, false)
 	var bk: String = outfit.get("back", "")
-	match bk:
-		"cape": _cape(a, t, behind)
-		"backpack": _backpack(a, t, behind)
-		_: Sets.dispatch_back(self, bk, a, t, behind)
+	var d := Meta.draw_key(bk)
+	if not Sets.dispatch_back(self, d, a, t, behind):
+		_witem(bk, "back_b" if behind else "back_f", a, t)
 	_T = Transform2D.IDENTITY
 
 
 func _front_items(outfit: Dictionary, a: Dictionary, t: float) -> void:
-	Magic.skin_fx(self, outfit, a, t, _head_only)  # 0.12: узоры окрасок наборов
+	Magic.skin_fx(self, outfit, a, t, _head_only)  # 0.12: узоры окрасок
 	_back_items(outfit, a, t, false)
 	var nk: String = outfit.get("neck", "")
 	match nk:
-		"scarf": _scarf(a)
-		"bowtie": _bowtie(a)
-		"necklace": _necklace(a, t)
 		"_apron": Magic.master_apron(self, a, t)
-		_: Sets.dispatch_neck(self, nk, a, t)
+		_:
+			if not Sets.dispatch_neck(self, Meta.draw_key(nk), a, t):
+				_witem(nk, "neck", a, t)
 	_T = Transform2D.IDENTITY
 	var ey: String = outfit.get("eyes", "")
-	match ey:
-		"crystal_glasses": _crystal_glasses(a, t)
+	match Meta.draw_key(ey):
 		"sunglasses": _sunglasses(a)
-		"monocle": _monocle(a, t)
 		"_master": Magic.master_eyes(self, a, t)
-		_: Sets.dispatch_eyes(self, ey, a, t)
+		_:
+			if not Sets.dispatch_eyes(self, Meta.draw_key(ey), a, t):
+				_witem(ey, "eyes", a, t)
 	_T = Transform2D.IDENTITY
 	var hd: String = outfit.get("head", "")
-	match hd:
-		"bow": _bow(a)
-		"cap": _cap(a)
-		"miner": _miner(a, t)
-		"crown": _crown(a, t)
-		"wreath": _wreath(a, t)
-		_: Sets.dispatch_head(self, hd, a, t)
-	_T = Transform2D.IDENTITY
+	if not Sets.dispatch_head(self, Meta.draw_key(hd), a, t):
+		_witem(hd, "head", a, t)
+	# 0.12b: супер-эксклюзив — его шляпа / маска / корона (видно и на аватарке)
+	_witem(outfit.get("aura", ""), "worn", a, t)
 	if not _head_only and a.kind != "icon":
 		# 0.12: спутник и сияние впереди, блеск редких вещей
-		Magic.companion(self, outfit.get("companion", ""), a, t, _react, true)
-		Magic.aura(self, outfit.get("aura", ""), a, t, _react, true)
+		_comp(outfit.get("companion", ""), a, t, true)
+		_aura(outfit.get("aura", ""), a, t, true)
 		Magic.rarity_fx(self, outfit, a, t)
 	_T = Transform2D.IDENTITY
 
@@ -1402,175 +1421,7 @@ func _hv(a: Dictionary, v: Vector2) -> Vector2:
 	return a.top + v.rotated(a.tilt) * (a.top_w / 100.0)
 
 
-func _bow(a: Dictionary) -> void:
-	_T = _head_T(a)
-	var c := Vector2(30, -2)
-	var pink := Color("#FF4FA3")
-	# хвостики ленты
-	for sx in [-1.0, 1.0]:
-		var tl := PackedVector2Array([c + Vector2(sx * 1, 2), c + Vector2(sx * 8, 4), c + Vector2(sx * 17, 22), c + Vector2(sx * 11, 20), c + Vector2(sx * 7, 26), c + Vector2(sx * -2, 8)])
-		_shape(["bow_tail", sx], tl, c + Vector2(sx * 7, 12), pink.darkened(0.12), 1.4)
-	for sx in [-1.0, 1.0]:
-		var lc := c + Vector2(sx * 21, -6)
-		_ball(lc, 22, 15.5, pink, sx * -0.35, 1.1, 0.5)
-		for d in [Vector2(-7, -5), Vector2(7, 1), Vector2(-1, 7), Vector2(10, -8)]:
-			_dot(lc + Vector2(d.x * sx, d.y).rotated(sx * -0.35), 2.4, Color(1, 1, 1, 0.92))
-		_glow(c + Vector2(sx * 7, -4), 9, 10, Color("#9E1558", 0.5))
-	_ball(c, 8.5, 9.5, pink.darkened(0.08), 0.0, 1.0, 0.6)
-
-
-func _cap(a: Dictionary) -> void:
-	_T = _head_T(a)
-	var tip := Vector2(8, -84)
-	var bl := Vector2(-37, 4)
-	var br := Vector2(37, 4)
-	var cone := PackedVector2Array()
-	for i in 9:
-		cone.append(bl.lerp(tip, i / 8.0))
-	for i in range(1, 9):
-		cone.append(tip.lerp(br, i / 8.0))
-	for i in range(1, 8):
-		var s := i / 8.0
-		cone.append(Vector2(lerpf(37, -37, s), 4 + sin(s * PI) * 6))
-	var ctr := Vector2(3, -18)
-	_shape(["cap_cone"], cone, ctr, Color("#33C3F2"), 1.1, 0.35)
-	# косые полоски
-	var cols := [Color("#FF5FA8"), Color("#FFD93D"), Color("#FF5FA8")]
-	for j in 3:
-		var s0 := 0.12 + j * 0.27
-		var s1 := s0 + 0.11
-		var q := PackedVector2Array([bl.lerp(tip, s0 + 0.06), br.lerp(tip, s0 - 0.04), br.lerp(tip, s1 - 0.04), bl.lerp(tip, s1 + 0.06)])
-		_fill(q, cols[j])
-	for d in [Vector2(-8, -8), Vector2(14, -30), Vector2(2, -54), Vector2(20, -6)]:
-		_dot(d, 2.6, Color(1, 1, 1, 0.9))
-	_overlay(["cap_over"], cone, ctr, 1.1)
-	# рюшка по краю
-	for i in 7:
-		var s := i / 6.0
-		var x := lerpf(-34, 34, s)
-		_ball(Vector2(x, 6 + sin(s * PI) * 5), 7, 6, Color("#FFD93D") if i % 2 == 0 else Color("#FF5FA8"), 0.0, 1.0, 0.4, 1.0)
-	# помпон
-	for d in [Vector2(-6, 2), Vector2(6, 3), Vector2(0, -6), Vector2(-5, -4), Vector2(5, -5)]:
-		_ball(tip + d, 7, 7, Color("#FFF2FA"), 0.0, 1.0, 0.3, 1.0)
-	_ball(tip + Vector2(0, 0), 8, 8, Color.WHITE, 0.0, 1.0, 0.4, 1.0)
-
-
-func _miner(a: Dictionary, t: float) -> void:
-	_T = _head_T(a)
-	var lamp := Vector2(0, -24)
-	var fl := 0.2 + 0.05 * sin(t * 3.0)
-	# луч фонаря
-	var beam := PackedVector2Array([lamp + Vector2(-8, 0), lamp + Vector2(8, 0), Vector2(80, -170), Vector2(-80, -170)])
-	ci.draw_polygon(_T * beam, PackedColorArray([Color(1, 0.95, 0.6, fl), Color(1, 0.95, 0.6, fl), Color(1, 0.95, 0.6, 0.0), Color(1, 0.95, 0.6, 0.0)]))
-	var dome := PackedVector2Array()
-	for i in 21:
-		var ang := PI + PI * i / 20.0
-		dome.append(Vector2(cos(ang) * 50, 8 + sin(ang) * 50))
-	for i in range(1, 6):
-		dome.append(Vector2(lerpf(50, -50, i / 6.0), 9))
-	_shape(["miner_dome"], dome, Vector2(-4, -16), Color("#FFC83A"), 1.0, 0.75)
-	# красная светоотражающая полоса
-	var band := PackedVector2Array([Vector2(-49.5, -4), Vector2(49.5, -4), Vector2(50, 6), Vector2(-50, 6)])
-	_fill(band, Color("#FF5A3C"))
-	_fill(PackedVector2Array([Vector2(-49, -2.5), Vector2(49, -2.5), Vector2(49, -0.5), Vector2(-49, -0.5)]), Color(1, 1, 1, 0.55))
-	# гребень
-	_shape(["miner_ridge"], PackedVector2Array([Vector2(-6, -46), Vector2(6, -46), Vector2(7, -5), Vector2(-7, -5)]), Vector2(0, -24), Color("#FFD85A"), 1.3, 0.6)
-	_overlay(["miner_over"], dome, Vector2(-4, -16), 1.4)
-	for sx in [-1.0, 1.0]:
-		_ball(Vector2(sx * 30, -24), 3, 3, Color("#FFE9A0"), 0.0, 1.0, 0.8, 0.8)
-	_ball(Vector2(0, 8), 60, 9.5, Color("#E8961E"), 0.0, 1.3, 0.5)
-	# фонарь: корпус, светящееся стекло, ореол
-	_glow(lamp, 46, 46, Color(1.0, 0.93, 0.55, fl * 1.6))
-	_ball(lamp, 17, 17, Color("#6E5C86"), 0.0, 1.0, 0.6)
-	_ball(lamp, 12, 12, Color("#FFF0A0"), 0.0, 1.4, 0.9, 1.0)
-	_dot(lamp + Vector2(-3, -3), 5, Color(1, 1, 1, 0.95))
-
-
-func _crown(a: Dictionary, t: float) -> void:
-	_T = _head_T(a)
-	var gold := Color("#FFC83A")
-	var pts := PackedVector2Array([Vector2(-42, 8), Vector2(-46, -34), Vector2(-24, -14), Vector2(-12, -46), Vector2(0, -20),
-		Vector2(12, -46), Vector2(24, -14), Vector2(46, -34), Vector2(42, 8), Vector2(0, 10)])
-	_shape(["crown"], pts, Vector2(0, -8), gold, 1.0, 0.85)
-	var band := PackedVector2Array()
-	for i in 13:
-		band.append(Vector2(lerpf(-44, 44, i / 12.0), -8))
-	band.append(Vector2(44, 0))
-	for i in 13:
-		band.append(Vector2(lerpf(44, -44, i / 12.0), 10))
-	band.append(Vector2(-44, 0))
-	_shape(["crown_band"], band, Vector2(0, 1), Color("#F4A62A"), 1.8, 0.8)
-	var gems := [Color("#FF3B6B"), Color("#3BB8FF"), Color("#2EE59D")]
-	for i in 3:
-		_gem(Vector2((i - 1) * 27, 1), 8.0 if i == 1 else 7.0, gems[i])
-	for v in [Vector2(-46, -34), Vector2(-12, -46), Vector2(12, -46), Vector2(46, -34)]:
-		_ball(v, 5.5, 5.5, Color("#FFEFFB"), 0.0, 1.0, 0.9, 1.0)
-	var tw := 0.5 + 0.5 * sin(t * 4.0)
-	_sparkle(Vector2(-30, -26), 4 + 4 * tw, Color(1, 1, 1, 0.95))
-	_sparkle(Vector2(32, -18), 3 + 3 * (1.0 - tw), Color(1, 1, 1, 0.85))
-
-
-func _wreath(a: Dictionary, t: float) -> void:
-	_T = _head_T(a)
-	var ring := PackedVector2Array()
-	for i in 17:
-		var ang := PI + PI * i / 16.0
-		ring.append(Vector2(cos(ang) * 52, 6 + sin(ang) * 14))
-	_line(ring, Color("#2D7F4F"), 7.0)
-	for i in range(0, 17):
-		var v: Vector2 = ring[i]
-		var tg: Vector2 = (ring[mini(i + 1, 16)] - ring[maxi(i - 1, 0)]).normalized()
-		var up := -1.0 if i % 2 == 0 else 1.0
-		var col := Color("#4CC774") if i % 2 == 0 else Color("#36A85E")
-		_ball(v + tg.orthogonal() * up * -5.0, 9, 4.5, col, tg.angle() + up * 0.55, 1.2, 0.3, 1.0)
-	# цветочки
-	for fx in [-36.0, 36.0]:
-		var fc := Vector2(fx, 6 + sin(PI + PI * (fx + 52) / 104.0) * 14 + 2)
-		for k in 5:
-			_dot(fc + Vector2(0, -4.5).rotated(k * TAU / 5.0), 3.6, Color("#FFF4FB"))
-		_dot(fc, 2.6, Color("#FFC83A"))
-	var caps := [Color("#5FF0D6"), Color("#C38BFF"), Color("#FF8FD0"), Color("#C38BFF"), Color("#5FF0D6")]
-	var xs := [-44, -22, 0, 22, 44]
-	for i in 5:
-		var base := Vector2(xs[i], 6 + sin(PI + PI * (xs[i] + 52) / 104.0) * 14)
-		var h := 22.0 if i % 2 == 0 else 16.0
-		var glow := 0.3 + 0.18 * sin(t * 3.0 + i)
-		_glow(base + Vector2(0, -h), 24, 18, Color(caps[i], glow))
-		_shape(["wr_stem", h], PackedVector2Array([base + Vector2(-4.5, 0), base + Vector2(-3, -h), base + Vector2(3, -h), base + Vector2(4.5, 0)]) , base + Vector2(0, -h / 2.0), Color("#F4EEFF"), 1.5, 0.2, 1.0)
-		var cap := PackedVector2Array()
-		for j in 13:
-			var ang := PI + PI * j / 12.0
-			cap.append(base + Vector2(0, -h) + Vector2(cos(ang) * 13, sin(ang) * 11))
-		cap.append(base + Vector2(0, -h + 2.5))
-		_shape(["wr_cap", i], cap, base + Vector2(-2, -h - 4), caps[i], 1.0, 0.6)
-		_dot(base + Vector2(-5, -h - 6), 2.2, Color(1, 1, 1, 0.9))
-		_dot(base + Vector2(4, -h - 3), 1.6, Color(1, 1, 1, 0.8))
-
-
-func _crystal_glasses(a: Dictionary, t: float) -> void:
-	var r: float = a.eye_rad * 1.12
-	var frame := Color("#9FF6FF")
-	for e in [a.eye_l, a.eye_r]:
-		_T = Transform2D(a.tilt, e)
-		var hex := PackedVector2Array()
-		for i in 6:
-			hex.append(Vector2(cos(i * TAU / 6.0 + PI / 6.0), sin(i * TAU / 6.0 + PI / 6.0)) * r)
-		_vgrad(hex, Color(0.6, 1.0, 1.0, 0.32), Color(0.8, 0.55, 1.0, 0.3), false)
-		var cl := hex.duplicate()
-		cl.append(hex[0])
-		_line(cl, Color("#2A86B8"), r * 0.26)
-		_line(cl, frame, r * 0.13)
-		_line(PackedVector2Array([hex[3].lerp(hex[4], 0.15), hex[4], hex[5].lerp(hex[4], 0.6)]), Color(1, 1, 1, 0.85), r * 0.05)
-		_line(PackedVector2Array([Vector2(-r * 0.45, r * 0.1), Vector2(-r * 0.05, -r * 0.35)]), Color(1, 1, 1, 0.4), r * 0.1)
-		_sparkle(Vector2(-r * 0.5, -r * 0.5), r * (0.16 + 0.08 * sin(t * 4.0)), Color.WHITE)
-	_T = Transform2D.IDENTITY
-	var l: Vector2 = a.eye_l + Vector2(r * 0.87, 0).rotated(a.tilt)
-	var rr: Vector2 = a.eye_r - Vector2(r * 0.87, 0).rotated(a.tilt)
-	ci.draw_line(l, rr, Color("#2A86B8"), r * 0.2, true)
-	ci.draw_line(l, rr, frame, r * 0.1, true)
-	_gem((l + rr) / 2.0, r * 0.24, Color("#B46CFF"))
-
-
+## Очки-сердечки (0.12b: «Парижские очки» котика)
 func _sunglasses(a: Dictionary) -> void:
 	var r: float = a.eye_rad * 1.12
 	var bridge := PackedVector2Array()
@@ -1591,29 +1442,11 @@ func _sunglasses(a: Dictionary) -> void:
 	_T = Transform2D.IDENTITY
 
 
-func _monocle(a: Dictionary, t: float) -> void:
-	var r: float = a.eye_rad * 1.15
-	var e: Vector2 = a.eye_r
-	_T = Transform2D(a.tilt, e)
-	_glow(Vector2(0, 0), r, r, Color(0.75, 0.95, 1.0, 0.18))
-	_arc(Vector2.ZERO, r, r, 0, TAU, Color("#A8651A"), r * 0.26, 40)
-	_arc(Vector2.ZERO, r, r, 0, TAU, Color("#FFCB45"), r * 0.15, 40)
-	_arc(Vector2.ZERO, r, r, 1.05 * PI, 1.55 * PI, Color("#FFF4C0"), r * 0.06, 12)
-	_line(PackedVector2Array([Vector2(-r * 0.5, -r * 0.25), Vector2(-r * 0.15, -r * 0.6)]), Color(1, 1, 1, 0.6), r * 0.1)
-	_T = Transform2D.IDENTITY
-	var start := e + Vector2(r * 0.72, r * 0.72)
-	for i in 9:
-		var s := i / 8.0
-		var c := start + Vector2(s * r * 0.9, s * r * 2.6 + sin(s * PI) * r * 0.5)
-		_ball(c, maxf(2.2, r * 0.07), maxf(2.2, r * 0.07), Color("#FFCB45"), 0.0, 1.0, 0.8, 0.8)
-	_sparkle(e + Vector2(-r * 0.55, -r * 0.55), r * (0.1 + 0.06 * sin(t * 4.0)), Color.WHITE)
-
-
-func _scarf(a: Dictionary) -> void:
+## Вязаный полосатый шарф с хвостиком, бахромой и бубенчиком (0.12b: цвета — у вещи героя)
+func _scarf(a: Dictionary, stripes: Array, bell := Color("#FFCB45")) -> void:
 	var w: float = a.neck_w
 	var h := w * 0.2
 	var n: Vector2 = a.neck
-	var stripes := [Color("#FF5A6E"), Color("#FFD23F"), Color("#2EC4B6")]
 	var top := PackedVector2Array()
 	var bot := PackedVector2Array()
 	for i in 13:
@@ -1633,7 +1466,7 @@ func _scarf(a: Dictionary) -> void:
 	for i in 5:
 		var fx: Vector2 = tail[3].lerp(tail[2], (i + 0.5) / 5.0)
 		ci.draw_line(fx, fx + Vector2(0, h * 0.4), stripes[i % 3], 3.0, true)
-	_ball(tail[3].lerp(tail[2], 0.5) + Vector2(0, h * 0.75), h * 0.3, h * 0.3, Color("#FFCB45"), 0.0, 1.0, 0.9, 1.0)
+	_ball(tail[3].lerp(tail[2], 0.5) + Vector2(0, h * 0.75), h * 0.3, h * 0.3, bell, 0.0, 1.0, 0.9, 1.0)
 	ci.draw_line(tail[3].lerp(tail[2], 0.5) + Vector2(-h * 0.18, h * 0.85), tail[3].lerp(tail[2], 0.5) + Vector2(h * 0.18, h * 0.85), Color("#8A5A10"), 1.6, true)
 	# основная полоса: вязаные полоски
 	for i in 12:
@@ -1668,137 +1501,6 @@ func _scarf(a: Dictionary) -> void:
 	ci.draw_polyline(band, Color(0.35, 0.05, 0.2, 0.5), 1.6, true)
 
 
-func _bowtie(a: Dictionary) -> void:
-	var k: float = a.neck_w / 150.0
-	var n: Vector2 = a.neck + Vector2(0, 2)
-	_T = Transform2D(0.0, Vector2(k, k), 0.0, n)
-	var col := Color("#FF3B5C")
-	for sx in [-1.0, 1.0]:
-		var wing := PackedVector2Array([Vector2(sx * 6, -6), Vector2(sx * 22, -18), Vector2(sx * 36, -19), Vector2(sx * 40, -6), Vector2(sx * 40, 6), Vector2(sx * 36, 19), Vector2(sx * 22, 18), Vector2(sx * 6, 6)])
-		_shape(["bt_wing", sx], wing, Vector2(sx * 24, 0), col, 1.25, 0.55)
-		for d in [Vector2(18, -8), Vector2(30, 2), Vector2(18, 9), Vector2(32, -11), Vector2(31, 13)]:
-			_dot(Vector2(d.x * sx, d.y), 2.6, Color(1, 1, 1, 0.92))
-		_glow(Vector2(sx * 10, 0), 8, 12, Color("#8E0F30", 0.45))
-	_ball(Vector2.ZERO, 9, 11, col.darkened(0.1), 0.0, 1.0, 0.6)
-
-
-func _necklace(a: Dictionary, t: float) -> void:
-	var w: float = a.neck_w * 0.8
-	var n: Vector2 = a.neck
-	var chain := PackedVector2Array()
-	for i in 17:
-		var ang := lerpf(0.0, PI, i / 16.0)
-		chain.append(n + Vector2(cos(ang) * w * 0.5, -8 + sin(ang) * w * 0.17))
-	ci.draw_polyline(chain, Color("#B07A1A"), 2.0, true)
-	for i in 17:
-		if i == 8:
-			continue
-		if i % 2 == 0:
-			_ball(chain[i], 4.6, 4.6, Color("#FFF0F8"), 0.0, 1.0, 0.9, 1.0)
-		else:
-			_ball(chain[i], 3.4, 3.4, Color("#FFC83A"), 0.0, 1.0, 0.9, 1.0)
-	# подвеска-сердечко
-	var pc: Vector2 = chain[8] + Vector2(0, w * 0.1)
-	var hk := w * 0.12
-	_T = Transform2D(0.0, pc)
-	_shape(["neck_heart", hk], _heart(Vector2.ZERO, hk, 24), Vector2(0, -hk * 0.15), Color("#C25CFF"), 1.0, 0.9)
-	_dot(Vector2(-hk * 0.45, -hk * 0.45), hk * 0.16, Color(1, 1, 1, 0.95))
-	_T = Transform2D.IDENTITY
-	_ball(chain[8] - Vector2(0, 1), 3.2, 3.2, Color("#FFC83A"), 0.0, 1.0, 0.9, 1.0)
-	_sparkle(pc + Vector2(hk * 0.9, -hk * 0.7), hk * (0.4 + 0.25 * sin(t * 4.0)), Color.WHITE)
-
-
-func _cape(a: Dictionary, t: float, behind: bool) -> void:
-	var w: float = a.back_w
-	var b: Vector2 = a.back
-	if not behind:
-		# застёжка: золотая звёздочка под подбородком
-		var n: Vector2 = a.neck + Vector2(0, 6)
-		var star := PackedVector2Array()
-		for i in 10:
-			var rr := 14.0 if i % 2 == 0 else 6.5
-			star.append(n + Vector2(0, -rr).rotated(i * TAU / 10.0))
-		_shape(["cape_star", n], star, n, Color("#FFCB45"), 1.0, 0.8)
-		_ball(n, 3.5, 3.5, Color("#FF5FA8"), 0.0, 1.0, 0.9, 0.8)
-		return
-	# высокий воротник за головой и широкий плащ до земли
-	var pts := PackedVector2Array([b + Vector2(-w * 0.34, -w * 0.36), b + Vector2(-w * 0.50, -w * 0.2)])
-	var bottom_y := b.y + w * 0.58
-	var hem := PackedVector2Array()
-	for i in 13:
-		var s := i / 12.0
-		var x := lerpf(-w * 0.66, w * 0.66, s)
-		var v := Vector2(b.x + x, bottom_y + sin(s * TAU * 2.0 + t * 2.0) * 6.0 + (absf(s - 0.5) * -14.0))
-		pts.append(v)
-		hem.append(v)
-	pts.append(b + Vector2(w * 0.50, -w * 0.2))
-	pts.append(b + Vector2(w * 0.34, -w * 0.36))
-	var cols := PackedColorArray()
-	for v in pts:
-		var ty := clampf((v.y - b.y + w * 0.5) / (w * 1.1), 0.0, 1.0)
-		var tx := clampf((v.x - b.x) / (w * 1.3) + 0.5, 0.0, 1.0)
-		cols.append(Color("#7A5CF0").lerp(Color("#24166A"), ty * 0.8 + tx * 0.25))
-	var outline := pts.duplicate()
-	outline.append(pts[0])
-	ci.draw_polyline(outline, Color(0.1, 0.05, 0.25, 0.6), 4.0, true)
-	ci.draw_polygon(pts, cols)
-	# складки
-	for i in [3, 6, 9]:
-		var hp: Vector2 = hem[i]
-		ci.draw_line(Vector2(hp.x * 0.8 + b.x * 0.2, b.y - w * 0.05), hp + Vector2(0, -6), Color(0.08, 0.02, 0.2, 0.25), 6.0, true)
-	# золотая кайма
-	ci.draw_polyline(hem, Color("#B8771A"), 7.0, true)
-	ci.draw_polyline(hem, Color("#FFCB45"), 4.0, true)
-	var stars := [Vector2(-0.55, 0.35), Vector2(0.55, 0.28), Vector2(-0.42, 0.52), Vector2(0.46, 0.5), Vector2(0.6, 0.02), Vector2(-0.6, 0.05), Vector2(-0.3, 0.2), Vector2(0.3, 0.4)]
-	for i in stars.size():
-		var tw := 0.5 + 0.5 * sin(t * 3.0 + i * 1.7)
-		var sc: Vector2 = b + stars[i] * w
-		_glow(sc, w * 0.07, w * 0.07, Color(1, 0.9, 0.55, 0.32 * tw))
-		_sparkle(sc, w * 0.04 * (0.7 + tw * 0.6), Color(1, 0.96, 0.78, 0.55 + 0.45 * tw))
-
-
-func _backpack(a: Dictionary, t: float, behind: bool) -> void:
-	var w: float = a.back_w
-	var b: Vector2 = a.back
-	var orange := Color("#FF8A3D")
-	if behind:
-		var c := b + Vector2(w * 0.5, -w * 0.12)
-		var s := Vector2(w * 0.5, w * 0.6)
-		var r := Rect2(c - s / 2.0, s)
-		_shape(["bp_body", w, b], _rrect(r, s.x * 0.28), c, orange, 1.4, 0.4)
-		var pk := Rect2(r.position + Vector2(s.x * 0.1, s.y * 0.5), Vector2(s.x * 0.8, s.y * 0.4))
-		_shape(["bp_pocket", w, b], _rrect(pk, s.x * 0.16), pk.get_center(), Color("#FFB03D"), 1.6, 0.4)
-		_T = Transform2D(0.0, pk.get_center())
-		_shape(["bp_heart", w], _heart(Vector2.ZERO, s.x * 0.12, 20), Vector2.ZERO, Color("#FF4F93"), 1.0, 0.6, 1.0)
-		_T = Transform2D.IDENTITY
-		var fl := Rect2(r.position + Vector2(0, -2), Vector2(s.x, s.y * 0.34))
-		_shape(["bp_flap", w, b], _rrect(fl, s.x * 0.26), fl.get_center(), Color("#2EC4B6"), 1.5, 0.45)
-		_ball(c + Vector2(0, -s.y * 0.2 + s.y * 0.14), s.x * 0.09, s.x * 0.09, Color("#FFCB45"), 0.0, 1.0, 0.9)
-		# брелок-звёздочка покачивается
-		var ch := r.position + Vector2(s.x * 0.9, s.y * 0.3)
-		var sw := sin(t * 2.4) * 0.3
-		var sp := ch + Vector2(0, s.y * 0.22).rotated(sw)
-		ci.draw_line(ch, sp, Color("#FFF0C0"), 1.6, true)
-		_sparkle(sp, s.x * 0.12, Color("#FFE066"))
-		return
-	# лямки спереди
-	var k := w / 184.0
-	for sx in [-1.0, 1.0]:
-		var top: Vector2 = b + Vector2(sx * 62, -8) * k
-		var bot: Vector2 = b + Vector2(sx * 52, 74) * k
-		if a.kind == "axolotl":
-			top = b + Vector2(sx * 40, -22) * k
-			bot = b + Vector2(sx * 50, 30) * k
-		elif a.kind == "puppy" or a.kind == "kitten":
-			top = b + Vector2(sx * 46, -30) * k
-			bot = b + Vector2(sx * 58, 26) * k
-		var strap := PackedVector2Array([top, top.lerp(bot, 0.5) + Vector2(sx * 4, 0), bot])
-		ci.draw_polyline(strap, Color("#B5521E"), 15.0 * k + 2.0, true)
-		ci.draw_polyline(strap, Color("#2EC4B6"), 10.0 * k, true)
-		ci.draw_polyline(strap, Color(1, 1, 1, 0.35), 3.0 * k, true)
-		_ball(top.lerp(bot, 0.55), 4.5 * k + 1.0, 4.5 * k + 1.0, Color("#FFCB45"), 0.0, 1.0, 0.9, 1.0)
-
-
 func _rrect(r: Rect2, rad: float) -> PackedVector2Array:
 	rad = minf(rad, minf(r.size.x, r.size.y) * 0.49)
 	var pts := PackedVector2Array()
@@ -1814,29 +1516,33 @@ func _rrect(r: Rect2, rad: float) -> PackedVector2Array:
 # ---------- Значок вещи для гардероба ----------
 
 ## Рисует вещь отдельно, в квадрате размером size вокруг c. Окраска — мини-аватаркой героя,
-## сияние (0.12) — маленьким героем в этом сиянии, спутник — крупно сам по себе.
+## сияние — маленьким героем в этом сиянии (супер-эксклюзив — герой в его шляпе/маске),
+## спутник — крупно сам по себе. Вещи «по анатомии» рисуют свой значок (модуль героя, icon).
 func draw_item_icon(target: CanvasItem, id: String, slot: String, kind: String, c: Vector2, size: float, t: float) -> void:
 	ci = target
 	_rid = target.get_canvas_item()
 	_T = Transform2D.IDENTITY
+	_react = 99.0
+	var d := Meta.draw_key(id)
 	if slot == "skin":
 		draw_avatar(target, kind, c, size * 0.36, {"skin": id}, t, palette(kind, {"skin": id}).body)
 		return
 	if slot == "aura":
 		# сияние вокруг аватарки героя (дешевле, чем целый герой на каждой карточке)
-		var k := size / 300.0
-		var a0 := {"top": Vector2(0, -64), "center": Vector2(0, 4), "size": 66.0, "comp": Vector2.ZERO, "kind": "icon", "tilt": 0.0, "top_w": 100.0}
+		var k := size / 250.0
+		var a0 := {"top": Vector2(0, -64), "center": Vector2(0, 4), "size": 66.0, "comp": Vector2(54, -40), "kind": "icon", "tilt": 0.0, "top_w": 100.0}
 		_icon = true
 		ci.draw_set_transform(c, 0.0, Vector2(k, k))
-		Magic.aura(self, id, a0, t + 0.7, 99.0, false)
+		_aura(id, a0, t + 0.7, false)
 		ci.draw_set_transform(Vector2.ZERO)
 		var ring: Color = palette(kind, {}).body
-		draw_avatar(target, kind, c + Vector2(0, size * 0.02), size * 0.2, {}, t, ring)
+		var sup: bool = Meta.item(id).has("covers")
+		draw_avatar(target, kind, c + Vector2(0, size * (0.1 if sup else 0.02)), size * (0.3 if sup else 0.23), {"aura": id} if sup else {}, t, ring)
 		ci = target
 		_rid = target.get_canvas_item()
 		_T = Transform2D.IDENTITY
 		ci.draw_set_transform(c, 0.0, Vector2(k, k))
-		Magic.aura(self, id, a0, t + 0.7, 99.0, true)
+		_aura(id, a0, t + 0.7, true)
 		ci.draw_set_transform(Vector2.ZERO)
 		_icon = false
 		return
@@ -1846,66 +1552,52 @@ func draw_item_icon(target: CanvasItem, id: String, slot: String, kind: String, 
 		"eye_l": Vector2(-44, 0), "eye_r": Vector2(44, 0), "eye_rad": 34.0, "temple": 90.0,
 		"neck": Vector2(0, 0), "neck_w": 170.0, "back": Vector2(0, -40), "back_w": 150.0, "kind": "icon",
 		"comp": Vector2.ZERO, "center": Vector2.ZERO, "size": 30.0, "hp": func(v): return v}
+	var m = _w(id)
+	if m != null and m.icon(self, id, slot, a, t):
+		_T = Transform2D.IDENTITY
+		ci.draw_set_transform(Vector2.ZERO)
+		return
 	match slot:
 		"companion":
-			ci.draw_set_transform(c, 0.0, Vector2(sc, sc) * (1.45 if id == "seahorse" else 2.0))
-			_react = 99.0
-			Magic.companion(self, id, a, t, 99.0, false)
-			Magic.companion(self, id, a, t, 99.0, true)
+			ci.draw_set_transform(c, 0.0, Vector2(sc, sc) * (1.45 if d == "seahorse" else 2.0))
+			_comp(id, a, t, false)
+			_comp(id, a, t, true)
 		"head":
-			var oy := {"bow": 0.0, "cap": 10.0, "miner": 0.0, "crown": 0.0, "wreath": 0.0, "acorn_cap": 4.0,
-				"bluebell_hat": 10.0, "coral_tiara": 6.0, "top_hat": 28.0, "space_helmet": 26.0, "crystal_diadem": 8.0, "firefly_crown": 18.0}
-			a.top = Vector2(0, 20 + oy.get(id, 0.0))
-			if id == "bow" or id == "shell_clip":
-				a.top = Vector2(-36, 10)
-				a.top_w = 180.0
+			var oy := {"coral_tiara": 6.0}
+			a.top = Vector2(0, 20 + oy.get(d, 0.0))
 			_front_items({"head": id}, a, t)
 		"eyes":
-			if id == "monocle" or id == "amethyst_monocle":
-				a.eye_r = Vector2(-20, -30)
-				a.eye_rad = 42.0
-			elif id == "dive_mask":
+			if d == "dive_mask":
 				a.top = Vector2(0, 10)
 				a.eye_l = Vector2(-40, 24)
 				a.eye_r = Vector2(40, 24)
 				a.eye_rad = 28.0
 				a.temple = 80.0
-			elif id == "masquerade" or id == "star_lorgnette":
+			elif d == "masquerade" or d == "star_lorgnette":
 				a.eye_l = Vector2(-40, -6)
 				a.eye_r = Vector2(40, -6)
 				a.eye_rad = 28.0
-			elif id == "flight_goggles" or id == "daisy_glasses":
-				a.eye_l = Vector2(-40, 0)
-				a.eye_r = Vector2(40, 0)
-				a.eye_rad = 28.0
-				a.temple = 82.0
 			_front_items({"eyes": id}, a, t)
 		"neck":
-			a.neck = Vector2(0, -20)
-			if id == "comet_scarf":
-				a.neck = Vector2(-24, -30)
-				a.neck_w = 140.0
-			elif id == "star_compass" or id == "mountain_heart":
-				a.neck = Vector2(0, -40)
+			# кулоны и подвески рисуются в «пикселях героя» — значок шеи крупнее (×1.5)
+			ci.draw_set_transform(c, 0.0, Vector2(sc, sc) * 1.5)
+			a.neck = Vector2(0, -24)
+			a.neck_w = 116.0
+			if d == "comet_scarf":
+				a.neck = Vector2(-18, -26)
+				a.neck_w = 96.0
+			elif d == "star_compass" or d == "pearl_necklace":
+				a.neck = Vector2(0, -34)
 			_front_items({"neck": id}, a, t)
 		"back":
-			if id == "backpack":
-				a.back = Vector2(-84, 10)
-				a.back_w = 220.0
-				_back_items({"back": id}, a, t, true)
-			elif id == "rocket_pack":
+			if d == "rocket_pack":
 				a.back = Vector2(0, -6)
-				a.back_w = 190.0
-				_back_items({"back": id}, a, t, true)
-			elif id == "dragonfly_wings":
-				a.back = Vector2(0, 14)
-				a.back_w = 150.0
-				_back_items({"back": id}, a, t, true)
+				a.back_w = 130.0
 			else:
-				a.back = Vector2(0, -50)
-				a.back_w = 140.0 if id == "fullmoon_mantle" else 150.0
+				a.back = Vector2(0, -34)
+				a.back_w = 124.0
 				a.neck = Vector2(28, -55)
 				a.neck_w = 0.0
-				_back_items({"back": id}, a, t, true)
+			_back_items({"back": id}, a, t, true)
 	_T = Transform2D.IDENTITY
 	ci.draw_set_transform(Vector2.ZERO)
