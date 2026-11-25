@@ -1,9 +1,9 @@
 extends SceneTree
 ## Робот-игрок для проверки уровней Cascado.
 ## Запуск (из корня репозитория):
-##   godot --headless --path block_game -s tools/level_bot.gd -- --levels=1-50 --games=30 --seed=1
+##   godot --headless --path block_game -s tools/level_bot.gd -- --levels=1-100 --games=30 --seed=1 --tuck=1
 ## Параметры (все необязательные):
-##   --levels=A-B   какие уровни гонять (по умолчанию 1-50)
+##   --levels=A-B   какие уровни гонять (по умолчанию 1-100)
 ##   --games=N      партий на уровень (по умолчанию 30)
 ##   --seed=S       зерно случайных фигур (один и тот же seed = одинаковые партии)
 ##   --max=N        предел фигур на партию (по умолчанию 200)
@@ -13,6 +13,9 @@ extends SceneTree
 ##                  (zerno = n*7919+13 + k*104729) и пишет в CSV строку на каждое
 ##   --k0=K         с какого k начинать перебор зёрен (по умолчанию 0)
 ##   --set=a:1,b:2  временно заменить поля строки таблицы (например --set=hang:1,rows:3)
+##   --tuck=1       кроме бросков сверху пробовать «подсунуть» фигуру: опустить до упора
+##                  и сдвинуть вбок на 1–3 клетки (под островок камня, уровни 51+);
+##                  так играет человек, в ~2 раза медленнее. Уровни 51–100 настроены с --tuck=1
 ## Робот ставит фигуры мгновенно: скорость падения на него не влияет.
 ## Прогресс игрока (user://save.cfg) сохраняется до прогона и возвращается после.
 
@@ -38,12 +41,13 @@ const SAFE_H := 8
 const W_CROW := 2.0      # бонус за заполненность рядов с кристаллами
 
 var look := false
+var tuck := false
 var set_fields := {}
 var mismatches := 0
 
 
 func _initialize() -> void:
-	var args := {"levels": "1-50", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0", "dump": "0", "set": "", "k0": "0"}
+	var args := {"levels": "1-100", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0", "dump": "0", "set": "", "k0": "0", "tuck": "0"}
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--") and a.contains("="):
 			var kv := a.substr(2).split("=", true, 1)
@@ -55,6 +59,7 @@ func _initialize() -> void:
 	var base_seed := int(args.seed)
 	var max_pieces := int(args.max)
 	look = args.look == "1"
+	tuck = args.tuck == "1"
 	for kv in String(args.set).split(",", false):
 		var pr: PackedStringArray = kv.split(":")
 		var val = float(pr[1]) if pr[1].contains(".") else int(pr[1])
@@ -235,6 +240,7 @@ func _fits(b: PackedInt32Array, cells: Array, pos: Vector2i) -> bool:
 # Все конечные положения фигуры: [{rot, x, board, ids, crystals, lines, chain, top_out}]
 func _placements(b: PackedInt32Array, ids: PackedInt32Array, t: int, start_y: int, new_id: int) -> Array:
 	var out: Array = []
+	var seen := {}
 	var rots := _rotations(t)
 	for r in rots.size():
 		var cells: Array = rots[r]
@@ -244,20 +250,43 @@ func _placements(b: PackedInt32Array, ids: PackedInt32Array, t: int, start_y: in
 				continue
 			while _fits(b, cells, p + Vector2i(0, 1)):
 				p.y += 1
-			var nb := b.duplicate()
-			var nids := ids.duplicate()
-			var top_out := false
-			for c in cells:
-				var y: int = c.y + p.y
-				if y < 0:
-					top_out = true
-				else:
-					nb[y * COLS + c.x + p.x] = t
-					nids[y * COLS + c.x + p.x] = new_id
-			var sim := _resolve(nb, nids)
-			out.append({"rot": r, "x": ox, "board": nb, "ids": nids, "crystals": sim.crystals, "lines": sim.lines,
-				"chain": sim.chain, "top_out": top_out})
+			var finals: Array = [[p, p]]
+			if tuck:
+				# «подсунуть» фигуру: опустить до упора и сдвинуть вбок на 1–3 клетки
+				# (под островок камня или под нависание), затем уронить дальше
+				for dir in [-1, 1]:
+					var q := p
+					for st in 3:
+						if not _fits(b, cells, q + Vector2i(dir, 0)):
+							break
+						q.x += dir
+						var f := q
+						while _fits(b, cells, f + Vector2i(0, 1)):
+							f.y += 1
+						finals.append([f, Vector2i(q.x, p.y)])
+			for fin in finals:
+				var key := "%d,%d,%d" % [r, fin[0].x, fin[0].y]
+				if seen.has(key):
+					continue
+				seen[key] = true
+				out.append(_make(b, ids, t, cells, r, ox, fin[0], fin[1], p.y, new_id))
 	return out
+
+
+func _make(b: PackedInt32Array, ids: PackedInt32Array, t: int, cells: Array, r: int, ox: int, p: Vector2i, slide: Vector2i, rest_y: int, new_id: int) -> Dictionary:
+	var nb := b.duplicate()
+	var nids := ids.duplicate()
+	var top_out := false
+	for c in cells:
+		var y: int = c.y + p.y
+		if y < 0:
+			top_out = true
+		else:
+			nb[y * COLS + c.x + p.x] = t
+			nids[y * COLS + c.x + p.x] = new_id
+	var sim := _resolve(nb, nids)
+	return {"rot": r, "x": ox, "tx": slide.x, "ty": rest_y, "board": nb, "ids": nids, "crystals": sim.crystals, "lines": sim.lines,
+		"chain": sim.chain, "top_out": top_out}
 
 
 # Очистка линий с каскадом, как в игре («липкая» гравитация из scripts/gravity.gd).
@@ -341,6 +370,16 @@ func _execute(p: Dictionary) -> void:
 		guard += 1
 	if G.piece_pos.x != p.x:
 		mismatches += 1
+	if p.tx != p.x:
+		while G.piece_pos.y < p.ty and G.soft_drop():
+			pass
+		guard = 0
+		while G.piece_pos.x != p.tx and guard < 10:
+			if not G.move(1 if p.tx > G.piece_pos.x else -1):
+				break
+			guard += 1
+		if G.piece_pos.x != p.tx:
+			mismatches += 1
 	G.hard_drop()
 
 

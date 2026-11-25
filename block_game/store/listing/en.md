@@ -47,7 +47,7 @@ Cascado is a calm and clever falling-block puzzle. Clear lines to break the rock
 Pick your companion for the journey: a little owl who lives in a cozy tree hollow, or a smiling axolotl from an underwater grotto. Win levels, collect crystal shards and make your friend look great.
 
 What's inside:
-• 50 handcrafted levels in 5 halls of the cave: Amethyst, Emerald, Fire, Ice and the Heart of the Mountain. After level 50, the Endless Depths keep going.
+• 100 handcrafted levels in 10 halls of the cave: from the Amethyst Hall through the Sapphire Grotto, Amber Mines, Moon Lake and Firefly Nest up to the Crystal Crown. After level 100, the Endless Depths keep going.
 • A clear goal in every level: free all the crystals.
 • Cascade combos: one cleared line can trigger a whole chain reaction.
 • Earn 1 to 3 stars. The fewer pieces you use, the more stars you get.
@@ -77,6 +77,6 @@ Take a breath, drop a block and start the cascade.
 ### Things to keep true (update this text if the game changes)
 - "No ads and no in-app purchases" and "Works fully offline": remove or change these lines the same day ads,
   purchases or any internet feature appear in the game.
-- "Endless Depths after level 50": keep only while this mode is in the build.
+- "100 levels in 10 halls" and "Endless Depths after level 100": keep only while this is true in the build (version 0.10).
 - The game interface must be in English for the English listing to be honest. If the game is only in Russian
   at release, the English listing must say so, or English must be added to the game first.

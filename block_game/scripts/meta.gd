@@ -11,7 +11,7 @@ const HEROES := ["owl", "axolotl", "puppy", "kitten"]
 const SLOTS := ["head", "eyes", "neck", "back", "skin"]
 
 ## Вещи гардероба. price — цена в осколках; stars — нужно звёзд всего;
-## hall — нужно пройти зал с этим номером (1 = Аметистовый, ... 5 = Сердце горы).
+## hall — нужно пройти зал с этим номером (1 = Аметистовый, ... 10 = Корона кристаллов).
 ## Названия вещей, украшений, залов, героев — в scripts/i18n.gd (ключи item_<id>, hall_<n>...).
 const ITEMS := [
 	{"id": "bow", "slot": "head", "price": 20},
@@ -86,16 +86,29 @@ const PER_NEW_STAR := 5
 const PER_BIG_CHAIN := 3     # за каждую цепочку ×3 и выше в партии
 const CHAIN_CAP := 12        # не больше 12 за цепочки
 
-# Залы: по 10 уровней. После 50-го — «Бесконечные глубины», нумерация продолжается.
+# Залы: по 10 уровней, 10 залов (100 уровней таблицы scripts/levels.gd). После 100-го —
+# «Бесконечные глубины» (последняя строка HALLS), нумерация продолжается.
+# Названия — scripts/i18n.gd, ключи hall_0 ... hall_10.
 const HALL_SIZE := 10
 const HALLS := [
-	{"col": Color("#B46CFF")},
-	{"col": Color("#3DDC97")},
-	{"col": Color("#FF7A3D")},
-	{"col": Color("#7FE3FF")},
-	{"col": Color("#FF4D6D")},
-	{"col": Color("#9C8FD6")},
+	{"col": Color("#B46CFF")},  # 1 Аметистовый зал
+	{"col": Color("#3DDC97")},  # 2 Изумрудный зал
+	{"col": Color("#FF7A3D")},  # 3 Огненный зал
+	{"col": Color("#7FE3FF")},  # 4 Ледяной зал
+	{"col": Color("#FF4D6D")},  # 5 Сердце горы
+	{"col": Color("#4D7CFF")},  # 6 Сапфировый грот
+	{"col": Color("#FFB547")},  # 7 Янтарные копи
+	{"col": Color("#D8E2FF")},  # 8 Лунное озеро
+	{"col": Color("#C6F04A")},  # 9 Гнездо светлячков
+	{"col": Color("#FF8AD8")},  # 10 Корона кристаллов
+	{"col": Color("#9C8FD6")},  # Бесконечные глубины
 ]
+## Залов с уровнями таблицы (без «Бесконечных глубин»).
+const HALL_COUNT := 10
+## Последний уровень таблицы; дальше — «Бесконечные глубины».
+const LAST_LEVEL := HALL_COUNT * HALL_SIZE
+## Ступени богатства дома: сколько залов надо пройти для ступени 1, 2, 3.
+const HOME_STAGE_HALLS := [1, 3, 6]
 const METERS_PER_LEVEL := 12
 
 enum Buy { OK, OWNED, LOCKED, POOR, UNKNOWN }
@@ -118,7 +131,7 @@ static func hall(level: int) -> Dictionary:
 	return HALLS[hall_index(level)]
 
 
-## Название зала по номеру 0..5 на текущем языке (тексты — scripts/i18n.gd).
+## Название зала по номеру 0..10 (10 — «Бесконечные глубины») на текущем языке (тексты — scripts/i18n.gd).
 static func hall_name(h: int) -> String:
 	return I18n.t("hall_%d" % clampi(h, 0, HALLS.size() - 1))
 
@@ -146,7 +159,7 @@ static func depth(level: int) -> int:
 	return level * METERS_PER_LEVEL
 
 
-## Пройден ли зал номер n (1..5): открыт уровень после его последнего.
+## Пройден ли зал номер n (1..10): открыт уровень после его последнего.
 static func hall_done(n: int, max_level: int) -> bool:
 	return max_level > n * HALL_SIZE
 
@@ -185,10 +198,15 @@ static func decor_for(home: String, spot: String) -> Array:
 	return DECOR.filter(func(it): return it.home == home and it.spots.has(k))
 
 
-## Ступень богатства дома (0..3) по пройденным залам.
+## Ступень богатства дома (0..3) по пройденным залам: 1 зал — ступень 1,
+## 3 зала — ступень 2, 6 залов — ступень 3 (HOME_STAGE_HALLS).
 static func home_stage(max_level: int) -> int:
-	var halls := clampi((max_level - 1) / HALL_SIZE, 0, 5)
-	return [0, 1, 2, 2, 3, 3][halls]
+	var halls := clampi((max_level - 1) / HALL_SIZE, 0, HALL_COUNT)
+	var stage := 0
+	for need in HOME_STAGE_HALLS:
+		if halls >= need:
+			stage += 1
+	return stage
 
 
 static func items_in(slot: String) -> Array:

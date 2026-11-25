@@ -725,7 +725,7 @@ func hall_top(h: int) -> float:
 
 
 func map_last() -> int:
-	return maxi(53, g.max_level + 2)
+	return maxi(Meta.LAST_LEVEL + 3, g.max_level + 2)
 
 
 func _clamp_scroll() -> void:
@@ -751,7 +751,7 @@ func draw_map() -> void:
 	# полосы залов
 	for h in Meta.HALLS.size():
 		var y0 := hall_top(h) + off
-		var y1 := (hall_top(h + 1) if h < 5 else node_y(last) + 300.0) + off
+		var y1 := (hall_top(h + 1) if h < Meta.HALL_COUNT else node_y(last) + 300.0) + off
 		if y1 < 0 or y0 > H:
 			continue
 		var col: Color = Meta.HALLS[h].col
@@ -763,7 +763,7 @@ func draw_map() -> void:
 			if gy > y1 - 40:
 				break
 			var gx: float = 36.0 if k % 2 == 0 else g.W - 36.0
-			var lit: bool = g.max_level > h * 10 + k
+			var lit: bool = g.max_level > h * Meta.HALL_SIZE + k
 			g.draw_circle(Vector2(gx, gy), 26, Color(col, 0.12 if lit else 0.03), true, -1.0, true)
 			_gem(Vector2(gx, gy), 14, Color(col, 0.9 if lit else 0.25))
 	# тропа
@@ -792,10 +792,10 @@ func draw_map() -> void:
 		if y0 + 140 < 0 or y0 > H:
 			continue
 		var col: Color = Meta.HALLS[h].col
-		var first := h * 10 + 1
-		var sub := I18n.t("map_range") % [Meta.depth(first), Meta.depth(first + 9)] if h < 5 else I18n.t("map_below") % Meta.depth(51)
-		if h == 5 and g.max_level <= 50:
-			sub = I18n.t("map_locked")
+		var first := h * Meta.HALL_SIZE + 1
+		var sub := I18n.t("map_range") % [Meta.depth(first), Meta.depth(first + Meta.HALL_SIZE - 1)] if h < Meta.HALL_COUNT else I18n.t("map_below") % Meta.depth(Meta.LAST_LEVEL + 1)
+		if h == Meta.HALL_COUNT and g.max_level <= Meta.LAST_LEVEL:
+			sub = I18n.t("map_locked") % Meta.LAST_LEVEL
 		g._rbox(Rect2(70, y0 + 30, 580, 110), Color(0.06, 0.035, 0.13, 0.85), 30)
 		_shadow_text(g.W / 2.0, y0 + 80, Meta.hall_name(h), 44, col)
 		_ctext(g.W / 2.0, y0 + 122, sub, 26, g.DIM)

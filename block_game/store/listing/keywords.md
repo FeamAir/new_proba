@@ -18,7 +18,7 @@ Never use: Tetris, tetromino, names of other games or companies (for example oth
 | cascade / cascade combo | brand name, short, full | our hook; matches "combo", "chain" searches |
 | combo / combos | short, full | common search word for puzzle games |
 | chain reaction | full description | natural phrase for cascades |
-| levels / 50 levels / handcrafted levels | full description | level-based puzzle searches |
+| levels / 100 levels / handcrafted levels | full description | level-based puzzle searches |
 | stars (1 to 3 stars) | full description | level-puzzle players look for it |
 | relaxing / calm / cozy | full description, short (backup) | "relaxing puzzle", "cozy game" searches |
 | offline / no internet | full description | "offline games", "games without wifi" searches |

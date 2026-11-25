@@ -23,7 +23,7 @@ Status: DRAFT. Nothing is uploaded.
 | 4 | "Choose your friend" screen: owl and axolotl side by side | Pick your friend: owl or axolotl | Выбери друга: совёнок или аксолотль |
 | 5 | Wardrobe: hero in a crown and cape, item grid with shard prices | 16 outfits to collect | 16 нарядов в гардеробе |
 | 6 | Home: owl's tree hollow or axolotl's grotto with several decorations placed | Decorate a cozy home | Укрась уютный дом |
-| 7 | Cave map: halls Amethyst → Emerald → Fire → Ice → Heart of the Mountain, current level marked | 50 levels in 5 crystal halls | 50 уровней в 5 кристальных залах |
+| 7 | Cave map: several halls (e.g. Sapphire Grotto → Amber Mines), current level marked | 100 levels in 10 crystal halls | 100 уровней в 10 кристальных залах |
 | 8 | Level win screen with 3 stars and shards reward | Earn 3 stars in every level | Собери 3 звезды на каждом уровне |
 
 Optional replacement for #8 (if we want the "calm" message): a calm game frame with the caption

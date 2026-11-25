@@ -68,10 +68,10 @@ func _initialize() -> void:
 			hang_ok = false
 	check(hang_ok, "висячий блок над дырой на всех уровнях с hang")
 	var speed_ok := true
-	for n in range(1, 80):
+	for n in range(1, 160):
 		if lv.params(n).speed > lv.MAX_SPEED:
 			speed_ok = false
-	check(speed_ok, "скорость не выше 0,26 с на клетку (ступень 21) и после 50-го")
+	check(speed_ok, "скорость не выше 0,26 с на клетку (ступень 21) и после 100-го")
 
 	# Уровень 1: вертикальная фигура в колодец даёт каскад
 	g.start_level(1)
@@ -415,8 +415,8 @@ func _test_meta(g, _chain3: int) -> void:
 	m.place("owl", "near", "owl_lantern")
 	check(m.placed_at("owl", "near") == "owl_lantern" and m.placed_at("axolotl", "near") == "", "у каждого дома свои места")
 	check(m.decor_for("owl", "hang").size() == 4 and m.decor_for("axolotl", "floor_l").size() <= 6, "наборы украшений по местам помещаются в сетку")
-	check(Meta.home_stage(1) == 0 and Meta.home_stage(11) == 1 and Meta.home_stage(31) == 2 and Meta.home_stage(51) == 3, "ступени богатства дома")
-	check(Meta.hall_index(10) == 0 and Meta.hall_index(11) == 1 and Meta.hall_index(50) == 4 and Meta.hall_index(77) == 5 and Meta.depth(10) == 120, "залы и глубина")
+	check(Meta.home_stage(1) == 0 and Meta.home_stage(11) == 1 and Meta.home_stage(41) == 2 and Meta.home_stage(71) == 3 and Meta.home_stage(151) == 3, "ступени богатства дома")
+	check(Meta.hall_index(10) == 0 and Meta.hall_index(11) == 1 and Meta.hall_index(50) == 4 and Meta.hall_index(77) == 7 and Meta.hall_index(100) == 9 and Meta.hall_index(101) == 10 and Meta.depth(10) == 120, "залы и глубина")
 
 	_test_tryon(g)
 
@@ -593,7 +593,7 @@ func _test_i18n(g) -> void:
 				printerr("    нет перевода: ", l, ":", k)
 	check(names_ok, "названия всех вещей, украшений, залов, героев и мест переведены")
 	# Переключение языка
-	check(I18n.set_lang("en") and I18n.t("cascade") % 3 == "CASCADE ×3" and Meta.hall_name(5) == "Endless Depths", "английский: CASCADE ×3, Endless Depths")
+	check(I18n.set_lang("en") and I18n.t("cascade") % 3 == "CASCADE ×3" and Meta.hall_name(10) == "Endless Depths", "английский: CASCADE ×3, Endless Depths")
 	check(Meta.lock_reason("necklace", 999, 1) == "Clear Amethyst Hall first" and Meta.item_name("cape") == "Starry cape", "английский: причина замка и название вещи")
 	check(Screens.shards_word(1) == "shard" and Screens.shards_word(5) == "shards", "английский: shard / shards")
 	check(I18n.set_lang("ru") and I18n.t("cascade") % 3 == "КАСКАД ×3" and Meta.hall_name(0) == "Аметистовый зал", "русский: КАСКАД ×3, Аметистовый зал")
