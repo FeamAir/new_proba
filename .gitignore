@@ -2,7 +2,7 @@
 .godot/
 export.cfg
 export_credentials.cfg
-android/build/
+android/
 *.apk
 *.aab
 *.tmp
