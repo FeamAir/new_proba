@@ -332,6 +332,11 @@ const STR := {
 		"item_ki_parasol": "Lace Parasol",
 		"item_ki_aura_fireworks": "Ball Fireworks",
 		"item_ki_starry": "Starry Cat",
+		# 0.12: 3D-дома
+		"pause_graphics": "Graphics: %s",
+		"gfx_high": "high",
+		"gfx_simple": "simple",
+		"gfx_2d": "2D",
 	},
 	"ru": {
 		"cascade": "КАСКАД ×%d",
@@ -638,6 +643,11 @@ const STR := {
 		"item_ki_parasol": "Кружевной зонтик",
 		"item_ki_aura_fireworks": "Праздничный салют",
 		"item_ki_starry": "Звёздная кошка",
+		# 0.12: 3D-дома
+		"pause_graphics": "Графика: %s",
+		"gfx_high": "высокая",
+		"gfx_simple": "простая",
+		"gfx_2d": "2D",
 	},
 }
 

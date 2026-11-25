@@ -281,11 +281,16 @@ func draw_home() -> void:
 	var hv := _home_view()
 	var kind: String = g.meta.hero if g.meta.hero != "" else "owl"
 	var placed: Dictionary = g.meta.decor_placed.get(kind, {})
-	home.draw(g, kind, hv[0], 1.0, hv[1], Meta.home_stage(g.max_level), placed, g.meta.outfit(), g.t_total, react, "", true)
-	var ha: Array = Home.HERO_AT[kind]
-	rects["hero"] = Rect2(hv[0] + ha[0] - Vector2(110, 130), Vector2(220, 240))
-	for s in Meta.SPOTS:
-		rects["spot_" + s] = Rect2(home.spot_screen(kind, s) - Vector2(60, 60), Vector2(120, 120))
+	if g.home3d.showing():
+		# 0.12: 3D-дом (scripts/home3d/); касания мимо кнопок крутят камеру, тап по месту / герою — там же
+		g.home3d.draw(g, Rect2(0, 0, g.W, H))
+	else:
+		# запасной 2D-дом: 3D недоступно или выбрано «Графика: 2D»
+		home.draw(g, kind, hv[0], 1.0, hv[1], Meta.home_stage(g.max_level), placed, g.meta.outfit(), g.t_total, react, "", true)
+		var ha: Array = Home.HERO_AT[kind]
+		rects["hero"] = Rect2(hv[0] + ha[0] - Vector2(110, 130), Vector2(220, 240))
+		for s in Meta.SPOTS:
+			rects["spot_" + s] = Rect2(home.spot_screen(kind, s) - Vector2(60, 60), Vector2(120, 120))
 	# верхняя полоса
 	g.draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(g.W, 0), Vector2(g.W, 250), Vector2(0, 250)]),
 		PackedColorArray([Color(0.04, 0.02, 0.1, 0.75), Color(0.04, 0.02, 0.1, 0.75), Color(0.04, 0.02, 0.1, 0), Color(0.04, 0.02, 0.1, 0)]))
@@ -338,9 +343,10 @@ func _hanger_icon(c: Vector2) -> void:
 	g.draw_colored_polygon(PackedVector2Array([c + Vector2(-16, 14), c + Vector2(16, 14), c + Vector2(22, 32), c + Vector2(-22, 32)]), Color("#FF5A7A"))
 
 
-func tap_home(pos: Vector2) -> void:
+## true — касание обработано (кнопка, герой или место 2D-дома); false — мимо, его получает камера 3D-дома
+func tap_home(pos: Vector2) -> bool:
 	if _tap_lang(pos) or g.forge_ui.tap_home_button(pos):
-		return
+		return true
 	if rects.get("play", Rect2()).has_point(pos):
 		g.play("click")
 		g.start_level(g.max_level)
@@ -359,7 +365,9 @@ func tap_home(pos: Vector2) -> void:
 				g.play("click")
 				spot = s
 				open_wardrobe("home")
-				return
+				return true
+		return false
+	return true
 
 
 # ---------- Гардероб ----------
@@ -423,11 +431,22 @@ func draw_wardrobe() -> void:
 		var view := Rect2(-x0, 160, 720 + 2 * x0, 740)
 		var org := Vector2(st.get_center().x - 360.0 * s, st.position.y - view.position.y * s)
 		var placed: Dictionary = tryon.placed(g.meta, kind)
-		home.draw(g, kind, org, s, view, Meta.home_stage(g.max_level), placed, g.meta.outfit(), g.t_total, react, spot, false)
-		focus = home.spot_screen(kind, spot)
-		for sp in Meta.SPOTS:
-			var sc: Vector2 = home.spot_screen(kind, sp)
-			rects["spot_" + sp] = Rect2(sc - Vector2(50, 50), Vector2(100, 100))
+		if g.home3d.showing_stage():
+			# 0.12: 3D-дом в окне сцены: камера у выбранного места, примерка — с пульсирующим кольцом
+			g.home3d.draw(g, st)
+			focus = g.home3d.spot_screen(spot)
+			if focus.x < 0.0:
+				focus = st.get_center()
+			for sp in Meta.SPOTS:
+				var sc: Vector2 = g.home3d.spot_screen(sp)
+				if sc.x >= 0.0:
+					rects["spot_" + sp] = Rect2(sc - Vector2(50, 50), Vector2(100, 100))
+		else:
+			home.draw(g, kind, org, s, view, Meta.home_stage(g.max_level), placed, g.meta.outfit(), g.t_total, react, spot, false)
+			focus = home.spot_screen(kind, spot)
+			for sp in Meta.SPOTS:
+				var sc: Vector2 = home.spot_screen(kind, sp)
+				rects["spot_" + sp] = Rect2(sc - Vector2(50, 50), Vector2(100, 100))
 		_text(Vector2(st.position.x + 18, st.position.y + 40), I18n.t("house_" + kind), 30, Color(g.TEXT, 0.8))
 	else:
 		for k in 5:
