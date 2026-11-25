@@ -31,6 +31,35 @@ const ITEMS := [
 	{"id": "skin_gold", "slot": "skin", "name": "Золотой", "price": 200, "stars": 100},
 ]
 
+## Украшения дома: у каждого героя свой дом и свой набор. spots — куда можно поставить:
+## floor (пол слева/справа), wall (стена или ветка слева/справа), hang (подвес сверху),
+## near (рядом с героем).
+const SPOTS := ["floor_l", "floor_r", "wall_l", "wall_r", "hang", "near"]
+const SPOT_NAMES := {"floor_l": "Пол слева", "floor_r": "Пол справа", "wall_l": "Слева",
+	"wall_r": "Справа", "hang": "Сверху", "near": "Рядом"}
+const DECOR := [
+	{"id": "owl_nest", "home": "owl", "name": "Коврик-гнездо", "price": 10, "spots": ["near", "floor"]},
+	{"id": "owl_lantern", "home": "owl", "name": "Фонарик", "price": 15, "spots": ["hang", "wall", "near"]},
+	{"id": "owl_garland", "home": "owl", "name": "Гирлянда", "price": 20, "spots": ["hang"]},
+	{"id": "owl_mushrooms", "home": "owl", "name": "Грибы-лампы", "price": 20, "spots": ["floor"]},
+	{"id": "owl_birdhouse", "home": "owl", "name": "Скворечник", "price": 25, "spots": ["wall"]},
+	{"id": "owl_books", "home": "owl", "name": "Книжки", "price": 30, "spots": ["wall", "near"]},
+	{"id": "owl_swing", "home": "owl", "name": "Качели", "price": 30, "spots": ["hang"]},
+	{"id": "owl_hammock", "home": "owl", "name": "Гамак", "price": 35, "spots": ["wall", "floor"]},
+	{"id": "owl_moon", "home": "owl", "name": "Луна-подвеска", "price": 40, "spots": ["hang"], "stars": 25},
+	{"id": "owl_nightlight", "home": "owl", "name": "Кристалл-ночник", "price": 50, "spots": ["floor", "near"], "hall": 1},
+	{"id": "axo_starfish", "home": "axolotl", "name": "Морская звезда", "price": 10, "spots": ["wall"]},
+	{"id": "axo_coral", "home": "axolotl", "name": "Коралл", "price": 15, "spots": ["wall", "floor"]},
+	{"id": "axo_anchor", "home": "axolotl", "name": "Якорь", "price": 20, "spots": ["floor", "wall"]},
+	{"id": "axo_shell", "home": "axolotl", "name": "Жемчужница", "price": 25, "spots": ["floor", "near"]},
+	{"id": "axo_lily", "home": "axolotl", "name": "Кувшинка", "price": 25, "spots": ["hang"]},
+	{"id": "axo_bubble", "home": "axolotl", "name": "Лампа-пузырь", "price": 30, "spots": ["hang", "near"]},
+	{"id": "axo_tree", "home": "axolotl", "name": "Кораллы-деревья", "price": 35, "spots": ["floor"]},
+	{"id": "axo_sofa", "home": "axolotl", "name": "Камень-диван", "price": 40, "spots": ["near"]},
+	{"id": "axo_castle", "home": "axolotl", "name": "Замок", "price": 50, "spots": ["floor"], "hall": 2},
+	{"id": "axo_chest", "home": "axolotl", "name": "Сундук", "price": 60, "spots": ["floor", "near"], "stars": 40},
+]
+
 # Начисление осколков за победу
 const WIN_FIRST := 10
 const WIN_REPEAT := 3
@@ -56,6 +85,8 @@ var hero := ""               # "" — ещё не выбран (первый з�
 var shards := 0
 var owned: Array = []        # id купленных вещей
 var equipped: Dictionary = {}  # слот -> id
+var decor_owned: Array = []    # id купленных украшений (свои для каждого дома)
+var decor_placed: Dictionary = {"owl": {}, "axolotl": {}}  # дом -> {место -> id}
 
 
 # ---------- Залы ----------
@@ -96,7 +127,25 @@ static func item(id: String) -> Dictionary:
 	for it in ITEMS:
 		if it.id == id:
 			return it
+	for it in DECOR:
+		if it.id == id:
+			return it
 	return {}
+
+
+static func spot_kind(spot: String) -> String:
+	return spot.trim_suffix("_l").trim_suffix("_r")
+
+
+static func decor_for(home: String, spot: String) -> Array:
+	var k := spot_kind(spot)
+	return DECOR.filter(func(it): return it.home == home and it.spots.has(k))
+
+
+## Ступень богатства дома (0..3) по пройденным залам.
+static func home_stage(max_level: int) -> int:
+	var halls := clampi((max_level - 1) / HALL_SIZE, 0, 5)
+	return [0, 1, 2, 2, 3, 3][halls]
 
 
 static func items_in(slot: String) -> Array:
@@ -116,12 +165,12 @@ static func lock_reason(id: String, total_stars: int, max_level: int) -> String:
 
 
 func is_owned(id: String) -> bool:
-	return owned.has(id)
+	return owned.has(id) or decor_owned.has(id)
 
 
 func is_equipped(id: String) -> bool:
 	var it := item(id)
-	return not it.is_empty() and equipped.get(it.slot, "") == id
+	return it.has("slot") and equipped.get(it.slot, "") == id
 
 
 func buy(id: String, total_stars: int, max_level: int) -> int:
@@ -135,12 +184,15 @@ func buy(id: String, total_stars: int, max_level: int) -> int:
 	if shards < int(it.price):
 		return Buy.POOR
 	shards -= int(it.price)
-	owned.append(id)
+	if it.has("home"):
+		decor_owned.append(id)
+	else:
+		owned.append(id)
 	return Buy.OK
 
 
 func equip(id: String) -> bool:
-	if not is_owned(id):
+	if not owned.has(id):
 		return false
 	equipped[item(id).slot] = id
 	return true
@@ -153,6 +205,8 @@ func unequip(slot: String) -> void:
 ## Нажатие на вещь в гардеробе: надета — снять; куплена — надеть; иначе купить и надеть.
 ## Возвращает: "off", "on", "bought", "locked", "poor".
 func tap_item(id: String, total_stars: int, max_level: int) -> String:
+	if not item(id).has("slot"):
+		return "locked"
 	if is_equipped(id):
 		unequip(item(id).slot)
 		return "off"
@@ -162,6 +216,50 @@ func tap_item(id: String, total_stars: int, max_level: int) -> String:
 	match buy(id, total_stars, max_level):
 		Buy.OK:
 			equip(id)
+			return "bought"
+		Buy.POOR:
+			return "poor"
+	return "locked"
+
+
+# ---------- Украшения дома ----------
+
+func placed_at(home: String, spot: String) -> String:
+	return decor_placed.get(home, {}).get(spot, "")
+
+
+## Поставить купленное украшение на место своего дома (с прежнего места оно уходит).
+func place(home: String, spot: String, id: String) -> bool:
+	var it := item(id)
+	if not decor_owned.has(id) or it.get("home", "") != home or not SPOTS.has(spot) or not it.spots.has(spot_kind(spot)):
+		return false
+	var d: Dictionary = decor_placed.get(home, {})
+	for s in d.keys():
+		if d[s] == id:
+			d.erase(s)
+	d[spot] = id
+	decor_placed[home] = d
+	return true
+
+
+func remove_decor(home: String, spot: String) -> void:
+	if decor_placed.has(home):
+		decor_placed[home].erase(spot)
+
+
+## Нажатие на украшение для места: стоит тут — убрать; куплено — поставить; иначе купить и поставить.
+func tap_decor(home: String, spot: String, id: String, total_stars: int, max_level: int) -> String:
+	if placed_at(home, spot) == id:
+		remove_decor(home, spot)
+		return "off"
+	if decor_owned.has(id):
+		return "on" if place(home, spot, id) else "locked"
+	var it := item(id)
+	if it.get("home", "") != home or not it.spots.has(spot_kind(spot)):
+		return "locked"
+	match buy(id, total_stars, max_level):
+		Buy.OK:
+			place(home, spot, id)
 			return "bought"
 		Buy.POOR:
 			return "poor"
@@ -187,6 +285,8 @@ func save_to(cfg: ConfigFile) -> void:
 	cfg.set_value("meta", "shards", shards)
 	cfg.set_value("meta", "owned", owned)
 	cfg.set_value("meta", "equipped", equipped)
+	cfg.set_value("meta", "decor_owned", decor_owned)
+	cfg.set_value("meta", "decor_placed", decor_placed)
 
 
 func load_from(cfg: ConfigFile) -> void:
@@ -198,12 +298,27 @@ func load_from(cfg: ConfigFile) -> void:
 	var o = cfg.get_value("meta", "owned", [])
 	if o is Array:
 		for id in o:
-			if id is String and not item(id).is_empty() and not owned.has(id):
+			if id is String and not item(id).is_empty() and not item(id).has("home") and not owned.has(id):
 				owned.append(id)
+	decor_owned = []
+	var dow = cfg.get_value("meta", "decor_owned", [])
+	if dow is Array:
+		for id in dow:
+			if id is String and item(id).has("home") and not decor_owned.has(id):
+				decor_owned.append(id)
+	decor_placed = {"owl": {}, "axolotl": {}}
+	var dp = cfg.get_value("meta", "decor_placed", {})
+	if dp is Dictionary:
+		for home in HEROES:
+			var d = dp.get(home, {})
+			if d is Dictionary:
+				for spot in d:
+					if spot is String and d[spot] is String:
+						place(home, spot, d[spot])
 	equipped = {}
 	var e = cfg.get_value("meta", "equipped", {})
 	if e is Dictionary:
 		for slot in e:
 			var id = e[slot]
-			if id is String and owned.has(id) and item(id).slot == slot:
+			if id is String and owned.has(id) and item(id).get("slot", "") == slot:
 				equipped[slot] = id
