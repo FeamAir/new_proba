@@ -20,3 +20,6 @@ play-service-account*.json
 Thumbs.db
 .idea/
 .vscode/
+
+# Рабочие копии помощников Claude
+.claude/worktrees/
