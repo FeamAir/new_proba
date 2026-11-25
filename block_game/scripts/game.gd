@@ -74,6 +74,7 @@ var crystals_left := 0
 var pieces_used := 0
 var par := 0
 var speed_step := 1       # ступень скорости из таблицы уровней
+var level_override := {}  # для инструментов (робот-тестер): заменяет поля строки таблицы
 var last_stars := 0
 var score := 0
 var shown_score := 0.0
@@ -202,6 +203,7 @@ func start_level(n: int) -> void:
 	fall_dist.fill(0)
 	# Параметры уровня берутся из таблицы scripts/levels.gd (кривая сложности).
 	var p: Dictionary = Levels.params(n)
+	p.merge(level_override, true)
 	var lr := RandomNumberGenerator.new()
 	lr.seed = p.seed
 	var rows: int = clampi(p.rows, 1, 7)

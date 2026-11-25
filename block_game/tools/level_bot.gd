@@ -9,6 +9,8 @@ extends SceneTree
 ##   --max=N        предел фигур на партию (по умолчанию 200)
 ##   --look=1       смотреть и на следующую фигуру (сильнее, но в ~20 раз медленнее)
 ##   --csv=путь     дополнительно записать итог в CSV
+##   --seeds=K      режим подбора раскладки: для каждого уровня пробует K зёрен
+##                  (zerno = n*7919+13 + k*104729) и пишет в CSV строку на каждое
 ## Робот ставит фигуры мгновенно: скорость падения на него не влияет.
 ## Прогресс игрока (user://save.cfg) сохраняется до прогона и возвращается после.
 
@@ -35,7 +37,7 @@ var mismatches := 0
 
 
 func _initialize() -> void:
-	var args := {"levels": "1-30", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": ""}
+	var args := {"levels": "1-30", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0"}
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--") and a.contains("="):
 			var kv := a.substr(2).split("=", true, 1)
@@ -62,6 +64,10 @@ func _initialize() -> void:
 	CRYSTAL = G.CRYSTAL
 
 	var lines: Array = []
+	if int(args.seeds) > 0:
+		_seed_search(l_from, l_to, games, base_seed, max_pieces, int(args.seeds), args.csv)
+		_restore(had_save, save_bytes)
+		return
 	var header := "lvl | ряды крист par | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь | медиана | par~40%"
 	print(header)
 	lines.append("level,rows,crystals,par,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain,median_pieces,suggested_par")
@@ -112,6 +118,10 @@ func _initialize() -> void:
 			f.store_string("\n".join(lines) + "\n")
 			f.close()
 
+	_restore(had_save, save_bytes)
+
+
+func _restore(had_save: bool, save_bytes: PackedByteArray) -> void:
 	# --- возвращаем сохранение как было ---
 	if had_save:
 		var f2 := FileAccess.open(SAVE, FileAccess.WRITE)
@@ -319,3 +329,35 @@ func _execute(p: Dictionary) -> void:
 	if G.piece_pos.x != p.x:
 		mismatches += 1
 	G.hard_drop()
+
+
+func _seed_search(l_from: int, l_to: int, games: int, base_seed: int, max_pieces: int, k_count: int, csv: String) -> void:
+	var out: Array = ["level,k,seed,win_pct,median,p40,avg_win"]
+	for n in range(l_from, l_to + 1):
+		for k in k_count:
+			var sd := n * 7919 + 13 + k * 104729
+			G.level_override = {"seed": sd}
+			var plist: Array = []
+			var wins := 0
+			for gi in games:
+				seed(base_seed * 100003 + n * 1009 + gi)
+				G.start_level(n)
+				var r := _play(max_pieces)
+				if r.win:
+					wins += 1
+					plist.append(r.pieces)
+			plist.sort()
+			var med: int = plist[plist.size() / 2] if plist.size() > 0 else 999
+			var p40: int = plist[int(plist.size() * 0.4)] if plist.size() > 0 else 999
+			var avg := 0.0
+			for v in plist:
+				avg += v
+			avg /= maxi(plist.size(), 1)
+			var line := "%d,%d,%d,%.1f,%d,%d,%.2f" % [n, k, sd, 100.0 * wins / games, med, p40, avg]
+			print(line)
+			out.append(line)
+	G.level_override = {}
+	if csv != "":
+		var f := FileAccess.open(csv, FileAccess.WRITE)
+		f.store_string("\n".join(out) + "\n")
+		f.close()
