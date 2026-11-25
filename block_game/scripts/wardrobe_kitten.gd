@@ -575,16 +575,16 @@ static func moustache(h, a: Dictionary, t: float) -> void:
 	var at: Vector2 = mid + Vector2(0, r * 1.38).rotated(a.tilt)
 	var wig := sin(t * 2.0) * 0.05
 	for sx in [-1.0, 1.0]:
-		var key := ["ki_moustache2", sx]
+		var key := ["ki_moustache3", sx]
 		var pts := PackedVector2Array()
 		if not h._cache.has(key):
 			var top := PackedVector2Array()
 			var bot := PackedVector2Array()
 			for i in 13:
 				var s := i / 12.0
-				var x: float = sx * (1.0 + s * 34.0)
-				var y := -pow(s, 2.6) * 16.0 + sin(s * PI) * 2.0
-				var th := 12.0 * pow(sin(minf(s * 1.4, 1.0) * PI * 0.5), 0.6) * (1.0 - s * 0.82) + 1.5
+				var x: float = sx * (1.0 + s * 29.0)
+				var y := -pow(s, 3.0) * 11.0 + sin(s * PI) * 2.5
+				var th := 15.0 * pow(sin(minf(s * 1.6, 1.0) * PI * 0.5), 0.5) * (1.0 - s * 0.8) + 2.0
 				top.append(Vector2(x, y - th * 0.45))
 				bot.append(Vector2(x, y + th * 0.75))
 			bot.reverse()

@@ -60,6 +60,11 @@ func kind() -> String:
 	return g.meta.hero if g.meta.hero != "" else "owl"
 
 
+## 0.13: пол героя (для названий вещей и рисунков)
+func _gen() -> String:
+	return g.meta.gender_of(kind())
+
+
 func open() -> void:
 	anim_id = ""
 	result = false
@@ -167,13 +172,13 @@ func _draw_goal() -> void:
 	var st: String = g.meta.forge_status(wid, g.max_level)
 	var wc := Vector2(500, 300)
 	sc._ctext(wc.x, 156, I18n.t("forge_goal"), 22, Color("#FFD9F4"), 330)
-	var wn := Meta.item_name(wid)
+	var wn := Meta.item_name(wid, kind(), _gen())
 	sc._ctext(wc.x, 188, wn, sc.fit_size(wn, 330, 30), Color.from_hsv(fposmod(t * 0.15, 1.0), 0.35, 1.0), 340)
 	var ir := Rect2(wc - Vector2(150, 100), Vector2(300, 200))
 	var hp := wc + Vector2(0, 14)
 	if st == "done":
 		Rarity.soft_disc(g, wc + Vector2(0, 20), 130, Color.from_hsv(fposmod(t * 0.2, 1.0), 0.5, 1.0, 0.35))
-		sc.hero.draw(g, kind(), hp, GOAL_SC, {"aura": wid}, t, react)
+		sc.hero.draw(g, kind(), hp, GOAL_SC, g.meta.look(kind()).merged({"aura": wid}), t, react)
 	else:
 		var ready := st in ["ok", "poor"]
 		Rarity.soft_disc(g, wc + Vector2(0, 18), 120, Color(0.75, 0.55, 1.0, 0.5 + (0.25 * sin(t * 4.0) if ready else 0.0)))
@@ -206,6 +211,8 @@ func _master_line() -> String:
 		return I18n.t("forge_say_ready")
 	if g.meta.legends_forged() >= 2:
 		return I18n.t("forge_say_super")
+	if _gen() == "girl" and I18n.has("forge_say_start_%s_girl" % kind()):
+		return I18n.t("forge_say_start_%s_girl" % kind())
 	return I18n.t("forge_say_start_" + kind())
 
 
@@ -241,7 +248,7 @@ func _draw_set_card(n: int, r: Rect2) -> void:
 	var it: Dictionary = Meta.item(rid)
 	if st == "done":
 		Rarity.icon_glow(g, rar, ic, rad * 2.0, t, n)
-		sc.hero.draw_item_icon(g, rid, it.slot, kind(), ic, rad * (1.5 if it.slot == "back" else 2.0), t)
+		sc.hero.draw_item_icon(g, rid, it.slot, kind(), ic, rad * (1.5 if it.slot == "back" else 2.0), t, _gen())
 		Rarity.icon_fx(g, rar, ic, rad * 2.0, t, n, Rect2(ic - Vector2(rad, rad), Vector2(rad, rad) * 2.0))
 	else:
 		var ready := st == "ok" or st == "poor"
@@ -253,7 +260,7 @@ func _draw_set_card(n: int, r: Rect2) -> void:
 		_sil_q.append([it.slot, rid, ic, rad * (1.4 if it.slot == "back" else 1.9)])
 		_top_q.append(["?", ic + Vector2(rad * 0.62, -rad * 0.55), 36])
 	var tx := r.position.x + 188
-	var nm := Meta.set_title(n)
+	var nm := Meta.set_title(n, _gen())
 	sc._text(Vector2(tx, r.position.y + 44), nm, sc.fit_size(nm, r.end.x - tx - 20, 30), scol)
 	var locked := st == "hall"
 	# ячейки рецепта
@@ -270,7 +277,7 @@ func _draw_set_card(n: int, r: Rect2) -> void:
 		var isz := cs * (0.74 if ni.slot == "back" else 0.94)
 		if own:
 			g.draw_polyline(sc._rr_outline(cr.grow(-1), 15), Color(scol, 0.9), 2.0, true)
-			sc.hero.draw_item_icon(g, nid, ni.slot, kind(), cr.get_center(), isz, t)
+			sc.hero.draw_item_icon(g, nid, ni.slot, kind(), cr.get_center(), isz, t, _gen())
 			g.draw_set_transform(Vector2.ZERO)
 			g.draw_circle(cr.end - Vector2(7, 7), 9, OK_COL, true, -1.0, true)
 			g.draw_polyline(PackedVector2Array([cr.end - Vector2(12, 7), cr.end - Vector2(8, 3), cr.end - Vector2(2, 11)]), DARK_TEXT, 2.2, true)
@@ -284,12 +291,12 @@ func _draw_set_card(n: int, r: Rect2) -> void:
 	if locked:
 		line = I18n.t("forge_hall_hint") % int(info.hall)
 	elif st == "done":
-		line = Meta.item_name(rid, kind()) + " · " + Meta.rarity_name(rar)
+		line = Meta.item_name(rid, kind(), _gen()) + " · " + Meta.rarity_name(rar)
 		lcol = Rarity.col(rar)
 	else:
 		line = I18n.t("forge_have") % [have, needs.size()] + " · " + I18n.t("forge_keep")
 		if have == needs.size():
-			line = Meta.item_name(rid, kind()) + " · " + Meta.rarity_name(rar)
+			line = Meta.item_name(rid, kind(), _gen()) + " · " + Meta.rarity_name(rar)
 			lcol = Rarity.col(rar)
 	sc._text(Vector2(tx, cy + cs + 34), line, sc.fit_size(line, r.end.x - tx - 16, 21), lcol)
 	# кнопки внизу справа
@@ -345,9 +352,9 @@ func _draw_sil() -> void:
 		var id: String = q[1]
 		if slot == "hero":
 			# 0.12b: главная цель — силуэт героя целиком в супер-эксклюзиве
-			sc.hero.draw(sil, kind(), q[2], q[3], {"aura": id}, 0.0)
+			sc.hero.draw(sil, kind(), q[2], q[3], g.meta.look(kind()).merged({"aura": id}), 0.0)
 		else:
-			sc.hero.draw_item_icon(sil, id, slot, kind(), q[2], q[3], 0.0)
+			sc.hero.draw_item_icon(sil, id, slot, kind(), q[2], q[3], 0.0, _gen())
 		sil.draw_set_transform(Vector2.ZERO)
 
 
@@ -397,7 +404,7 @@ func tap(pos: Vector2) -> void:
 			if g.meta.equip(rid):
 				g._save()
 				g.play("crystal")
-				_sc().say(I18n.t("card_worn") + ": " + Meta.item_name(rid, kind()))
+				_sc().say(I18n.t("card_worn") + ": " + Meta.item_name(rid, kind(), _gen()))
 			return
 	var sup: String = Meta.super_recipe(kind()).id
 	if rects.get("super_try", Rect2()).has_point(pos):
@@ -536,7 +543,7 @@ func _draw_anim() -> void:
 			var s := 70.0 * (1.0 - smoothstep(1.2, 1.7, t) * 0.7)
 			g.draw_circle(p, s * 0.55, Color(rcol, 0.25), true, -1.0, true)
 			var it: Dictionary = Meta.item(needs[i])
-			sc.hero.draw_item_icon(g, needs[i], it.slot, kind(), p, s, g.t_total)
+			sc.hero.draw_item_icon(g, needs[i], it.slot, kind(), p, s, g.t_total, _gen())
 			g.draw_set_transform(Vector2.ZERO)
 	# 3) светящийся кристалл (1.5..2.6), трещины (2.2..2.6)
 	if t > 1.5 and t < 2.65:
@@ -585,7 +592,7 @@ func _reward_frame(c: Vector2, s: float, rid: String) -> void:
 	g._rbox(r, Color("#24173F"), 28)
 	Rarity.frame(g, r, rar, g.t_total, 28.0)
 	var it: Dictionary = Meta.item(rid)
-	sc.hero.draw_item_icon(g, rid, it.slot, kind(), c, s * 0.8, g.t_total)
+	sc.hero.draw_item_icon(g, rid, it.slot, kind(), c, s * 0.8, g.t_total, _gen())
 	g.draw_set_transform(Vector2.ZERO)
 	Rarity.icon_fx(g, rar, c, s * 0.8, g.t_total, 1.0, r.grow(-6))
 
@@ -602,7 +609,7 @@ func _draw_result() -> void:
 	Rarity.soft_disc(g, Vector2(360, y0 + 450), 330, Color(rcol, 0.4))
 	var hero_sc := 1.2 if not Meta.item(rid).has("covers") else 1.0
 	sc.hero.draw(g, kind(), Vector2(360, y0 + 480), hero_sc, g.meta.outfit(), g.t_total, react)
-	var title := I18n.t("forge_got") % Meta.item_name(rid, kind())
+	var title := I18n.t("forge_got") % Meta.item_name(rid, kind(), _gen())
 	sc._shadow_text(g.W / 2.0, y0 + 140, title, sc.fit_size(title, 660, 44), g.TEXT, 700)
 	var rn := Meta.rarity_name(rar)
 	var w: float = g.font.get_string_size(rn, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x + 50
@@ -628,7 +635,7 @@ func _draw_try() -> void:
 	var rcol := Rarity.col(rar)
 	Rarity.soft_disc(g, Vector2(360, y0 + 450), 330, Color(rcol, 0.35))
 	sc.hero.draw(g, kind(), Vector2(360, y0 + 470), 1.2 if not it.has("covers") else 1.0, o, g.t_total, react)
-	var nm := Meta.item_name(try_id, kind())
+	var nm := Meta.item_name(try_id, kind(), _gen())
 	sc._shadow_text(g.W / 2.0, y0 + 110, nm, sc.fit_size(nm, 660, 46), rcol.lerp(Color.WHITE, 0.3), 700)
 	var left := ceili(TRY_TIME - try_t)
 	var lbl := I18n.t("forge_try_left") % left

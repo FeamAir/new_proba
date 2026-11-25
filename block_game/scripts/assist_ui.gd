@@ -125,7 +125,7 @@ func draw_home_goal() -> void:
 	var r := Rect2(play.position.x, play.end.y + 14, play.size.x, 54)
 	rects["goal"] = r
 	g._rbox(r, Color(0.08, 0.04, 0.16, 0.88), 27)
-	var name := Meta.item_name(gl.id)
+	var name := Meta.item_name(gl.id, g.meta.hero, g.meta.gender_of(g.meta.hero))
 	if gl.ready:
 		var pulse := 0.5 + 0.5 * sin(g.t_total * 5.0)
 		g._rbox(r, Color(OK_COL, 0.12 + 0.12 * pulse), 27)
