@@ -676,7 +676,10 @@ func _notification(what: int) -> void:
 		match state:
 			State.PLAYING, State.CLEARING, State.SETTLE:
 				_set_state(State.PAUSED)
-			State.PAUSED, State.WIN, State.LOSE, State.MAP, State.WARDROBE:
+			State.WARDROBE:
+				if not screens.cancel_try():  # сначала снимается примерка
+					go_home()
+			State.PAUSED, State.WIN, State.LOSE, State.MAP:
 				go_home()
 			State.PICK_HERO:
 				if meta.hero != "":

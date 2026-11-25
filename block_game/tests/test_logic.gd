@@ -387,10 +387,12 @@ func _test_meta(g, _chain3: int) -> void:
 	m.unequip("head")
 	check(not m.is_equipped("crown") and m.outfit().is_empty(), "снять")
 	m.shards = 40
-	check(m.tap_item("sunglasses", 0, 1) == "bought" and m.is_equipped("sunglasses") and m.shards == 0, "нажатие: купить и сразу надеть")
-	check(m.tap_item("sunglasses", 0, 1) == "off" and not m.is_equipped("sunglasses"), "нажатие на надетое — снять")
-	check(m.tap_item("sunglasses", 0, 1) == "on", "нажатие на купленное — надеть")
-	check(m.tap_item("monocle", 0, 1) == "locked" and m.tap_item("scarf", 0, 1) == "poor", "нажатие: закрыто / не хватает")
+	check(m.tap_item("sunglasses") == "try" and not m.is_owned("sunglasses") and m.shards == 40, "нажатие на некупленное — примерка, осколки целы")
+	check(m.buy_item("sunglasses", 0, 1) == "bought" and m.is_equipped("sunglasses") and m.shards == 0, "купить и сразу надеть")
+	check(m.tap_item("sunglasses") == "off" and not m.is_equipped("sunglasses"), "нажатие на надетое — снять")
+	check(m.tap_item("sunglasses") == "on", "нажатие на купленное — надеть")
+	check(m.buy_item("monocle", 0, 1) == "locked" and m.buy_item("scarf", 0, 1) == "poor" and not m.is_owned("scarf"), "покупка: закрыто / не хватает")
+	check(m.tap_item("owl_lantern") == "locked", "украшение не надевается")
 
 	# Смена героя (вещи общие)
 	check(m.hero == "" and m.set_hero("axolotl") and m.hero == "axolotl", "выбор аксолотля")
@@ -399,19 +401,22 @@ func _test_meta(g, _chain3: int) -> void:
 
 	# Украшения дома
 	m.shards = 100
-	check(m.tap_decor("owl", "hang", "owl_lantern", 0, 1) == "bought" and m.placed_at("owl", "hang") == "owl_lantern" and m.shards == 85, "украшение: купить и повесить")
-	check(m.tap_decor("owl", "wall_l", "owl_lantern", 0, 1) == "on" and m.placed_at("owl", "wall_l") == "owl_lantern" and m.placed_at("owl", "hang") == "", "украшение переезжает на другое место")
-	check(m.tap_decor("owl", "wall_l", "owl_lantern", 0, 1) == "off" and m.placed_at("owl", "wall_l") == "", "украшение: убрать")
-	check(m.tap_decor("owl", "floor_l", "owl_swing", 0, 1) == "locked" and not m.is_owned("owl_swing"), "качели не ставятся на пол")
-	check(m.tap_decor("axolotl", "floor_l", "owl_mushrooms", 0, 1) == "locked", "украшение совёнка не ставится в грот")
+	check(m.tap_decor("owl", "hang", "owl_lantern") == "try" and m.shards == 100 and not m.is_owned("owl_lantern") and m.placed_at("owl", "hang") == "", "украшение: нажатие — примерка, без покупки")
+	check(m.buy_decor("owl", "hang", "owl_lantern", 0, 1) == "bought" and m.placed_at("owl", "hang") == "owl_lantern" and m.shards == 85, "украшение: купить и повесить")
+	check(m.tap_decor("owl", "wall_l", "owl_lantern") == "on" and m.placed_at("owl", "wall_l") == "owl_lantern" and m.placed_at("owl", "hang") == "", "украшение переезжает на другое место")
+	check(m.tap_decor("owl", "wall_l", "owl_lantern") == "off" and m.placed_at("owl", "wall_l") == "", "украшение: убрать")
+	check(m.tap_decor("owl", "floor_l", "owl_swing") == "locked" and m.buy_decor("owl", "floor_l", "owl_swing", 0, 1) == "locked" and not m.is_owned("owl_swing"), "качели не ставятся на пол")
+	check(m.tap_decor("axolotl", "floor_l", "owl_mushrooms") == "locked", "украшение совёнка не ставится в грот")
 	check(not m.place("axolotl", "hang", "owl_lantern"), "купленное для дупла нельзя поставить в грот")
-	check(m.tap_decor("axolotl", "floor_r", "axo_castle", 99, 1) == "locked", "замок закрыт до 2-го зала")
-	check(m.tap_decor("axolotl", "floor_r", "axo_anchor", 0, 1) == "bought" and m.placed_at("axolotl", "floor_r") == "axo_anchor", "украшение в гроте")
+	check(m.tap_decor("axolotl", "floor_r", "axo_castle") == "try" and m.buy_decor("axolotl", "floor_r", "axo_castle", 99, 1) == "locked", "замок: примерить можно, купить — после 2-го зала")
+	check(m.buy_decor("axolotl", "floor_r", "axo_anchor", 0, 1) == "bought" and m.placed_at("axolotl", "floor_r") == "axo_anchor", "украшение в гроте")
 	m.place("owl", "near", "owl_lantern")
 	check(m.placed_at("owl", "near") == "owl_lantern" and m.placed_at("axolotl", "near") == "", "у каждого дома свои места")
 	check(m.decor_for("owl", "hang").size() == 4 and m.decor_for("axolotl", "floor_l").size() <= 6, "наборы украшений по местам помещаются в сетку")
 	check(Meta.home_stage(1) == 0 and Meta.home_stage(11) == 1 and Meta.home_stage(31) == 2 and Meta.home_stage(51) == 3, "ступени богатства дома")
 	check(Meta.hall_index(10) == 0 and Meta.hall_index(11) == 1 and Meta.hall_index(50) == 4 and Meta.hall_index(77) == 5 and Meta.depth(10) == 120, "залы и глубина")
+
+	_test_tryon(g)
 
 	# Сохранение и загрузка мета-данных
 	var cfg := ConfigFile.new()
@@ -455,6 +460,95 @@ func _test_meta(g, _chain3: int) -> void:
 	var m3 = Meta.new()
 	m3.load_from(bad)
 	check(m3.hero == "" and m3.shards == 0 and m3.owned == ["bow"] and m3.equipped.is_empty() and m3.decor_placed.owl.is_empty(), "испорченные мета-данные отбрасываются")
+
+
+# ---------- Примерка 0.7 (scripts/tryon.gd + экран гардероба) ----------
+
+func _test_tryon(g) -> void:
+	var Meta: Script = load("res://scripts/meta.gd")
+	var keep_meta = g.meta
+	var keep_stars: Dictionary = g.stars
+	var keep_max: int = g.max_level
+	var m = Meta.new()
+	m.set_hero("owl")
+	m.shards = 100
+	m.owned = ["bow"]
+	m.equip("bow")
+	g.meta = m
+	g.stars = {}
+	g.max_level = 1
+	if g.screens == null:  # в тесте _ready() ещё не вызывался
+		g.screens = load("res://scripts/screens.gd").new(g)
+	var sc = g.screens
+	sc.open_wardrobe("head")
+	# примерка некупленной вещи: ничего не тратится, герой показан в ней
+	sc.tap_card("miner", "owl")
+	check(sc.tryon.id == "miner" and m.shards == 100 and not m.is_owned("miner") and m.owned == ["bow"], "примерка: осколки и покупки не меняются")
+	check(sc.tryon.outfit(m).head == "miner" and m.equipped.head == "bow", "примерка: на герое каска поверх бантика, наряд не тронут")
+	check(sc.tryon.status(m, 0, 1) == "ok", "примерка: хватает — можно купить")
+	# отмена — прежний наряд
+	check(sc.cancel_try() and not sc.tryon.active() and sc.tryon.outfit(m) == {"head": "bow"} and m.shards == 100, "отмена: снова бантик, осколки целы")
+	check(not sc.cancel_try(), "нечего отменять — false")
+	# «Назад» на телефоне сначала снимает примерку
+	g._set_state(g.State.WARDROBE)
+	sc.tap_card("cap", "owl")
+	g._notification(Node.NOTIFICATION_WM_GO_BACK_REQUEST)
+	check(g.state == g.State.WARDROBE and not sc.tryon.active() and not m.is_owned("cap"), "«Назад»: примерка снята, остаёмся в гардеробе")
+	# повторное нажатие на примеряемую — снять примерку
+	sc.tap_card("cap", "owl")
+	sc.tap_card("cap", "owl")
+	check(not sc.tryon.active(), "повторное нажатие снимает примерку")
+	# другая вещь — переключение примерки
+	sc.tap_card("cap", "owl")
+	sc.tap_card("miner", "owl")
+	check(sc.tryon.id == "miner" and sc.tryon.outfit(m).head == "miner", "нажатие на другую вещь — примеряется она")
+	# подтверждение — покупка и надеть
+	sc._confirm_try()
+	check(m.is_owned("miner") and m.is_equipped("miner") and m.shards == 40 and not sc.tryon.active(), "«Купить»: куплено и надето, −60")
+	# купленное — без подтверждения
+	sc.tap_card("bow", "owl")
+	check(m.is_equipped("bow") and not sc.tryon.active() and m.shards == 40, "купленное надевается сразу")
+	# нехватка осколков
+	sc.tap_card("crown", "owl")
+	check(sc.tryon.status(m, 0, 1) == "locked", "корона без звёзд: примерить можно, купить нельзя")
+	sc.tap_card("skin_moon", "owl")
+	check(sc.tryon.status(m, 0, 1) == "poor" and sc.tryon.shortage(m) == 40, "не хватает 40 осколков")
+	sc._confirm_try()
+	check(not m.is_owned("skin_moon") and m.shards == 40 and not m.equipped.has("skin") and sc.tryon.active(), "нехватка: покупки нет, примерка остаётся")
+	check(sc.tryon.confirm(m, 999, 99) == "poor", "confirm при нехватке — poor")
+	sc.cancel_try()
+	# украшения дома
+	sc.open_wardrobe("home")
+	check(not sc.tryon.active(), "открытие гардероба сбрасывает примерку")
+	sc.spot = "hang"
+	sc.tap_card("owl_garland", "owl")
+	check(sc.tryon.is_decor() and sc.tryon.placed(m, "owl").get("hang", "") == "owl_garland" and m.placed_at("owl", "hang") == "" and m.shards == 40 and not m.is_owned("owl_garland"), "украшение: примерка на месте, без покупки")
+	check(sc.tryon.placed(m, "axolotl").get("hang", "") == "", "примерка не попадает в чужой дом")
+	sc.cancel_try()
+	check(sc.tryon.placed(m, "owl").is_empty(), "украшение: отмена — место снова пустое")
+	sc.tap_card("owl_garland", "owl")
+	sc._confirm_try()
+	check(m.is_owned("owl_garland") and m.placed_at("owl", "hang") == "owl_garland" and m.shards == 20 and not sc.tryon.active(), "украшение: «Купить» — куплено и повешено")
+	sc.tap_card("owl_moon", "owl")
+	sc._confirm_try()
+	check(not m.is_owned("owl_moon") and m.placed_at("owl", "hang") == "owl_garland" and m.shards == 20, "украшение закрыто звёздами — не покупается")
+	sc.cancel_try()
+	sc.spot = "floor_l"
+	sc.tap_card("owl_hammock", "owl")
+	check(sc.tryon.status(m, 0, 1) == "poor" and sc.tryon.shortage(m) == 15, "украшение: не хватает 15")
+	sc._confirm_try()
+	check(not m.is_owned("owl_hammock") and m.placed_at("owl", "floor_l") == "" and m.shards == 20, "украшение: нехватка — покупки нет")
+	sc.cancel_try()
+	# склонение «не хватает N осколков»
+	var keep_lang: String = I18n.lang
+	I18n.set_lang("ru")
+	check(I18n.t("poor_n") % [1, I18n.forms("shards_gen_forms", 1)] == "Не хватает 1 осколка" and I18n.forms("shards_gen_forms", 5) == "осколков" and I18n.forms("shards_gen_forms", 22) == "осколков", "русский: не хватает 1 осколка / 5 осколков")
+	I18n.set_lang("en")
+	check(I18n.t("poor_n") % [1, I18n.forms("shards_gen_forms", 1)] == "Need 1 more shard" and I18n.t("buy_for") % 60 == "Buy for 60", "английский: Need 1 more shard, Buy for 60")
+	I18n.set_lang(keep_lang)
+	g.meta = keep_meta
+	g.stars = keep_stars
+	g.max_level = keep_max
 
 
 # ---------- Локализация (scripts/i18n.gd) ----------

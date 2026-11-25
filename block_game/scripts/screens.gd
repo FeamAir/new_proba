@@ -7,6 +7,7 @@ const Meta := preload("res://scripts/meta.gd")
 const Hero := preload("res://scripts/hero.gd")
 const Home := preload("res://scripts/home.gd")
 const I18n := preload("res://scripts/i18n.gd")
+const TryOn := preload("res://scripts/tryon.gd")
 
 const NODE_GAP := 130.0     # шаг между уровнями на карте
 const HALL_HEAD := 240.0    # место под заголовок зала
@@ -29,6 +30,10 @@ var rects := {}             # кнопки текущего экрана (зап
 var map_scroll := 0.0
 var map_vel := 0.0
 var drag := {}
+var tryon = TryOn.new()     # примерка некупленной вещи / украшения (scripts/tryon.gd)
+var fx_t := 99.0            # секунд с покупки (короткий эффект)
+var fx_at := Vector2.ZERO
+var focus := Vector2.ZERO   # где на сцене гардероба герой / место примерки
 
 
 func _init(game) -> void:
@@ -39,6 +44,7 @@ func update(delta: float) -> void:
 	react += delta
 	fade = maxf(0.0, fade - delta * 2.5)
 	toast_t = maxf(0.0, toast_t - delta)
+	fx_t += delta
 	if drag.is_empty() and absf(map_vel) > 1.0:
 		map_scroll += map_vel * delta
 		map_vel = move_toward(map_vel, 0.0, maxf(600.0, absf(map_vel) * 3.0) * delta)
@@ -315,6 +321,7 @@ func tap_home(pos: Vector2) -> void:
 
 func open_wardrobe(t := "head") -> void:
 	tab = t
+	tryon.clear()
 	g._set_state(g.State.WARDROBE)
 
 
@@ -345,8 +352,9 @@ func draw_wardrobe() -> void:
 		var x0 := (st.size.x / s - 720.0) / 2.0
 		var view := Rect2(-x0, 160, 720 + 2 * x0, 740)
 		var org := Vector2(st.get_center().x - 360.0 * s, st.position.y - view.position.y * s)
-		var placed: Dictionary = g.meta.decor_placed.get(kind, {})
+		var placed: Dictionary = tryon.placed(g.meta, kind)
 		home.draw(g, kind, org, s, view, Meta.home_stage(g.max_level), placed, g.meta.outfit(), g.t_total, react, spot, false)
+		focus = home.spot_screen(kind, spot)
 		for sp in Meta.SPOTS:
 			var sc: Vector2 = home.spot_screen(kind, sp)
 			rects["spot_" + sp] = Rect2(sc - Vector2(50, 50), Vector2(100, 100))
@@ -357,8 +365,12 @@ func draw_wardrobe() -> void:
 		g.draw_colored_polygon(_ellipse(Vector2(st.get_center().x, st.end.y - 60), 210, 26), Color(0.2, 0.12, 0.36, 0.9))
 		var sc := 1.5 if kind == "owl" else 1.36
 		var hp := Vector2(st.get_center().x, st.end.y - 60 - 112 * sc)
-		hero.draw(g, kind, hp, sc, g.meta.outfit(), g.t_total, react)
+		hero.draw(g, kind, hp, sc, tryon.outfit(g.meta), g.t_total, react)
 		rects["hero"] = Rect2(hp - Vector2(150, 170), Vector2(300, 320))
+		focus = hp
+	if tryon.active():
+		_try_tag(st)
+	_buy_fx()
 	_fade_over(st)
 	# что вылезло за сцену сверху — закрываем фоном, поверх шапка
 	g.draw_rect(Rect2(0, 0, g.W, st.position.y), g.BG_TOP)
@@ -390,7 +402,7 @@ func draw_wardrobe() -> void:
 			g._rbox(r, Color("#46307A") if sel else g.BTN, 22)
 			if sel:
 				g.draw_polyline(_rr_outline(r.grow(-1), 20), g.ACCENT, 3.0, true)
-			hero.draw_avatar(g, h, r.position + Vector2(36, 31), 24, g.meta.outfit(), g.t_total, g.ACCENT if sel else g.DIM)
+			hero.draw_avatar(g, h, r.position + Vector2(36, 31), 24, tryon.outfit(g.meta), g.t_total, g.ACCENT if sel else g.DIM)
 			_text(Vector2(r.position.x + 70, r.position.y + 42), Meta.hero_name(h), 30, g.ACCENT if sel else g.TEXT)
 	# вкладки
 	var tabs := Meta.SLOTS.duplicate()
@@ -412,7 +424,11 @@ func draw_wardrobe() -> void:
 		var r := Rect2(20 + (i % 3) * (cw2 + 14), L.grid_y + (i / 3) * (L.card_h + 14), cw2, L.card_h)
 		rects["item_" + it.id] = r
 		_card(it, r, kind)
-	_toast(L.grid_y - 150)
+	if tryon.active():
+		_try_panel(L, kind)
+		_toast(st.position.y + 60)
+	else:
+		_toast(L.grid_y - 150)
 
 
 func _ellipse(c: Vector2, rx: float, ry: float) -> PackedVector2Array:
@@ -440,6 +456,10 @@ func _card(it: Dictionary, r: Rect2, kind: String) -> void:
 	g.draw_set_transform(Vector2.ZERO)
 	if lock != "":
 		g._rbox(Rect2(r.position, Vector2(r.size.x, 132)), Color(0.08, 0.04, 0.15, 0.5), 22)
+	if tryon.id == it.id:
+		var pulse := 0.8 + 0.2 * sin(g.t_total * 5.0)
+		g.draw_polyline(_rr_outline(r.grow(-2), 20), Color(g.ACCENT, pulse), 5.0, true)
+		_badge(Vector2(r.get_center().x, r.position.y + 4), I18n.t("try_on"), 18)
 	_text(Vector2(r.position.x, r.position.y + 154), Meta.item_name(it.id), 21, g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 	var sy := r.position.y + 186
 	var cx := r.get_center().x
@@ -468,7 +488,136 @@ func _rr_outline(r: Rect2, rad: float) -> PackedVector2Array:
 	return pts
 
 
+# ---------- Примерка и панель покупки ----------
+
+## Плашка-ярлык по центру сверху (top — верхняя середина).
+func _badge(top: Vector2, label: String, size: int) -> Rect2:
+	var w: float = g.font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + size * 1.4
+	var r := Rect2(top.x - w / 2.0, top.y, w, size * 1.7)
+	g._rbox(r, g.ACCENT, int(r.size.y / 2.0))
+	_text(Vector2(r.position.x, r.position.y + size * 1.2), label, size, DARK_TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+	return r
+
+
+## Ярлык «Примерка» на сцене: над героем или над местом украшения.
+func _try_tag(st: Rect2) -> void:
+	var y: float = st.position.y + 14
+	var x: float = st.get_center().x
+	if tryon.is_decor():
+		x = clampf(focus.x, st.position.x + 110, st.end.x - 110)
+		y = clampf(focus.y - 130, st.position.y + 56, st.end.y - 60)
+	_badge(Vector2(x, y), I18n.t("try_on"), 24)
+
+
+## Панель подтверждения: название, цена, состояние, кнопки «Отмена» / «Купить за N».
+## Закрывает строку героев/мест и вкладки (пока идёт примерка, они не нужны).
+func _try_panel(L: Dictionary, kind: String) -> void:
+	var it: Dictionary = Meta.item(tryon.id)
+	var r := Rect2(14, L.chips_y - 20, g.W - 28, L.grid_y - 8 - (L.chips_y - 20))
+	rects["try_panel"] = r
+	g._rbox(r.grow(6), Color(0.02, 0.01, 0.06, 0.55), 34)
+	g._rbox(r, Color("#2E1D58"), 30)
+	g.draw_polyline(_rr_outline(r.grow(-2), 28), Color(g.ACCENT, 0.85), 3.0, true)
+	# иконка
+	var ic := r.position + Vector2(52, 50)
+	g.draw_circle(ic, 36, Color(0.08, 0.04, 0.16, 0.9), true, -1.0, true)
+	if it.has("home"):
+		home.draw_decor_icon(g, tryon.id, ic, 62, g.t_total)
+	else:
+		hero.draw_item_icon(g, tryon.id, it.slot, kind, ic, 66, g.t_total)
+	g.draw_set_transform(Vector2.ZERO)
+	# цена справа
+	var price := str(tryon.price())
+	var pw: float = g.font.get_string_size(price, HORIZONTAL_ALIGNMENT_LEFT, -1, 34).x
+	var pr := Rect2(r.end.x - pw - 82, r.position.y + 12, pw + 64, 50)
+	_pill(pr, Color(0.08, 0.04, 0.16, 0.9))
+	var st: String = tryon.status(g.meta, g.total_stars(), g.max_level)
+	shard_icon(pr.position + Vector2(28, 25), 15)
+	_text(pr.position + Vector2(50, 37), price, 32, BAD_COL if st == "poor" else g.CRYSTAL_COL)
+	# название и состояние
+	var tx: float = r.position.x + 106
+	var tw: float = pr.position.x - tx - 10
+	_text(Vector2(tx, r.position.y + 42), Meta.item_name(tryon.id), 30, g.TEXT, tw)
+	var line := I18n.t("try_hint")
+	var col: Color = g.DIM
+	if st == "poor":
+		var n: int = tryon.shortage(g.meta)
+		line = I18n.t("poor_n") % [n, I18n.forms("shards_gen_forms", n)]
+		col = BAD_COL
+	elif st == "locked":
+		line = Meta.lock_reason(tryon.id, g.total_stars(), g.max_level)
+		col = Color("#FFB86B")
+		_lock_icon(Vector2(tx + 11, r.position.y + 69), 12, col)
+		tx += 30
+	_text(Vector2(tx, r.position.y + 76), line, 22, col, r.end.x - tx - 20)
+	# кнопки
+	var by: float = r.end.y - 70
+	_button("try_cancel", Rect2(r.position.x + 14, by, 230, 58), I18n.t("cancel"), false, 30)
+	var br := Rect2(r.position.x + 258, by, r.size.x - 272, 58)
+	var ok := st == "ok"
+	_button("try_buy", br, "", ok, 32, ok)
+	var label := I18n.t("buy_for") % tryon.price()
+	var lw: float = g.font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
+	var x0: float = br.get_center().x - (lw + 40) / 2.0
+	var tcol: Color = DARK_TEXT if ok else Color(g.TEXT, 0.45)
+	_text(Vector2(x0, br.get_center().y + 11), label, 30, tcol)
+	shard_icon(Vector2(x0 + lw + 24, br.get_center().y), 15)
+	if not ok:
+		g._rbox(br, Color(0.1, 0.06, 0.2, 0.35), 26)
+
+
+## Короткий эффект покупки: вспышка, кольцо и разлетающиеся осколки.
+func _buy_fx() -> void:
+	if fx_t > 0.8:
+		return
+	var k := fx_t / 0.8
+	var a := 1.0 - k
+	g.draw_circle(fx_at, 40 + 140 * k, Color(1, 0.95, 0.7, 0.25 * a), true, -1.0, true)
+	g.draw_arc(fx_at, 30 + 170 * k, 0, TAU, 48, Color(g.CRYSTAL_COL, a), 6.0 * a + 1.0, true)
+	for i in 10:
+		var ang := i * TAU / 10.0 + 0.3
+		var p := fx_at + Vector2(cos(ang), sin(ang)) * (50 + 180 * k) + Vector2(0, 120 * k * k)
+		shard_icon(p, 12 * a + 3)
+
+
+## Снять примерку (кнопка «Отмена», касание мимо панели, «Назад» на телефоне).
+## true — примерка была и снята.
+func cancel_try() -> bool:
+	if not tryon.active():
+		return false
+	tryon.clear()
+	g.play("click", 0.9)
+	return true
+
+
+func _confirm_try() -> void:
+	var id: String = tryon.id
+	match tryon.confirm(g.meta, g.total_stars(), g.max_level):
+		"bought", "owned":
+			g.play("crystal")
+			say(I18n.t("bought") % Meta.item_name(id))
+			poke_hero()
+			fx_t = 0.0
+			fx_at = focus
+			g._save()
+		"poor":
+			g.play("gameover", 1.3, -8.0)
+		_:
+			g.play("click", 0.7)
+			say(Meta.lock_reason(id, g.total_stars(), g.max_level))
+
+
 func tap_wardrobe(pos: Vector2) -> void:
+	var on_card := false
+	for n in rects:
+		if String(n).begins_with("item_") and rects[n].has_point(pos):
+			on_card = true
+	if tryon.active() and not on_card:
+		if rects.get("try_buy", Rect2()).has_point(pos):
+			_confirm_try()
+		elif rects.get("try_cancel", Rect2()).has_point(pos) or not rects.get("try_panel", Rect2()).has_point(pos):
+			cancel_try()
+		return
 	if rects.get("back", Rect2()).has_point(pos):
 		g.play("click")
 		g.go_home()
@@ -503,29 +652,41 @@ func tap_wardrobe(pos: Vector2) -> void:
 	var items: Array = Meta.decor_for(kind, spot) if tab == "home" else Meta.items_in(tab)
 	for it in items:
 		if rects.get("item_" + it.id, Rect2()).has_point(pos):
-			var res: String
-			if tab == "home":
-				res = g.meta.tap_decor(kind, spot, it.id, g.total_stars(), g.max_level)
-			else:
-				res = g.meta.tap_item(it.id, g.total_stars(), g.max_level)
-			match res:
-				"bought":
-					g.play("levelup")
-					say(I18n.t("bought") % Meta.item_name(it.id))
-					poke_hero()
-				"on":
-					g.play("crystal")
-					poke_hero()
-				"off":
-					g.play("click")
-				"poor":
-					g.play("gameover", 1.3, -8.0)
-					say(I18n.t("poor") % (int(it.price) - g.meta.shards))
-				_:
-					g.play("click", 0.7)
-					say(Meta.lock_reason(it.id, g.total_stars(), g.max_level))
-			g._save()
+			tap_card(it.id, kind)
 			return
+
+
+## Нажатие на карточку вещи / украшения (для текущей вкладки и места).
+## Купленное — надеть/снять сразу; некупленное — примерка (повторное нажатие — снять примерку).
+func tap_card(id: String, kind: String) -> void:
+	var res: String
+	if tab == "home":
+		res = g.meta.tap_decor(kind, spot, id)
+	else:
+		res = g.meta.tap_item(id)
+	match res:
+		"try":
+			if tryon.id == id:
+				cancel_try()
+				return
+			if tab == "home":
+				tryon.start_decor(kind, spot, id)
+			else:
+				tryon.start_item(id)
+			g.play("crystal", 1.25, -6.0)
+			poke_hero()
+		"on":
+			tryon.clear()
+			g.play("crystal")
+			poke_hero()
+			g._save()
+		"off":
+			tryon.clear()
+			g.play("click")
+			g._save()
+		_:
+			g.play("click", 0.7)
+			say(Meta.lock_reason(id, g.total_stars(), g.max_level))
 
 
 # ---------- Карта ----------

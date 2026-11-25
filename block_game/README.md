@@ -15,7 +15,7 @@
 godot --headless --path block_game -s tools/level_bot.gd -- --levels=1-50 --games=50
 ```
 
-Тесты логики:
+Тесты логики (строгий запуск: `GODOT=<путь> block_game/tests/run_tests.sh` — считает провалом и ошибку скрипта):
 ```
 godot --headless --path block_game -s tests/test_logic.gd
 ```
