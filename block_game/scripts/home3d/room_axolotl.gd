@@ -45,11 +45,16 @@ func _init() -> void:
 		elif s == "hang":
 			mark = Vector3(0, -1.05, 0)
 		spots[s] = {"pos": dir(a) * r + Vector3(0, d[2], 0), "yaw": face_center(a), "mark": mark, "stand": Vector3(0, 0.04, 0.24)}
+	# 0.14: полка славы — каменная ниша напротив входа камеры (за спиной камеры в обычном обзоре)
+	shelf_def = {"style": "axolotl", "pos": dir(PI / 2.0) * R, "yaw": face_center(PI / 2.0), "room_r": R,
+		"rows": [[1.28, wall_r(1.28) - 0.04], [1.78, wall_r(1.78) - 0.04]], "spacing": 0.37, "scale": 1.0, "depth": 0.3,
+		"plaque_z": 0.205, "plaque_y": -0.035, "focus_d": 0.64, "view_d": 1.9}
+	trophy_light = 1.05
 
 
 func _inside(p: Vector3) -> bool:
 	var rr := Vector2(p.x, p.z).length()
-	return rr < R - 0.85 and p.y > 0.15 and p.y < 3.15
+	return (rr < R - 0.85 or (rr < R - 0.5 and p.y < 2.2 and p.z > 1.5)) and p.y > 0.15 and p.y < 3.15
 
 
 func _setup_camera(c: Camera3D) -> void:
@@ -387,7 +392,7 @@ func _extras(h: Node3D) -> void:
 		# светящиеся самоцветы в стенах
 		var gc := [Color("#9FF6FF"), Color("#FF8FD8"), Color("#FFD34D")]
 		for i in 4:
-			var a := deg_to_rad([70.0, 150.0, 285.0, 110.0][i])
+			var a := deg_to_rad([50.0, 150.0, 285.0, 128.0][i])
 			var hy := 0.9 + 1.0 * hash1(i, 61)
 			var p := dir(a) * (wall_r(hy) - 0.06) + Vector3(0, hy, 0)
 			var g := node(h, p, face_center(a))

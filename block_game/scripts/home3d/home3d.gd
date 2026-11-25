@@ -28,6 +28,10 @@ const AUTO_FPS := 40.0
 const GUARD_PATH := "user://home3d_guard.cfg"
 ## Сколько секунд после касания места камера летит к нему, прежде чем открыть гардероб
 const OPEN_DELAY := 0.5
+## 0.14: через сколько секунд после входа в дом камера сама летит к полке показать новые кубки
+const REVEAL_AFTER := 1.1
+## Сколько секунд длится подпись «Новый кубок!» после начала показа
+const REVEAL_LEN := 4.5
 
 ## Для тестов: строить 3D даже без экрана (headless)
 static var force := false
@@ -60,6 +64,13 @@ var _prewarm_frames := 0
 
 
 var _guard_tripped := false
+
+## 0.14: полка славы. trophy_focus — к какому кубку подлетела камера (подпись на экране; 0 — нет),
+## shelf_focus — камера смотрит на всю полку; reveal_halls / reveal_t — показ новых кубков (-1 — нет показа)
+var trophy_focus := 0
+var shelf_focus := false
+var reveal_halls: Array = []
+var reveal_t := -1.0
 
 
 func setup(game) -> void:
@@ -202,6 +213,7 @@ func _process(delta: float) -> void:
 		_prewarm_frames += 1
 	if mode == "home":
 		_watch_fps(delta)
+		_reveal_step(delta)
 	# предохранитель: дом показан и прожил секунду — значит, 3D на этом телефоне работает
 	if mode in ["home", "stage"]:
 		_frames_ok += 1
@@ -228,6 +240,12 @@ func _build(k: String, st: int) -> void:
 	add_child(vp)
 	room = ROOMS[k].new()
 	room.setup(k, st, g.meta.decor_placed.get(k, {}), g.meta.outfit(), quality == "high")
+	room.trophies_done = Meta.trophies(g.max_level)
+	room.trophies_hidden = g.meta.trophies_pending(g.max_level)
+	reveal_halls = []
+	reveal_t = -1.0
+	trophy_focus = 0
+	shelf_focus = false
 	vp.add_child(room)
 	room.build()
 	room.cam.tapped.connect(_on_tap)
@@ -276,7 +294,8 @@ func _apply_viewport() -> void:
 	vp.msaa_3d = Viewport.MSAA_4X if quality == "high" else Viewport.MSAA_DISABLED
 	room.cam.px_scale = float(sz.x) / maxf(1.0, r.size.x)
 	# на весь экран интерфейс закрывает верх и низ: опускаем «горизонт», чтобы герой был в середине видимой части
-	room.cam.v_offset = -0.42 if mode != "stage" else 0.0
+	# (0.14: у полки славы камера близко — сдвиг меньше, кубок посередине между подписью и кнопками)
+	room.cam.v_offset = _v_offset_goal() if mode != "stage" else 0.0
 
 
 ## Где на экране игры картинка 3D
@@ -312,6 +331,11 @@ func _sync(delta: float) -> void:
 		room.cam.idle_sway = 0.0
 	room.set_markers(true)
 	room.set_outfit(g.meta.outfit())
+	# 0.14: кубки (общие для всех героев) и что сейчас в фокусе камеры
+	var hid: Array = g.meta.trophies_pending(g.max_level).filter(func(n): return not reveal_halls.has(n))
+	room.set_trophies(Meta.trophies(g.max_level), hid)
+	trophy_focus = room.focused_trophy()
+	shelf_focus = room.focused_shelf()
 	if _pending_spot != "":
 		_pending_t -= delta
 		if _pending_t <= 0.0:
@@ -381,6 +405,9 @@ func _on_tap(p: Vector2) -> void:
 	if c.type == "hero":
 		room.poke_hero()
 		g.play("crystal", randf_range(0.9, 1.15), -6.0)
+	elif c.type == "trophy":
+		# 0.14: кубок на полке — камера подлетает, на экране подпись (scripts/trophy_ui.gd)
+		focus_trophy(c.hall)
 	elif c.type == "spot":
 		# камера подлетает к месту, потом открывается выбор украшения (вкладка «Дом» гардероба)
 		room.focus_spot(c.spot)
@@ -396,7 +423,68 @@ func _on_double_tap(p: Vector2) -> void:
 	if c.is_empty() or room.is_focused_on(c.at) or (c.get("spot", "") != "" and room.cam.focused and room.cam.goal_pivot.distance_to(room.spot_focus.get(c.spot, [c.at])[0]) < 0.05):
 		room.cam.fly_home()
 		return
+	if c.type == "trophy":
+		focus_trophy(c.hall)
+		return
 	room.focus(c)
+
+
+# ---------- Полка славы (0.14) ----------
+
+## Камера — к полке славы (кнопка «Кубки» на экране «Дом»); уже у полки — обратно к обзору
+func focus_shelf() -> void:
+	if room == null or room.shelf == null:
+		return
+	if room.focused_shelf():
+		room.cam.fly_home()
+		return
+	room.focus_shelf()
+	g.play("click")
+
+
+func focus_trophy(n: int) -> void:
+	if room == null or room.shelf == null:
+		return
+	room.focus_trophy(n)
+	g.play("crystal", 1.2 if room.shelf.has_trophy(n) else 0.8, -4.0)
+
+
+## Сдвиг картинки по вертикали: в обзоре — как раньше; у полки и кубка — меньше (плавно)
+func _v_offset_goal() -> float:
+	var goal := -0.42
+	if room.focused_trophy() > 0 or room.focused_shelf():
+		goal = -0.42 * clampf(room.cam.dist / maxf(0.1, room.cam.home_dist), 0.0, 1.0) * 0.75
+	var cur: float = room.cam.v_offset
+	if cur == 0.0 or absf(cur - goal) < 0.002:
+		return goal
+	return lerpf(cur, goal, 1.0 - exp(-6.0 * get_process_delta_time()))
+
+
+## Новые кубки (или все — после обновления старого сохранения): после входа в дом камера летит к полке,
+## кубки появляются с блеском. Сразу запоминается, что показ был (выход из дома посреди показа — не повтор).
+func _reveal_step(delta: float) -> void:
+	if reveal_t >= 0.0:
+		reveal_t += delta
+		if reveal_t > REVEAL_LEN + 0.45 * reveal_halls.size():
+			reveal_t = -1.0
+			reveal_halls = []
+		return
+	if _home_time < REVEAL_AFTER or room.shelf == null or room.cam.is_touching() or _pending_spot != "":
+		return
+	var p: Array = g.meta.trophies_pending(g.max_level)
+	if p.is_empty():
+		return
+	reveal_halls = p
+	reveal_t = 0.0
+	room.reveal_trophies(p)
+	g.meta.mark_trophies_seen(g.max_level)
+	if g.has_method("_save"):
+		g._save()
+	g.play("levelup", 1.15, -4.0)
+
+
+func revealing() -> bool:
+	return reveal_t >= 0.0
 
 
 # ---------- Автовыбор качества по FPS ----------

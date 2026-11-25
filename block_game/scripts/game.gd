@@ -38,6 +38,7 @@ const ForgeUI := preload("res://scripts/forge_ui.gd")
 ## 0.12b: окна «Сменить друга?» и «Гардероб обновлён» поверх экранов (scripts/notice_ui.gd)
 const NoticeUI := preload("res://scripts/notice_ui.gd")
 const Home3D := preload("res://scripts/home3d/home3d.gd")  # 0.12: 3D-дома
+const TrophyUI := preload("res://scripts/trophy_ui.gd")  # 0.14: кубки залов
 ## true — после очистки падают все группы поля (и камень уровня над дырами ниже линии);
 ## false — только то, что выше нижней очищенной линии (ниже неё поле не трогается).
 const FALL_ALL := false
@@ -110,6 +111,7 @@ var assist_ui
 var forge_ui                  # 0.12: Кристальная кузница
 var notice_ui                 # 0.12b: смена друга с возвратом, сообщение об обновлении гардероба
 var home3d                    # 0.12: 3D-дом на экране «Дом» (scripts/home3d/home3d.gd)
+var trophy_ui                 # 0.14: «Новый кубок!», кнопка «Кубки», полка славы 2D
 
 var fall_timer := 0.0
 var lock_timer := 0.0
@@ -164,6 +166,7 @@ func _ready() -> void:
 	assist_ui = AssistUI.new(self)
 	forge_ui = ForgeUI.new(self)
 	notice_ui = NoticeUI.new(self)
+	trophy_ui = TrophyUI.new(self)
 	home3d = Home3D.new()
 	home3d.name = "Home3D"
 	add_child(home3d)
@@ -561,6 +564,10 @@ func _win() -> void:
 	assist.on_win(level, pieces_used)
 	meta.shards += last_reward.total
 	stars[level] = maxi(stars.get(level, 0), last_stars)
+	if trophy_ui:
+		trophy_ui.on_win(meta.award_trophy(level, max_level))  # 0.14: последний уровень зала — кубок
+	else:
+		meta.award_trophy(level, max_level)
 	max_level = maxi(max_level, level + 1)
 	_save()
 	_set_state(State.WIN)
@@ -757,6 +764,8 @@ func _notification(what: int) -> void:
 		if notice_ui and notice_ui.active():
 			notice_ui.back()
 			return
+		if state == State.HOME and trophy_ui and trophy_ui.back():
+			return
 		match state:
 			State.PLAYING, State.CLEARING, State.SETTLE:
 				_set_state(State.PAUSED)
@@ -829,6 +838,8 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 			go_home()
 			return
 		State.HOME:
+			if trophy_ui and trophy_ui.tap_home(pos):
+				return
 			if not assist_ui.tap_home(pos) and not screens.tap_home(pos) and home3d:
 				home3d.touch(idx, pos, true)  # 0.12: мимо кнопок — камера 3D-дома
 			return
@@ -847,6 +858,8 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 			return
 		State.WIN, State.LOSE:
 			if state == State.LOSE and assist_ui.tap_lose(pos):
+				return
+			if state == State.WIN and trophy_ui and trophy_ui.tap_win(pos):
 				return
 			screens.tap_end(pos)
 			return
@@ -967,6 +980,8 @@ func _draw() -> void:
 		State.HOME:
 			screens.draw_home()
 			assist_ui.draw_home_goal()
+			if trophy_ui:
+				trophy_ui.draw_home()
 			return
 		State.FORGE:
 			_draw_background()
@@ -1245,6 +1260,8 @@ func _draw_overlay() -> void:
 				assist_ui.draw_stats()
 		State.WIN:
 			screens.draw_win()
+			if trophy_ui:
+				trophy_ui.draw_win()
 		State.LOSE:
 			if assist_ui.offers(level):
 				assist_ui.draw_lose()

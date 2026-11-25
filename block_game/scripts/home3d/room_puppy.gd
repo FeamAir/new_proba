@@ -36,6 +36,11 @@ func _init() -> void:
 	}
 	for s in ["floor_l", "floor_r"]:
 		spots[s]["mark"] = Vector3(0, 0.3, 0)
+	# 0.14: полка славы — деревянный стенд «доска почёта» в саду справа от будки (не загораживает скалу с местом «стена справа»)
+	var sp_pos := Vector3(3.1, 0, -0.45)
+	shelf_def = {"style": "puppy", "pos": sp_pos, "yaw": face_to(sp_pos, Vector3(-0.3, 0, 2.6)), "rows": [[0.52, 0.0], [0.94, 0.0]],
+		"spacing": 0.3, "scale": 0.82, "depth": 0.24, "front_z": 0.13, "plaque_z": 0.135, "plaque_y": -0.03,
+		"focus_d": 0.54, "view_d": 1.75}
 
 
 func _inside(p: Vector3) -> bool:

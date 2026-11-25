@@ -36,6 +36,10 @@ func _init() -> void:
 	}
 	for s in ["floor_l", "floor_r", "near"]:
 		spots[s]["mark"] = Vector3(0, 0.3, 0)
+	# 0.14: полка славы — застеклённая витрина у стены напротив окна (за спиной камеры в обычном обзоре)
+	shelf_def = {"style": "kitten", "pos": Vector3(0, 0, HL - 0.02), "yaw": PI, "rows": [[1.0, 0.0], [1.47, 0.0]],
+		"spacing": 0.34, "scale": 0.95, "depth": 0.36, "front_z": 0.19, "plaque_z": 0.165, "plaque_y": -0.035,
+		"focus_d": 0.6, "view_d": 1.75}
 
 
 func _inside(p: Vector3) -> bool:
