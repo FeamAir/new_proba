@@ -294,6 +294,7 @@ func _initialize() -> void:
 
 	_test_meta(g, max_chain)
 	_test_i18n(g)
+	_test_new_heroes(g)
 
 	if had_save:
 		var f := FileAccess.open(save_path, FileAccess.WRITE)
@@ -628,3 +629,88 @@ func _test_i18n(g) -> void:
 	bad.set_value("settings", "language", 42)
 	I18n.load_from(bad, "ru")
 	check(I18n.lang == "ru", "испорченное поле языка — автоопределение")
+
+
+# ---------- Щенок и котик (0.9) ----------
+
+func _test_new_heroes(g) -> void:
+	var Meta: Script = load("res://scripts/meta.gd")
+	var HomeS: Script = load("res://scripts/home.gd")
+	var HeroS: Script = load("res://scripts/hero.gd")
+	check(Meta.HEROES == ["owl", "axolotl", "puppy", "kitten"], "четыре друга: совёнок, аксолотль, щенок, котик")
+	var m = Meta.new()
+	check(m.set_hero("puppy") and m.hero == "puppy" and m.set_hero("kitten") and m.hero == "kitten", "выбор щенка и котика")
+	# Данные домов и окрасок
+	for h in ["puppy", "kitten"]:
+		var items: Array = Meta.DECOR.filter(func(it): return it.home == h)
+		var prices_ok := items.all(func(it): return int(it.price) >= 10 and int(it.price) <= 60)
+		var cond := items.filter(func(it): return it.has("stars") or it.has("hall")).size()
+		check(items.size() == 10 and prices_ok and cond >= 1 and cond <= 2, "%s: 10 украшений, цены 10–60, 1–2 с условием" % h)
+		var spots_ok := true
+		for sp in Meta.SPOTS:
+			var n: int = Meta.decor_for(h, sp).size()
+			if n < 1 or n > 6 or not HomeS.SPOTS[h].has(sp):
+				spots_ok = false
+		check(spots_ok and HomeS.HERO_AT.has(h), "%s: на каждом из 6 мест есть что поставить (и не больше 6)" % h)
+		var draw_ok := true
+		for it in items:
+			if not HomeS.DECOR_H.has(it.id):
+				draw_ok = false
+		check(draw_ok, "%s: у каждого украшения задана высота для рисования" % h)
+		var pal: Dictionary = HeroS.PALETTES.get(h, {})
+		check(pal.has("") and Meta.items_in("skin").all(func(it): return pal.has(it.id)), "%s: своя палитра для каждой окраски" % h)
+	# Свои названия окрасок
+	var keep_lang: String = I18n.lang
+	I18n.set_lang("en")
+	check(Meta.item_name("skin_gold", "puppy") == "Dalmatian" and Meta.item_name("skin_moon", "kitten") == "Siamese" and Meta.item_name("skin_gold", "owl") == "Golden" and Meta.item_name("skin_gold") == "Golden", "окраски: у щенка и котика свои названия, у совёнка прежние")
+	I18n.set_lang("ru")
+	check(Meta.item_name("skin_mint", "puppy") == "Шоколадный" and Meta.item_name("skin_mint", "kitten") == "Полосатик" and Meta.hero_name("puppy") == "Щенок" and Meta.hero_name("kitten") == "Котик", "русский: Щенок, Котик, Шоколадный, Полосатик")
+	I18n.set_lang(keep_lang)
+	# Вещи общие: надетое остаётся при смене друга
+	m.shards = 500
+	m.set_hero("puppy")
+	check(m.buy_item("cap", 0, 1) == "bought" and m.buy_item("skin_moon", 0, 1) == "bought", "щенок: купить колпак и окраску")
+	m.set_hero("kitten")
+	check(m.is_equipped("cap") and m.outfit().get("skin", "") == "skin_moon", "смена на котика: вещи и окраска остаются (рисуются по-кошачьи)")
+	# Украшения: у каждого дома свои
+	check(m.tap_decor("puppy", "hang", "pup_kite") == "try" and m.buy_decor("puppy", "hang", "pup_kite", 0, 1) == "locked", "змей: примерить можно, купить — за 25 звёзд")
+	check(m.buy_decor("puppy", "hang", "pup_lamp", 0, 1) == "bought" and m.placed_at("puppy", "hang") == "pup_lamp", "щенок: фонарь повешен")
+	check(m.tap_decor("kitten", "floor_l", "pup_ball") == "locked" and not m.place("kitten", "floor_l", "pup_lamp"), "украшение щенка не ставится на чердак")
+	check(m.tap_decor("puppy", "floor_l", "kit_box") == "locked", "коробка котика не ставится в сад")
+	check(m.buy_decor("kitten", "floor_r", "kit_box", 0, 1) == "bought" and m.placed_at("kitten", "floor_r") == "kit_box" and m.placed_at("puppy", "floor_r") == "", "котик: коробка на полу, в саду пусто")
+	check(m.tap_decor("kitten", "near", "kit_box") == "on" and m.placed_at("kitten", "near") == "kit_box" and m.placed_at("kitten", "floor_r") == "", "коробка переезжает поближе к котику")
+	check(m.buy_decor("kitten", "floor_l", "kit_tree", 99, 11) == "locked" and m.buy_decor("kitten", "floor_l", "kit_tree", 0, 21) == "bought", "кошачий домик — после 2-го зала")
+	check(m.tap_decor("puppy", "wall_l", "pup_bone") == "locked", "косточка не вешается на забор")
+	# Сохранение и загрузка
+	var cfg := ConfigFile.new()
+	m.save_to(cfg)
+	var m2 = Meta.new()
+	m2.load_from(cfg)
+	check(m2.hero == "kitten" and m2.placed_at("puppy", "hang") == "pup_lamp" and m2.placed_at("kitten", "near") == "kit_box" and m2.placed_at("kitten", "floor_l") == "kit_tree", "щенок и котик: герой и украшения домов сохраняются")
+	m.set_hero("puppy")
+	m.save_to(cfg)
+	m2.load_from(cfg)
+	check(m2.hero == "puppy" and m2.is_equipped("cap"), "сохранение: выбран щенок")
+	# Старое сохранение 0.8: в decor_placed только совёнок и аксолотль
+	var old := ConfigFile.new()
+	old.set_value("meta", "hero", "owl")
+	old.set_value("meta", "decor_owned", ["owl_lantern"])
+	old.set_value("meta", "decor_placed", {"owl": {"hang": "owl_lantern"}, "axolotl": {}})
+	var m3 = Meta.new()
+	m3.load_from(old)
+	check(m3.placed_at("owl", "hang") == "owl_lantern" and m3.decor_placed.puppy.is_empty() and m3.decor_placed.kitten.is_empty(), "старое сохранение: дома щенка и котика пустые")
+	var m4 = Meta.new()
+	check(m4.decor_placed.has("puppy") and m4.decor_placed.has("kitten"), "новая игра: места для домов щенка и котика")
+	# Экран выбора: на каждого друга — своя карточка, нажатие выбирает
+	if g.screens == null:
+		g.screens = load("res://scripts/screens.gd").new(g)
+	var keep_meta = g.meta
+	g.meta = Meta.new()
+	g.screens.rects.clear()
+	for i in Meta.HEROES.size():
+		g.screens.rects["hero_" + Meta.HEROES[i]] = Rect2(24 + (i % 2) * 344, 236 + (i / 2) * 318, 328, 304)
+	g.screens.tap_pick(Vector2(24 + 344 + 100, 236 + 318 + 100))
+	check(g.screens.pick_choice == "kitten", "«Выбери друга»: нажатие на карточку котика")
+	g.screens.tap_pick(Vector2(124, 236 + 318 + 100))
+	check(g.screens.pick_choice == "puppy", "«Выбери друга»: нажатие на карточку щенка")
+	g.meta = keep_meta

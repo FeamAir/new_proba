@@ -1,5 +1,5 @@
 extends RefCounted
-## Экраны мета-слоя Cascado (0.6): выбор героя, дом, гардероб (вещи и украшения дома),
+## Экраны мета-слоя Cascado (0.6, четыре друга — 0.9): выбор героя, дом, гардероб (вещи и украшения дома),
 ## карта-путешествие, экраны победы и поражения. Рисуют на узле игры (g — scripts/game.gd)
 ## и обрабатывают касания на этих экранах. Правила уровня — в game.gd, данные — в meta.gd.
 
@@ -15,6 +15,11 @@ const MAP_TOP := 150.0
 const DARK_TEXT := Color("#2A1A0A")
 const OK_COL := Color("#3DDC97")
 const BAD_COL := Color("#FF6B8A")
+## Выбор друга: подсветка и масштаб каждого героя в карточке
+const PICK_GLOW := {"owl": Color("#B46CFF"), "axolotl": Color("#FF8FD8"), "puppy": Color("#FFB547"), "kitten": Color("#7FE3FF")}
+const PICK_SCALE := {"owl": 0.66, "axolotl": 0.6, "puppy": 0.66, "kitten": 0.66}
+## Масштаб героя на сцене гардероба
+const WR_SCALE := {"owl": 1.5, "axolotl": 1.36, "puppy": 1.42, "kitten": 1.44}
 
 var g                       # узел игры
 var hero = Hero.new()
@@ -64,6 +69,13 @@ func say(text: String) -> void:
 
 func _text(pos: Vector2, s: String, size: int, col: Color, width := -1.0, align := HORIZONTAL_ALIGNMENT_LEFT) -> void:
 	g.draw_string(g.font, pos, s, align, width, size, col)
+
+
+## Размер шрифта, при котором строка влезает в ширину (не меньше 14).
+func fit_size(s: String, w: float, size: int) -> int:
+	while size > 14 and g.font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > w:
+		size -= 1
+	return size
 
 
 func _ctext(cx: float, y: float, s: String, size: int, col: Color, width := 700.0) -> void:
@@ -185,23 +197,26 @@ func draw_pick() -> void:
 	var oy := (H - 1280.0) * 0.4
 	_shadow_text(g.W / 2.0, 150 + oy, I18n.t("pick_title"), 64, g.TEXT)
 	_ctext(g.W / 2.0, 205 + oy, I18n.t("pick_sub"), 28, g.DIM)
-	for i in 2:
+	# четыре друга — сетка 2×2
+	for i in Meta.HEROES.size():
 		var kind: String = Meta.HEROES[i]
-		var r := Rect2(28 + i * 340, 250 + oy, 324, 580)
+		var r := Rect2(24 + (i % 2) * 344, 236 + oy + (i / 2) * 318, 328, 304)
 		rects["hero_" + kind] = r
 		var sel := pick_choice == kind
 		if sel:
 			g._rbox(r.grow(8), Color(g.ACCENT, 0.3 + 0.1 * sin(g.t_total * 4.0)), 40)
 		g._rbox(r, Color("#2A1A4F") if not sel else Color("#3A2468"), 34)
-		var glow := Color("#B46CFF") if kind == "owl" else Color("#FF8FD8")
+		var glow: Color = PICK_GLOW.get(kind, Color("#B46CFF"))
 		for k in 4:
-			g.draw_circle(r.get_center() + Vector2(0, 10), 150 - k * 30, Color(glow, 0.05 + k * 0.02), true, -1.0, true)
-		var sc := 1.08 if kind == "owl" else 0.98
-		hero.draw(g, kind, r.position + Vector2(r.size.x / 2.0, 300), sc, {}, g.t_total + i * 1.7, react if sel else 99.0)
-		_ctext(r.get_center().x, r.end.y - 70, Meta.hero_name(kind), 42, g.ACCENT if sel else g.TEXT, r.size.x)
-		_ctext(r.get_center().x, r.end.y - 30, I18n.t("pick_lives_" + kind), 24, g.DIM, r.size.x)
-	_button("ok", Rect2(160, 880 + oy, 400, 120), I18n.t("pick_ok"), true, 50, pick_choice != "")
-	_ctext(g.W / 2.0, 1070 + oy, I18n.t("pick_hint"), 26, g.DIM)
+			g.draw_circle(r.position + Vector2(r.size.x / 2.0, 120), 112 - k * 22, Color(glow, 0.05 + k * 0.02), true, -1.0, true)
+		var sc: float = PICK_SCALE.get(kind, 0.64)
+		hero.draw(g, kind, r.position + Vector2(r.size.x / 2.0, 140), sc, {}, g.t_total + i * 1.7, react if sel else 99.0)
+		var nm := Meta.hero_name(kind)
+		_ctext(r.get_center().x, r.end.y - 50, nm, fit_size(nm, r.size.x - 20, 36), g.ACCENT if sel else g.TEXT, r.size.x)
+		var lv := I18n.t("pick_lives_" + kind)
+		_ctext(r.get_center().x, r.end.y - 16, lv, fit_size(lv, r.size.x - 16, 22), g.DIM, r.size.x)
+	_button("ok", Rect2(160, 900 + oy, 400, 120), I18n.t("pick_ok"), true, 50, pick_choice != "")
+	_ctext(g.W / 2.0, 1076 + oy, I18n.t("pick_hint"), 26, g.DIM)
 	_lang_button(Rect2(g.W - 136, 24 + oy * 0.5, 116, 58))
 	_toast(1120 + oy)
 
@@ -363,7 +378,7 @@ func draw_wardrobe() -> void:
 		for k in 5:
 			g.draw_circle(st.get_center() + Vector2(0, 40), 260 - k * 45, Color(0.45, 0.25, 0.8, 0.05 + k * 0.015), true, -1.0, true)
 		g.draw_colored_polygon(_ellipse(Vector2(st.get_center().x, st.end.y - 60), 210, 26), Color(0.2, 0.12, 0.36, 0.9))
-		var sc := 1.5 if kind == "owl" else 1.36
+		var sc: float = WR_SCALE.get(kind, 1.4)
 		var hp := Vector2(st.get_center().x, st.end.y - 60 - 112 * sc)
 		hero.draw(g, kind, hp, sc, tryon.outfit(g.meta), g.t_total, react)
 		rects["hero"] = Rect2(hp - Vector2(150, 170), Vector2(300, 320))
@@ -394,16 +409,19 @@ func draw_wardrobe() -> void:
 				g.draw_circle(r.position + Vector2(r.size.x - 12, 12), 6, OK_COL, true, -1.0, true)
 			_text(Vector2(r.position.x, r.position.y + 38), Meta.spot_name(sp), 17, DARK_TEXT if sel else g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 	else:
-		for i in 2:
+		var nh := Meta.HEROES.size()
+		var hw: float = (g.W - 40.0 - (nh - 1) * 8.0) / nh
+		for i in nh:
 			var h: String = Meta.HEROES[i]
-			var r := Rect2(20 + i * 346, L.chips_y, 334, 62)
+			var r := Rect2(20 + i * (hw + 8), L.chips_y, hw, 62)
 			rects["chip_" + h] = r
 			var sel := h == kind
 			g._rbox(r, Color("#46307A") if sel else g.BTN, 22)
 			if sel:
 				g.draw_polyline(_rr_outline(r.grow(-1), 20), g.ACCENT, 3.0, true)
-			hero.draw_avatar(g, h, r.position + Vector2(36, 31), 24, tryon.outfit(g.meta), g.t_total, g.ACCENT if sel else g.DIM)
-			_text(Vector2(r.position.x + 70, r.position.y + 42), Meta.hero_name(h), 30, g.ACCENT if sel else g.TEXT)
+			hero.draw_avatar(g, h, r.position + Vector2(29, 31), 20, tryon.outfit(g.meta), g.t_total, g.ACCENT if sel else g.DIM)
+			var nm := Meta.hero_name(h)
+			_text(Vector2(r.position.x + 59, r.position.y + 40), nm, fit_size(nm, r.size.x - 66, 24), g.ACCENT if sel else g.TEXT)
 	# вкладки
 	var tabs := Meta.SLOTS.duplicate()
 	tabs.append("home")
@@ -460,7 +478,8 @@ func _card(it: Dictionary, r: Rect2, kind: String) -> void:
 		var pulse := 0.8 + 0.2 * sin(g.t_total * 5.0)
 		g.draw_polyline(_rr_outline(r.grow(-2), 20), Color(g.ACCENT, pulse), 5.0, true)
 		_badge(Vector2(r.get_center().x, r.position.y + 4), I18n.t("try_on"), 18)
-	_text(Vector2(r.position.x, r.position.y + 154), Meta.item_name(it.id), 21, g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+	var nm := Meta.item_name(it.id, kind)
+	_text(Vector2(r.position.x, r.position.y + 154), nm, fit_size(nm, r.size.x - 10, 21), g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 	var sy := r.position.y + 186
 	var cx := r.get_center().x
 	if on:
@@ -537,7 +556,7 @@ func _try_panel(L: Dictionary, kind: String) -> void:
 	# название и состояние
 	var tx: float = r.position.x + 106
 	var tw: float = pr.position.x - tx - 10
-	_text(Vector2(tx, r.position.y + 42), Meta.item_name(tryon.id), 30, g.TEXT, tw)
+	_text(Vector2(tx, r.position.y + 42), Meta.item_name(tryon.id, kind), 30, g.TEXT, tw)
 	var line := I18n.t("try_hint")
 	var col: Color = g.DIM
 	if st == "poor":
@@ -595,7 +614,7 @@ func _confirm_try() -> void:
 	match tryon.confirm(g.meta, g.total_stars(), g.max_level):
 		"bought", "owned":
 			g.play("crystal")
-			say(I18n.t("bought") % Meta.item_name(id))
+			say(I18n.t("bought") % Meta.item_name(id, g.meta.hero))
 			poke_hero()
 			fx_t = 0.0
 			fx_at = focus

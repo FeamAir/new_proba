@@ -842,8 +842,9 @@ func _puppy(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only
 		_ball(Vector2(0, -50), 12, 36, belly, 0.0, 3.0, 0.1, 0.0)
 	# Хохолок на макушке (под шапками не виден)
 	if outfit.get("head", "") == "":
-		_ball(Vector2(-4, -114), 7, 12, body, -0.35, 1.2, 0.35, 0.0)
-		_ball(Vector2(7, -112), 6, 9, body, 0.6, 1.2, 0.35, 0.0)
+		for i in 3:
+			var ang := (i - 1) * 0.55
+			_ball(Vector2(0, -108) + Vector2(0, -9).rotated(ang), 5.5, 10, body.lerp(p.dark, 0.25), ang, 1.2, 0.35, 0.0)
 	# Светлая мордочка
 	_glow(Vector2(0, -2), 70, 40, Color(belly, 0.75))
 	_ball(Vector2(0, -6), 40, 27, belly, 0.0, 2.2, 0.2, 0.0)
@@ -1066,7 +1067,7 @@ func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_onl
 	# пушистые щёчки: маленькие прядки по бокам
 	for sx in [-1.0, 1.0]:
 		for k in 2:
-			_ball(Vector2(sx * (90 - k * 4), -12 + k * 16), 12, 7, body, sx * (0.25 + k * 0.35), 1.3, 0.3, 0.0)
+			_ball(Vector2(sx * (86 - k * 5), -10 + k * 14), 10, 6, body, sx * (0.35 + k * 0.4), 1.3, 0.3, 0.0)
 	if stripes:
 		# «М» на лбу и полоски на щёчках
 		for i in 3:
@@ -1196,9 +1197,9 @@ func _kit_tail(p: Dictionary, t: float, env: float, react: float) -> void:
 	var up := smoothstep(0.0, 0.35, env)
 	var sway := sin(t * 1.1) * 0.5
 	var p0 := Vector2(44, 98)
-	var c1 := Vector2(104, 104).lerp(Vector2(64, 60), up)
-	var c2 := Vector2(126 + sway * 10.0, 40).lerp(Vector2(70, -10), up)
-	var p3 := Vector2(100 + sway * 22.0, -14).lerp(Vector2(66 + sin(react * 12.0) * 6.0, -70), up)
+	var c1 := Vector2(104, 104).lerp(Vector2(96, 70), up)
+	var c2 := Vector2(126 + sway * 10.0, 40).lerp(Vector2(118, -10), up)
+	var p3 := Vector2(100 + sway * 22.0, -14).lerp(Vector2(112 + sin(react * 12.0) * 5.0, -84), up)
 	var body: Color = p.body
 	var tipc: Color = p.dark if p.has("points") or p.has("stripes") else (p.belly if p.has("socks") else body.lerp(p.belly, 0.4))
 	var n := 16

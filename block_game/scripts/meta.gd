@@ -1,12 +1,12 @@
 extends RefCounted
-## Мета-слой Cascado (версия 0.6): герой, осколки, гардероб, залы карты.
+## Мета-слой Cascado (версия 0.6; щенок и котик — 0.9): герой, осколки, гардероб, залы карты.
 ## Только данные и правила, без рисования (рисование — scripts/hero.gd и scripts/screens.gd).
 ## Сохраняется в тот же user://save.cfg, раздел [meta]; старые сохранения без него
 ## загружаются со значениями по умолчанию.
 
 const I18n := preload("res://scripts/i18n.gd")
 
-const HEROES := ["owl", "axolotl"]
+const HEROES := ["owl", "axolotl", "puppy", "kitten"]
 
 const SLOTS := ["head", "eyes", "neck", "back", "skin"]
 
@@ -33,8 +33,8 @@ const ITEMS := [
 ]
 
 ## Украшения дома: у каждого героя свой дом и свой набор. spots — куда можно поставить:
-## floor (пол слева/справа), wall (стена или ветка слева/справа), hang (подвес сверху),
-## near (рядом с героем).
+## floor (пол слева/справа), wall (стена или ветка слева/справа), hang (подвес сверху;
+## у котика — верхняя полка), near (рядом с героем).
 const SPOTS := ["floor_l", "floor_r", "wall_l", "wall_r", "hang", "near"]
 const DECOR := [
 	{"id": "owl_nest", "home": "owl", "price": 10, "spots": ["near", "floor"]},
@@ -57,6 +57,26 @@ const DECOR := [
 	{"id": "axo_sofa", "home": "axolotl", "price": 40, "spots": ["near"]},
 	{"id": "axo_castle", "home": "axolotl", "price": 50, "spots": ["floor"], "hall": 2},
 	{"id": "axo_chest", "home": "axolotl", "price": 60, "spots": ["floor", "near"], "stars": 40},
+	{"id": "pup_ball", "home": "puppy", "price": 10, "spots": ["floor", "near"]},
+	{"id": "pup_bone", "home": "puppy", "price": 15, "spots": ["near"]},
+	{"id": "pup_bowl", "home": "puppy", "price": 20, "spots": ["near", "floor"]},
+	{"id": "pup_sign", "home": "puppy", "price": 20, "spots": ["wall"]},
+	{"id": "pup_flowerbed", "home": "puppy", "price": 25, "spots": ["floor"]},
+	{"id": "pup_pinwheel", "home": "puppy", "price": 30, "spots": ["wall", "floor"]},
+	{"id": "pup_lamp", "home": "puppy", "price": 35, "spots": ["hang", "wall", "floor"]},
+	{"id": "pup_bed", "home": "puppy", "price": 45, "spots": ["near"]},
+	{"id": "pup_kite", "home": "puppy", "price": 50, "spots": ["hang"], "stars": 25},
+	{"id": "pup_teddy", "home": "puppy", "price": 60, "spots": ["near", "floor"], "hall": 1},
+	{"id": "kit_yarn", "home": "kitten", "price": 10, "spots": ["floor", "near"]},
+	{"id": "kit_mouse", "home": "kitten", "price": 15, "spots": ["near"]},
+	{"id": "kit_pillow", "home": "kitten", "price": 20, "spots": ["near"]},
+	{"id": "kit_picture", "home": "kitten", "price": 20, "spots": ["wall"]},
+	{"id": "kit_catnip", "home": "kitten", "price": 25, "spots": ["hang", "wall", "floor"]},
+	{"id": "kit_box", "home": "kitten", "price": 30, "spots": ["floor", "near"]},
+	{"id": "kit_scratcher", "home": "kitten", "price": 35, "spots": ["floor"]},
+	{"id": "kit_lamp", "home": "kitten", "price": 40, "spots": ["floor"]},
+	{"id": "kit_aquarium", "home": "kitten", "price": 50, "spots": ["hang", "wall", "near"], "stars": 30},
+	{"id": "kit_tree", "home": "kitten", "price": 60, "spots": ["floor"], "hall": 2},
 ]
 
 # Начисление осколков за победу
@@ -85,7 +105,7 @@ var shards := 0
 var owned: Array = []        # id купленных вещей
 var equipped: Dictionary = {}  # слот -> id
 var decor_owned: Array = []    # id купленных украшений (свои для каждого дома)
-var decor_placed: Dictionary = {"owl": {}, "axolotl": {}}  # дом -> {место -> id}
+var decor_placed: Dictionary = {"owl": {}, "axolotl": {}, "puppy": {}, "kitten": {}}  # дом -> {место -> id}
 
 
 # ---------- Залы ----------
@@ -115,7 +135,10 @@ static func spot_name(spot: String) -> String:
 	return I18n.t("spot_" + spot)
 
 
-static func item_name(id: String) -> String:
+## kind — герой: у окрасок для разных героев свои названия (ключ item_<id>_<герой>, если есть).
+static func item_name(id: String, kind := "") -> String:
+	if kind != "" and I18n.has("item_%s_%s" % [id, kind]):
+		return I18n.t("item_%s_%s" % [id, kind])
 	return I18n.t("item_" + id)
 
 
@@ -353,7 +376,9 @@ func load_from(cfg: ConfigFile) -> void:
 		for id in dow:
 			if id is String and item(id).has("home") and not decor_owned.has(id):
 				decor_owned.append(id)
-	decor_placed = {"owl": {}, "axolotl": {}}
+	decor_placed = {}
+	for home in HEROES:
+		decor_placed[home] = {}
 	var dp = cfg.get_value("meta", "decor_placed", {})
 	if dp is Dictionary:
 		for home in HEROES:
