@@ -1,7 +1,8 @@
 extends Node2D
 ## Cascado: падающие блоки с кристаллами и каскадами.
 ## Цель уровня: освободить все кристаллы, вмурованные в нижние ряды.
-## После очистки линии блоки над ней осыпаются вниз и могут собрать новые линии (каскад ×2, ×3...).
+## После очистки линии фигуры падают целиком («липкая» гравитация, scripts/gravity.gd),
+## камень и кристаллы — поодиночке; так собираются новые линии (каскад ×2, ×3...).
 ## Всё рисуется через _draw(), сторонних картинок нет.
 
 const COLS := 8
@@ -22,6 +23,10 @@ const REPEAT_RATE := 0.06
 const LINE_SCORES := [0, 100, 250, 450, 700]
 const SAVE_PATH := "user://save.cfg"
 const Levels := preload("res://scripts/levels.gd")
+const Gravity := preload("res://scripts/gravity.gd")
+## true — после очистки падают все группы поля (и камень уровня над дырами ниже линии);
+## false — только то, что выше нижней очищенной линии (ниже неё поле не трогается).
+const FALL_ALL := false
 
 const GEMS := [
 	Color("#B46CFF"), Color("#FF4D6D"), Color("#FFB547"), Color("#3DDC97"),
@@ -58,6 +63,8 @@ var state := State.SPLASH
 var state_time := 0.0
 var board: Array = []
 var fall_dist: Array = []
+var piece_ids: Array = []  # номер уложенной фигуры для каждой клетки (0 — камень/кристалл/пусто)
+var next_piece_id := 0
 var has_piece := false
 var piece_type := 0
 var piece_cells: Array = []
@@ -127,6 +134,8 @@ func _ready() -> void:
 	board.fill(EMPTY)
 	fall_dist.resize(ROWS * COLS)
 	fall_dist.fill(0)
+	piece_ids.resize(ROWS * COLS)
+	piece_ids.fill(0)
 	_load()
 	_setup_audio()
 	for i in 28:
@@ -201,6 +210,8 @@ func start_level(n: int) -> void:
 	board.fill(EMPTY)
 	fall_dist.resize(ROWS * COLS)
 	fall_dist.fill(0)
+	piece_ids.resize(ROWS * COLS)
+	piece_ids.fill(0)
 	# Параметры уровня берутся из таблицы scripts/levels.gd (кривая сложности).
 	var p: Dictionary = Levels.params(n)
 	p.merge(level_override, true)
@@ -239,6 +250,8 @@ func start_level(n: int) -> void:
 		board[stones[i]] = CRYSTAL
 	# Висячие блоки над дырами (поле hang таблицы уровней) — заготовка каскада.
 	Levels.add_hang(board, p, lr, COLS, ROWS, STONE)
+	# Камень и кристаллы — без номера фигуры: каждая клетка падает сама по себе.
+	next_piece_id = 0
 	crystals_left = crystals_total
 	par = p.par
 	pieces_used = 0
@@ -390,6 +403,7 @@ func _moved() -> void:
 func _lock(silent := false) -> void:
 	has_piece = false
 	pieces_used += 1
+	next_piece_id += 1
 	for c in piece_cells:
 		var x: int = c.x + piece_pos.x
 		var y: int = c.y + piece_pos.y
@@ -397,6 +411,7 @@ func _lock(silent := false) -> void:
 			_lose()
 			return
 		board[y * COLS + x] = piece_type
+		piece_ids[y * COLS + x] = next_piece_id
 	if not silent:
 		play("land")
 	chain = 0
@@ -454,23 +469,15 @@ func _check_lines() -> bool:
 
 func _finish_clear() -> void:
 	var lowest: int = clearing_rows.max()
-	for y in clearing_rows:
-		for x in COLS:
-			board[y * COLS + x] = EMPTY
-	fall_dist.fill(0)
+	Gravity.clear_rows(board, piece_ids, clearing_rows, COLS, EMPTY)
+	# Каскад, «липкая» гравитация (scripts/gravity.gd): клетки одной фигуры держатся
+	# вместе, камень и кристаллы падают поодиночке. Все группы поля падают, пока могут.
+	var fall := Gravity.settle(board, piece_ids, COLS, ROWS, EMPTY, [STONE, CRYSTAL], -1 if FALL_ALL else lowest)
 	var moved := false
-	# Каскад: всё, что выше нижней очищенной линии, осыпается вниз по столбцам.
-	for x in COLS:
-		var write := lowest
-		for y in range(lowest, -1, -1):
-			var v: int = board[y * COLS + x]
-			if v != EMPTY:
-				if write != y:
-					board[write * COLS + x] = v
-					board[y * COLS + x] = EMPTY
-					fall_dist[write * COLS + x] = write - y
-					moved = true
-				write -= 1
+	for i in fall.size():
+		fall_dist[i] = fall[i]
+		if fall[i] > 0:
+			moved = true
 	clearing_rows.clear()
 	_set_state(State.SETTLE)
 	settle_timer = SETTLE_TIME if moved else 0.0

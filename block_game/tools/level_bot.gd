@@ -16,6 +16,9 @@ extends SceneTree
 ## Прогресс игрока (user://save.cfg) сохраняется до прогона и возвращается после.
 
 const SAVE := "user://save.cfg"
+const Gravity := preload("res://scripts/gravity.gd")
+# Номера фигур в расчётах робота — заведомо больше игровых, чтобы не совпасть.
+const SIM_ID := 1000000
 
 var G  # экземпляр игры
 var COLS := 8
@@ -74,10 +77,14 @@ func _initialize() -> void:
 		_seed_search(l_from, l_to, games, base_seed, max_pieces, int(args.seeds), args.csv)
 		_restore(had_save, save_bytes)
 		return
-	var header := "lvl | ряды крист par | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь | медиана | par~40% | партий с каскадом%"
+	var header := "lvl | ряды крист par | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь | медиана | par~40% | партий с каскадом% | партий с ×3+%"
 	print(header)
-	lines.append("level,rows,crystals,par,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain,median_pieces,suggested_par,cascade_games_pct")
+	lines.append("level,rows,crystals,par,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain,median_pieces,suggested_par,cascade_games_pct,chain3_games_pct")
 	var t0 := Time.get_ticks_msec()
+	var c3_total := 0
+	var c4_total := 0
+	var top_chain := 0
+	var games_total := 0
 	G.level_override = set_fields.duplicate()
 	for n in range(l_from, l_to + 1):
 		var wins := 0
@@ -88,6 +95,7 @@ func _initialize() -> void:
 		var chain_sum := 0
 		var cascades := 0
 		var casc_games := 0
+		var c3_games := 0
 		var maxchain_sum := 0
 		var rows_n := 0
 		var plist: Array = []
@@ -104,6 +112,13 @@ func _initialize() -> void:
 			maxchain_sum += r.max_chain
 			if r.max_chain >= 2:
 				casc_games += 1
+			if r.max_chain >= 3:
+				c3_games += 1
+				c3_total += 1
+			if r.max_chain >= 4:
+				c4_total += 1
+			top_chain = maxi(top_chain, r.max_chain)
+			games_total += 1
 			if r.win:
 				wins += 1
 				pieces_win += r.pieces
@@ -118,12 +133,14 @@ func _initialize() -> void:
 			100.0 * wins / games, float(pieces_win) / w, float(pieces_all) / games,
 			100.0 * st[1] / w, 100.0 * st[2] / w, 100.0 * st[3] / w,
 			float(chain_sum) / maxi(clears, 1), 100.0 * cascades / maxi(clears, 1), float(maxchain_sum) / games, med, sug,
-			100.0 * casc_games / games]
-		print("%3d | %2d %2d %3d | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f | %3d | %3d | %3.0f" % [
-			row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15], row[16]])
+			100.0 * casc_games / games, 100.0 * c3_games / games]
+		print("%3d | %2d %2d %3d | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f | %3d | %3d | %3.0f | %3.0f" % [
+			row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15], row[16], row[17]])
 		if args.get("dump", "") == "1":
 			print("PIECES %d %s" % [n, ",".join(plist.map(func(v): return str(v)))])
-		lines.append("%d,%d,%d,%d,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f,%d,%d,%.1f" % row)
+		lines.append("%d,%d,%d,%d,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f,%d,%d,%.1f,%.1f" % row)
+	print("партий с цепочкой ×3 и больше: %d из %d (%.1f%%), ×4 и больше: %d, самая длинная цепочка: ×%d" % [
+		c3_total, games_total, 100.0 * c3_total / maxi(games_total, 1), c4_total, top_chain])
 	print("время: %.1f с, несовпадений хода: %d" % [(Time.get_ticks_msec() - t0) / 1000.0, mismatches])
 	if args.csv != "":
 		var f := FileAccess.open(args.csv, FileAccess.WRITE)
@@ -210,8 +227,8 @@ func _fits(b: PackedInt32Array, cells: Array, pos: Vector2i) -> bool:
 	return true
 
 
-# Все конечные положения фигуры: [{rot, x, board, crystals, lines, top_out}]
-func _placements(b: PackedInt32Array, t: int, start_y: int) -> Array:
+# Все конечные положения фигуры: [{rot, x, board, ids, crystals, lines, chain, top_out}]
+func _placements(b: PackedInt32Array, ids: PackedInt32Array, t: int, start_y: int, new_id: int) -> Array:
 	var out: Array = []
 	var rots := _rotations(t)
 	for r in rots.size():
@@ -223,6 +240,7 @@ func _placements(b: PackedInt32Array, t: int, start_y: int) -> Array:
 			while _fits(b, cells, p + Vector2i(0, 1)):
 				p.y += 1
 			var nb := b.duplicate()
+			var nids := ids.duplicate()
 			var top_out := false
 			for c in cells:
 				var y: int = c.y + p.y
@@ -230,44 +248,17 @@ func _placements(b: PackedInt32Array, t: int, start_y: int) -> Array:
 					top_out = true
 				else:
 					nb[y * COLS + c.x + p.x] = t
-			var sim := _resolve(nb)
-			out.append({"rot": r, "x": ox, "board": nb, "crystals": sim.crystals, "lines": sim.lines, "top_out": top_out})
+					nids[y * COLS + c.x + p.x] = new_id
+			var sim := _resolve(nb, nids)
+			out.append({"rot": r, "x": ox, "board": nb, "ids": nids, "crystals": sim.crystals, "lines": sim.lines,
+				"chain": sim.chain, "top_out": top_out})
 	return out
 
 
-# Очистка линий с каскадом, как в игре. Меняет доску на месте.
-func _resolve(b: PackedInt32Array) -> Dictionary:
-	var crystals := 0
-	var lines := 0
-	while true:
-		var full: Array = []
-		for y in ROWS:
-			var ok := true
-			for x in COLS:
-				if b[y * COLS + x] == EMPTY:
-					ok = false
-					break
-			if ok:
-				full.append(y)
-		if full.is_empty():
-			break
-		lines += full.size()
-		for y in full:
-			for x in COLS:
-				if b[y * COLS + x] == CRYSTAL:
-					crystals += 1
-				b[y * COLS + x] = EMPTY
-		var lowest: int = full.max()
-		for x in COLS:
-			var write := lowest
-			for y in range(lowest, -1, -1):
-				var v: int = b[y * COLS + x]
-				if v != EMPTY:
-					if write != y:
-						b[write * COLS + x] = v
-						b[y * COLS + x] = EMPTY
-					write -= 1
-	return {"crystals": crystals, "lines": lines}
+# Очистка линий с каскадом, как в игре («липкая» гравитация из scripts/gravity.gd).
+# Меняет доску и номера фигур на месте.
+func _resolve(b: PackedInt32Array, ids: PackedInt32Array) -> Dictionary:
+	return Gravity.resolve(b, ids, COLS, ROWS, EMPTY, [G.STONE, CRYSTAL], CRYSTAL, G.FALL_ALL)
 
 
 func _features(b: PackedInt32Array) -> float:
@@ -315,13 +306,14 @@ func _score(p: Dictionary) -> float:
 
 func _choose() -> Dictionary:
 	var b := PackedInt32Array(G.board)
-	var cands := _placements(b, G.piece_type, G.piece_pos.y)
+	var ids := PackedInt32Array(G.piece_ids)
+	var cands := _placements(b, ids, G.piece_type, G.piece_pos.y, SIM_ID)
 	var best := {}
 	var best_s := -INF
 	for p in cands:
 		var s := _score(p)
 		if look and s > -1e8 and G.crystals_left - p.crystals > 0:
-			var nexts := _placements(p.board, G.next_type, 0)
+			var nexts := _placements(p.board, p.ids, G.next_type, 0, SIM_ID + 1)
 			var bn := -1e9
 			for q in nexts:
 				bn = maxf(bn, _score(q))

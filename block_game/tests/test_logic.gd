@@ -162,6 +162,112 @@ func _initialize() -> void:
 	run(g, 1.0)
 	check(g.chain >= 2 or g.score >= 100 + 250, "каскад дал вторую линию (цепочка)")
 
+	# «Липкая» гравитация: фигура над дырой не проваливается в неё по клеткам
+	g.start_level(1)
+	g.board.fill(-1)
+	g.piece_ids.fill(0)
+	b = g.ROWS - 1
+	for x in range(0, 7):
+		g.board[b * g.COLS + x] = g.STONE           # нижний ряд: дыра в x=7
+		if x != 3:
+			g.board[(b - 1) * g.COLS + x] = g.STONE  # ряд выше: дыры в x=3 и x=7
+	for x in range(2, 5):                            # лежачая палочка над дырой x=3
+		g.board[(b - 2) * g.COLS + x] = 1
+		g.piece_ids[(b - 2) * g.COLS + x] = 500
+	g.crystals_total = 1
+	g.crystals_left = 1
+	g.next_type = 0  # домино вертикально в колонку 7
+	g._spawn()
+	g.rotate_piece()
+	for i in 10:
+		g.move(1)
+	g.hard_drop()
+	check(g.state == g.State.CLEARING and g.chain == 1, "липкая: нижний ряд очищается")
+	var max_fall := 0
+	for i in 60:
+		g.step(0.02)
+		if g.state == g.State.SETTLE:
+			for f in g.fall_dist:
+				max_fall = maxi(max_fall, f)
+	var bridge_ok: bool = g.board[b * g.COLS + 3] == -1
+	for x in range(2, 5):
+		bridge_ok = bridge_ok and g.board[(b - 1) * g.COLS + x] == 1 and g.piece_ids[(b - 1) * g.COLS + x] == 500
+		bridge_ok = bridge_ok and g.board[(b - 2) * g.COLS + x] == -1
+	check(bridge_ok, "липкая: фигура упала целиком на 1 ряд и висит над дырой")
+	check(max_fall == 1, "липкая: анимация падения (fall_dist) задана")
+	check(g.state == g.State.PLAYING, "липкая: игра продолжается")
+
+	# Цепочка ×3: после второй очистки камень падает в дыру, которую прикрывало домино
+	g.start_level(1)
+	g.board.fill(-1)
+	g.piece_ids.fill(0)
+	b = g.ROWS - 1
+	for x in range(1, 8):
+		g.board[b * g.COLS + x] = g.STONE                 # ряд 0: дыра x=0
+	for x in [1, 2, 3, 4, 6, 7]:
+		g.board[(b - 1) * g.COLS + x] = g.STONE           # ряд 1: дыры x=0, x=5
+	for x in [2, 3, 4, 7]:
+		g.board[(b - 2) * g.COLS + x] = g.STONE           # ряд 2: дыры x=0, x=1
+	for x in [5, 6]:
+		g.board[(b - 2) * g.COLS + x] = 2                 # домино прикрывает дыру x=5
+		g.piece_ids[(b - 2) * g.COLS + x] = 600
+	g.board[(b - 3) * g.COLS + 1] = g.STONE               # висячий камень над дырой x=1
+	g.board[(b - 3) * g.COLS + 5] = g.STONE               # камень лежит на домино
+	g.crystals_total = 1
+	g.crystals_left = 1
+	# та же позиция в мгновенной симуляции робота (tools/level_bot.gd)
+	var sb := PackedInt32Array(g.board)
+	var sids := PackedInt32Array(g.piece_ids)
+	for yy in [b, b - 1, b - 2]:
+		sb[yy * g.COLS] = 1
+		sids[yy * g.COLS] = 900
+	var sim: Dictionary = g.Gravity.resolve(sb, sids, g.COLS, g.ROWS, g.EMPTY, [g.STONE, g.CRYSTAL], g.CRYSTAL, g.FALL_ALL)
+	check(sim.chain == 3 and sim.lines == 3, "симуляция робота тоже даёт ×3")
+	g.next_type = 1  # палочка из трёх вертикально в колонку 0
+	g._spawn()
+	g.rotate_piece()
+	for i in 10:
+		g.move(-1)
+	g.hard_drop()
+	max_chain = g.chain
+	var combo_popup := false
+	for i in 100:
+		g.step(0.02)
+		max_chain = maxi(max_chain, g.chain)
+		for pp in g.popups:
+			if String(pp.get("text", "")) == "КАСКАД ×3":
+				combo_popup = true
+	check(max_chain == 3, "построенная позиция даёт цепочку ×3 (вышло ×%d)" % max_chain)
+	check(combo_popup, "надпись «КАСКАД ×3»")
+	check(g.state == g.State.PLAYING, "после цепочки ×3 игра продолжается")
+
+	# Разрезанная очисткой фигура падает частями
+	g.start_level(1)
+	g.board.fill(-1)
+	g.piece_ids.fill(0)
+	b = g.ROWS - 1
+	for x in [0, 1, 2, 3, 5]:
+		g.board[b * g.COLS + x] = g.STONE                 # ряд 0: дыры x=4, x=6, x=7
+	for x in [0, 1, 5, 6]:
+		g.board[(b - 1) * g.COLS + x] = g.STONE           # ряд 1: фигура в x=2..4, дыра x=7
+	for c in [Vector2i(2, b - 1), Vector2i(3, b - 1), Vector2i(4, b - 1), Vector2i(2, b - 2), Vector2i(4, b - 2)]:
+		g.board[c.y * g.COLS + c.x] = 6                   # «U»: перекладина в ряду 1, ножки над ней
+		g.piece_ids[c.y * g.COLS + c.x] = 700
+	g.crystals_total = 1
+	g.crystals_left = 1
+	g.next_type = 0  # домино вертикально в колонку 7
+	g._spawn()
+	g.rotate_piece()
+	for i in 10:
+		g.move(1)
+	g.hard_drop()
+	check(g.chain == 1 and g.clearing_rows == [b - 1], "разрез: очищается ряд с перекладиной")
+	run(g, 1.0)
+	var split_ok: bool = g.board[(b - 1) * g.COLS + 2] == 6 and g.board[b * g.COLS + 4] == 6
+	split_ok = split_ok and g.board[(b - 1) * g.COLS + 4] == -1 and g.board[(b - 2) * g.COLS + 2] == -1
+	check(split_ok, "разрез: левая ножка упала на 1, правая — на 2 (в дыру)")
+	check(g.chain == 1 and g.state == g.State.PLAYING, "разрез: лишних линий нет")
+
 	# Победа: последний кристалл
 	g.start_level(1)
 	g.board.fill(-1)
