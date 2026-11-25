@@ -222,9 +222,10 @@ func unequip(slot: String) -> void:
 	equipped.erase(slot)
 
 
-## Нажатие на вещь в гардеробе: надета — снять; куплена — надеть; иначе купить и надеть.
-## Возвращает: "off", "on", "bought", "locked", "poor".
-func tap_item(id: String, total_stars: int, max_level: int) -> String:
+## Нажатие на вещь в гардеробе: надета — снять; куплена — надеть; не куплена — "try"
+## (примерка: ничего не покупается, решает игрок в панели — buy_item()).
+## Возвращает: "off", "on", "try", "locked" (не вещь гардероба).
+func tap_item(id: String) -> String:
 	if not item(id).has("slot"):
 		return "locked"
 	if is_equipped(id):
@@ -233,10 +234,21 @@ func tap_item(id: String, total_stars: int, max_level: int) -> String:
 	if is_owned(id):
 		equip(id)
 		return "on"
+	return "try"
+
+
+## Купить вещь и сразу надеть (кнопка «Купить» в панели примерки).
+## Возвращает: "bought", "owned", "poor", "locked".
+func buy_item(id: String, total_stars: int, max_level: int) -> String:
+	if not item(id).has("slot"):
+		return "locked"
 	match buy(id, total_stars, max_level):
 		Buy.OK:
 			equip(id)
 			return "bought"
+		Buy.OWNED:
+			equip(id)
+			return "owned"
 		Buy.POOR:
 			return "poor"
 	return "locked"
@@ -267,20 +279,35 @@ func remove_decor(home: String, spot: String) -> void:
 		decor_placed[home].erase(spot)
 
 
-## Нажатие на украшение для места: стоит тут — убрать; куплено — поставить; иначе купить и поставить.
-func tap_decor(home: String, spot: String, id: String, total_stars: int, max_level: int) -> String:
+## Нажатие на украшение для места: стоит тут — убрать; куплено — поставить;
+## не куплено — "try" (примерка, покупка — buy_decor()); чужой дом / не то место — "locked".
+func tap_decor(home: String, spot: String, id: String) -> String:
 	if placed_at(home, spot) == id:
 		remove_decor(home, spot)
 		return "off"
 	if decor_owned.has(id):
 		return "on" if place(home, spot, id) else "locked"
+	if not fits_spot(home, spot, id):
+		return "locked"
+	return "try"
+
+
+func fits_spot(home: String, spot: String, id: String) -> bool:
 	var it := item(id)
-	if it.get("home", "") != home or not it.spots.has(spot_kind(spot)):
+	return it.get("home", "") == home and SPOTS.has(spot) and it.spots.has(spot_kind(spot))
+
+
+## Купить украшение и сразу поставить на место. Возвращает: "bought", "owned", "poor", "locked".
+func buy_decor(home: String, spot: String, id: String, total_stars: int, max_level: int) -> String:
+	if not fits_spot(home, spot, id):
 		return "locked"
 	match buy(id, total_stars, max_level):
 		Buy.OK:
 			place(home, spot, id)
 			return "bought"
+		Buy.OWNED:
+			place(home, spot, id)
+			return "owned"
 		Buy.POOR:
 			return "poor"
 	return "locked"
