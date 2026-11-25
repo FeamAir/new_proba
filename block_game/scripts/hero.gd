@@ -1,5 +1,5 @@
 extends RefCounted
-## Герои Cascado — совёнок, аксолотль и щенок — и вещи гардероба. Всё рисуется кодом.
+## Герои Cascado — совёнок, аксолотль, щенок и котик — и вещи гардероба. Всё рисуется кодом.
 ## Использование: Hero.new().draw(canvas_item, "owl", центр, масштаб, наряд, время, react)
 ##   наряд — словарь слот -> id вещи (scripts/meta.gd), react — секунд с последнего касания.
 ## Герой нарисован в своих координатах: туловище около (0, 0), ширина ~200, ноги на y ≈ 115.
@@ -41,6 +41,14 @@ const PALETTES := {
 		"skin_mint": {"body": Color("#AE7149"), "dark": Color("#7E482B"), "belly": Color("#EDCDA8"), "nose": Color("#2C1814"), "eye": Color("#4A2618")},
 		"skin_moon": {"body": Color("#F59A4A"), "dark": Color("#DC7430"), "belly": Color("#FFF7EE"), "nose": Color("#33201C"), "eye": Color("#6B3A22"), "blaze": true},
 		"skin_gold": {"body": Color("#F8F6FB"), "dark": Color("#463E52"), "belly": Color("#FFFFFF"), "nose": Color("#2C2433"), "eye": Color("#4A3A5E"), "spots": Color("#3A3346")},
+	},
+	## Котик: ""  — рыжий/персиковый; skin_mint — серый полосатый (полоски);
+	##   skin_moon — сиамский (тёмные ушки, мордочка, лапки и хвост); skin_gold — чёрный с белой манишкой.
+	"kitten": {
+		"": {"body": Color("#FFB47E"), "dark": Color("#EE8A4E"), "belly": Color("#FFF3E6"), "inner": Color("#FFA3BE"), "iris": Color("#8CD56A"), "nose": Color("#FF7FA4"), "whisk": Color(1, 1, 1, 0.8)},
+		"skin_mint": {"body": Color("#B2AFC2"), "dark": Color("#6C6882"), "belly": Color("#F3F1F8"), "inner": Color("#FFB0C6"), "iris": Color("#F4C34E"), "nose": Color("#FF8FB0"), "whisk": Color(1, 1, 1, 0.85), "stripes": true},
+		"skin_moon": {"body": Color("#F8F0E4"), "dark": Color("#7A5A50"), "belly": Color("#FFFCF6"), "inner": Color("#E8A0A8"), "iris": Color("#62C2FF"), "nose": Color("#C9707E"), "whisk": Color(1, 1, 1, 0.85), "points": true},
+		"skin_gold": {"body": Color("#4E465E"), "dark": Color("#332D40"), "belly": Color("#FFFFFF"), "inner": Color("#F49AB6"), "iris": Color("#FFD23C"), "nose": Color("#FF8FB0"), "whisk": Color(1, 1, 1, 0.9), "socks": true},
 	},
 }
 
@@ -367,6 +375,8 @@ func draw(target: CanvasItem, kind: String, pos: Vector2, sc: float, outfit: Dic
 	var p := palette(kind, outfit)
 	if kind == "puppy":
 		_puppy(p, outfit, t, react, head_only)
+	elif kind == "kitten":
+		_kitten(p, outfit, t, react, head_only)
 	elif kind == "axolotl":
 		_axolotl(p, outfit, t, react, head_only)
 	else:
@@ -382,7 +392,7 @@ func draw_avatar(target: CanvasItem, kind: String, c: Vector2, r: float, outfit:
 	target.draw_circle(c + Vector2(0, r * 0.35), r * 0.7, Color(ring, 0.18), true, -1.0, true)
 	if kind == "axolotl":
 		draw(target, kind, c + Vector2(0, r * 0.22), r / 118.0, outfit, t, react, true)
-	elif kind == "puppy":
+	elif kind == "puppy" or kind == "kitten":
 		draw(target, kind, c + Vector2(0, r * 0.3), r / 118.0, outfit, t, react, true)
 	else:
 		draw(target, kind, c + Vector2(0, r * 0.12), r / 125.0, outfit, t, react, true)
@@ -392,6 +402,11 @@ func draw_avatar(target: CanvasItem, kind: String, c: Vector2, r: float, outfit:
 # ---------- Точки крепления ----------
 
 func _anchors(kind: String, hp: Callable, tilt: float) -> Dictionary:
+	if kind == "kitten":
+		# макушка — между треугольными ушками
+		return {"top": hp.call(Vector2(0, -106)), "top_w": 94.0, "tilt": tilt,
+			"eye_l": hp.call(Vector2(-38, -42)), "eye_r": hp.call(Vector2(38, -42)), "eye_rad": 25.0, "temple": 92.0,
+			"neck": Vector2(0, 42), "neck_w": 118.0, "back": Vector2(0, 66), "back_w": 130.0, "kind": kind}
 	if kind == "puppy":
 		# макушка — между висячими ушками; ошейник — под подбородком
 		return {"top": hp.call(Vector2(0, -106)), "top_w": 100.0, "tilt": tilt,
@@ -827,9 +842,8 @@ func _puppy(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only
 		_ball(Vector2(0, -50), 12, 36, belly, 0.0, 3.0, 0.1, 0.0)
 	# Хохолок на макушке (под шапками не виден)
 	if outfit.get("head", "") == "":
-		for i in 3:
-			var hc := Vector2(-9 + i * 9, -114 + absf(i - 1) * 3)
-			_ball(hc, 8, 11, body.lightened(0.04), (i - 1) * 0.5, 1.2, 0.35, 0.0)
+		_ball(Vector2(-4, -114), 7, 12, body, -0.35, 1.2, 0.35, 0.0)
+		_ball(Vector2(7, -112), 6, 9, body, 0.6, 1.2, 0.35, 0.0)
 	# Светлая мордочка
 	_glow(Vector2(0, -2), 70, 40, Color(belly, 0.75))
 	_ball(Vector2(0, -6), 40, 27, belly, 0.0, 2.2, 0.2, 0.0)
@@ -986,6 +1000,219 @@ func _pup_tail(p: Dictionary, t: float, env: float, react: float) -> void:
 	var tipc: Color = p.dark if p.has("spots") else p.body.lerp(p.belly, 0.5)
 	_ball(Vector2(46, -48), 10, 10, tipc, 0.0, 1.3, 0.35, 0.0)
 	_T = Transform2D.IDENTITY
+
+
+# ---------- Котик ----------
+
+func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only: bool) -> void:
+	var env := react_env(react)
+	# Голова чуть наклоняется; при касании — ласково трётся (наклон в сторону)
+	var tilt := 0.04 * sin(t * 0.8)
+	if env > 0.0:
+		tilt += 0.16 * env * sin(react * 4.0)
+	var pivot := Vector2(0, 30)
+	var hp := func(v: Vector2) -> Vector2: return (v - pivot).rotated(tilt) + pivot
+	var TH := Transform2D(tilt, pivot) * Transform2D(0.0, -pivot)
+	var a := _anchors("kitten", hp, tilt)
+	var body: Color = p.body
+	var dark: Color = p.dark
+	var belly: Color = p.belly
+	var stripes: bool = p.has("stripes")
+	var points: bool = p.has("points")
+	var socks: Color = belly if p.has("socks") else (dark if points else body.lerp(belly, 0.45))
+
+	if not head_only:
+		_glow(Vector2(0, 122), 96, 15, Color(0.03, 0.0, 0.1, 0.5))
+		_back_items(outfit, a, t, true)
+		_kit_tail(p, t, env, react)
+		# Задние лапки и туловище
+		for sx in [-1.0, 1.0]:
+			_ball(Vector2(sx * 48, 96), 30, 25, body.darkened(0.04), sx * 0.3, 1.1)
+			_ball(Vector2(sx * 64, 116), 17, 10, socks, 0.0, 1.0, 0.3, 1.0)
+			if stripes:
+				for k in 2:
+					_arc(Vector2(sx * 48, 96), 22 - k * 9, 17 - k * 7, -PI * 0.9, -PI * 0.35, Color(dark, 0.55), 4.0, 8)
+		_ball(Vector2(0, 70), 58, 52, body, 0.0, 1.15)
+		_glow(Vector2(0, 66), 38, 40, Color(belly, 0.95))
+		_ball(Vector2(0, 64), 26, 28, belly, 0.0, 2.6, 0.12, 0.0)
+		if stripes:
+			for sx in [-1.0, 1.0]:
+				for k in 3:
+					var y := 46.0 + k * 16.0
+					_line(PackedVector2Array([Vector2(sx * 56, y), Vector2(sx * 46, y + 4), Vector2(sx * 38, y + 2)]), Color(dark, 0.6), 4.5)
+		# Передние лапки с пальчиками
+		for sx in [-1.0, 1.0]:
+			_ball(Vector2(sx * 22, 90), 15, 24, body, 0.0, 1.1, 0.35)
+			var pc := Vector2(sx * 23, 110)
+			_ball(pc, 18, 12.5, socks, 0.0, 1.1, 0.4)
+			for k in 3:
+				_ball(pc + Vector2((k - 1) * 8.5, 7.0 - absf(k - 1) * 1.5), 4.8, 4.2, socks.lerp(Color.WHITE, 0.25), 0.0, 1.0, 0.3, 1.0)
+
+	_T = TH
+	# Треугольные ушки с розовой серединкой (за головой); иногда дёргаются
+	var twitch := 0.0
+	var tw := fmod(t + 1.3, 5.2)
+	if tw < 0.3:
+		twitch = sin(tw / 0.3 * PI) * 0.18
+	var perk := env * 0.12
+	for sx in [-1.0, 1.0]:
+		var ang: float = sx * (0.02 + perk) + (twitch if sx > 0 else 0.0)
+		_T = TH * Transform2D(ang, Vector2(sx * 58, -96))
+		_shape(["kit_ear", sx, dark if points else body], _kit_ear(sx, 1.0), Vector2(sx * 4, -24), dark if points else body, 1.2, 0.4)
+		_shape(["kit_ear_in", sx, p.inner], _kit_ear(sx, 0.62), Vector2(sx * 4, -18), p.inner, 2.0, 0.25, 0.0)
+	_T = TH
+	# Голова: круглая, с пушистыми щёчками
+	for sx in [-1.0, 1.0]:
+		_ball(Vector2(sx * 80, -6), 26, 20, body, sx * 0.5, 1.2, 0.35)
+	_shape(["kit_head", body], _kit_head(), Vector2(-8, -48), body, 1.15, 0.45)
+	if stripes:
+		# «М» на лбу и полоски на щёчках
+		for i in 3:
+			var x := (i - 1) * 15.0
+			var h := 22.0 if i == 1 else 17.0
+			_line(PackedVector2Array([Vector2(x, -112), Vector2(x * 0.9, -112 + h)]), Color(dark, 0.75), 6.0 if i == 1 else 5.0)
+		for sx in [-1.0, 1.0]:
+			for k in 2:
+				_line(PackedVector2Array([Vector2(sx * 92, -34 + k * 14), Vector2(sx * 74, -30 + k * 13)]), Color(dark, 0.6), 4.5)
+	# Мордочка: светлая; у сиамского — тёмная «маска»
+	if points:
+		_glow(Vector2(0, -12), 66, 46, Color(dark, 0.85))
+		_ball(Vector2(0, -8), 38, 26, dark.lerp(body, 0.15), 0.0, 2.2, 0.2, 0.0)
+	else:
+		_glow(Vector2(0, -2), 66, 40, Color(belly, 0.75))
+		for sx in [-1.0, 1.0]:
+			_ball(Vector2(sx * 15, -4), 20, 15, belly, 0.0, 2.2, 0.2, 0.0)
+
+	# Румянец
+	for sx in [-1.0, 1.0]:
+		_glow(Vector2(sx * 62, -8), 19, 11, BLUSH)
+
+	# Глаза: большие, с вертикальным зрачком-овалом; при касании — довольно щурится
+	var b := blink(t, 2.1)
+	var content := env > 0.25
+	for sx in [-1.0, 1.0]:
+		var ec := Vector2(sx * 38, -42)
+		if content:
+			_arc(ec + Vector2(0, -6), 16, 10, 0.12 * PI, 0.88 * PI, EYE_DARK, 5.5)
+			continue
+		if b < 0.3:
+			_arc(ec + Vector2(0, -4), 15, 9, 0.15 * PI, 0.85 * PI, EYE_DARK, 5.5)
+			continue
+		_kit_eye(ec, b, p)
+
+	# Розовый носик-сердечко с бликом
+	var nc := Vector2(0, -17)
+	_T = TH * Transform2D(0.0, nc)
+	_shape(["kit_nose", p.nose], _heart(Vector2.ZERO, 9.5, 24), Vector2(0, -1), p.nose, 1.0, 0.9, 1.2)
+	_dot(Vector2(-3.5, -3.5), 1.8, Color(1, 1, 1, 0.8))
+	_T = TH
+	# Ротик «ω»; при мурлыкании чуть приоткрыт
+	var lip := Color(p.nose.darkened(0.55), 0.9)
+	_line(PackedVector2Array([Vector2(0, -9), Vector2(0, -4)]), lip, 2.4)
+	if env > 0.25:
+		_glow(Vector2(0, 0), 6, 4, Color("#C0506E", 0.8))
+	_arc(Vector2(-6, -4), 6, 5, 0.0, PI, lip, 2.4, 10)
+	_arc(Vector2(6, -4), 6, 5, 0.0, PI, lip, 2.4, 10)
+	# Усики
+	var wcol: Color = p.whisk
+	for sx in [-1.0, 1.0]:
+		for k in 3:
+			var y0 := -10.0 + k * 7.0
+			var wv := sin(t * 1.3 + k) * 1.2
+			_line(PackedVector2Array([Vector2(sx * 40, y0), Vector2(sx * 66, y0 - 3 + k * 2 + wv), Vector2(sx * 90, y0 - 2 + k * 6 + wv)]), wcol, 1.8)
+	_T = Transform2D.IDENTITY
+
+	# Мурлыканье: ноты и сердечки поднимаются над головой
+	if react < REACT_TIME * 1.4 and react >= 0.0:
+		for i in 3:
+			var q := clampf(react / (REACT_TIME * 1.4) * 1.3 - i * 0.18, 0.0, 1.0)
+			if q <= 0.0 or q >= 1.0:
+				continue
+			var al := sin(q * PI)
+			var c := Vector2(70 + i * 22 + sin(q * 6.0 + i) * 8.0, -110 - q * 70 - i * 10)
+			if i == 1:
+				_T = Transform2D(0.0, c)
+				_shape(["kit_heart"], _heart(Vector2.ZERO, 11.0, 20), Vector2.ZERO, Color("#FF6FA0"), 1.0, 0.7, 0.0)
+				_T = Transform2D.IDENTITY
+			else:
+				_note(c, Color(1.0, 0.86, 0.45, al))
+
+	_front_items(outfit, a, t)
+
+
+func _note(c: Vector2, col: Color) -> void:
+	_oval(c, 6.5, 5, col, -0.4)
+	_line(PackedVector2Array([c + Vector2(5.5, -2), c + Vector2(5.5, -22)]), col, 2.6)
+	_line(PackedVector2Array([c + Vector2(5.5, -22), c + Vector2(13, -16)]), col, 2.6)
+
+
+func _kit_head() -> PackedVector2Array:
+	var key := ["kit_head_pts"]
+	if _cache.has(key):
+		return _cache[key]
+	var pts := PackedVector2Array()
+	for i in 48:
+		var th := TAU * i / 48.0
+		var v := Vector2(cos(th) * 92.0, sin(th) * 76.0)
+		if v.y > 0.0:
+			v.x *= 1.0 + 0.05 * sin(th)
+			v.y *= 0.95
+		pts.append(v + Vector2(0, -38))
+	_store(key, pts)
+	return pts
+
+
+## Треугольное ушко со скруглёнными углами (точка крепления — 0,0; растёт вверх)
+func _kit_ear(sx: float, k: float) -> PackedVector2Array:
+	var key := ["kit_ear_pts", sx, k]
+	if _cache.has(key):
+		return _cache[key]
+	var base := [Vector2(-34, 12), Vector2(-24, -24), Vector2(-4, -52), Vector2(8, -58), Vector2(16, -50), Vector2(28, -18), Vector2(34, 14)]
+	var pts := PackedVector2Array()
+	for v in base:
+		var w: Vector2 = (v - Vector2(2, 0)) * k + Vector2(2, -2 * (1.0 - k) * 10.0)
+		pts.append(Vector2(w.x * sx, w.y))
+	pts = _chaikin(pts, 2)
+	_store(key, pts)
+	return pts
+
+
+func _kit_eye(ec: Vector2, b: float, p: Dictionary) -> void:
+	b = snappedf(b, 0.1)
+	var iris: Color = p.iris
+	_ball(ec, 21, 22 * b, Color("#2A1A3F"), 0.0, 1.4, 0.3, 1.2)
+	_vgrad(_ell(ec, 18, 19 * b, 0.0, 28), iris.darkened(0.3), iris.lerp(Color("#FFFBE0"), 0.45))
+	# зрачок — мягкий вертикальный овал (не «хищная» щёлочка)
+	_vgrad(_ell(ec + Vector2(0, 1), 8.5, 15 * b, 0.0, 22), EYE_DARK, Color("#3A2458"))
+	_oval(ec + Vector2(-6, -8 * b), 6.5, 7.0 * b, Color(1, 1, 1, 0.97), -0.4)
+	_dot(ec + Vector2(6.5, 8 * b), 3.0 * b, Color(1, 1, 1, 0.9))
+	_dot(ec + Vector2(3, -13 * b), 1.5 * b, Color(1, 1, 1, 0.7))
+
+
+## Пушистый хвост из «пушинок»: в покое плавно покачивается, при касании — трубой вверх
+func _kit_tail(p: Dictionary, t: float, env: float, react: float) -> void:
+	var up := smoothstep(0.0, 0.35, env)
+	var sway := sin(t * 1.1) * 0.5
+	var p0 := Vector2(44, 98)
+	var c1 := Vector2(104, 104).lerp(Vector2(64, 60), up)
+	var c2 := Vector2(126 + sway * 10.0, 40).lerp(Vector2(70, -10), up)
+	var p3 := Vector2(100 + sway * 22.0, -14).lerp(Vector2(66 + sin(react * 12.0) * 6.0, -70), up)
+	var body: Color = p.body
+	var tipc: Color = p.dark if p.has("points") or p.has("stripes") else (p.belly if p.has("socks") else body.lerp(p.belly, 0.4))
+	var n := 13
+	for i in n:
+		var s := i / float(n - 1)
+		var c := p0.bezier_interpolate(c1, c2, p3, s)
+		var r := snappedf(lerpf(14.0, 12.0, s) + sin(s * PI) * 2.0, 0.5)
+		var col := body
+		if p.has("stripes") and i % 3 == 1:
+			col = p.dark
+		if p.has("points"):
+			col = body.lerp(p.dark, smoothstep(0.2, 0.7, s))
+			col = Color(snappedf(col.r, 0.05), snappedf(col.g, 0.05), snappedf(col.b, 0.05))
+		if i == n - 1:
+			col = tipc
+		_ball(c, r, r, col, 0.0, 1.2, 0.35, 0.0 if i < n - 1 else 1.2)
 
 
 # ---------- Вещи ----------
@@ -1412,7 +1639,7 @@ func _backpack(a: Dictionary, t: float, behind: bool) -> void:
 		if a.kind == "axolotl":
 			top = b + Vector2(sx * 40, -22) * k
 			bot = b + Vector2(sx * 50, 30) * k
-		elif a.kind == "puppy":
+		elif a.kind == "puppy" or a.kind == "kitten":
 			top = b + Vector2(sx * 46, -30) * k
 			bot = b + Vector2(sx * 58, 26) * k
 		var strap := PackedVector2Array([top, top.lerp(bot, 0.5) + Vector2(sx * 4, 0), bot])
