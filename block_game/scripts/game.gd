@@ -237,6 +237,8 @@ func start_level(n: int) -> void:
 	_shuffle(stones, lr)
 	for i in crystals_total - deep:
 		board[stones[i]] = CRYSTAL
+	# Висячие блоки над дырами (поле hang таблицы уровней) — заготовка каскада.
+	Levels.add_hang(board, p, lr, COLS, ROWS, STONE)
 	crystals_left = crystals_total
 	par = p.par
 	pieces_used = 0

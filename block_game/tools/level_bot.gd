@@ -1,9 +1,9 @@
 extends SceneTree
 ## Робот-игрок для проверки уровней Cascado.
 ## Запуск (из корня репозитория):
-##   godot --headless --path block_game -s tools/level_bot.gd -- --levels=1-30 --games=30 --seed=1
+##   godot --headless --path block_game -s tools/level_bot.gd -- --levels=1-50 --games=30 --seed=1
 ## Параметры (все необязательные):
-##   --levels=A-B   какие уровни гонять (по умолчанию 1-30)
+##   --levels=A-B   какие уровни гонять (по умолчанию 1-50)
 ##   --games=N      партий на уровень (по умолчанию 30)
 ##   --seed=S       зерно случайных фигур (один и тот же seed = одинаковые партии)
 ##   --max=N        предел фигур на партию (по умолчанию 200)
@@ -11,6 +11,7 @@ extends SceneTree
 ##   --csv=путь     дополнительно записать итог в CSV
 ##   --seeds=K      режим подбора раскладки: для каждого уровня пробует K зёрен
 ##                  (zerno = n*7919+13 + k*104729) и пишет в CSV строку на каждое
+##   --set=a:1,b:2  временно заменить поля строки таблицы (например --set=hang:1,rows:3)
 ## Робот ставит фигуры мгновенно: скорость падения на него не влияет.
 ## Прогресс игрока (user://save.cfg) сохраняется до прогона и возвращается после.
 
@@ -33,11 +34,12 @@ const SAFE_H := 8
 const W_CROW := 2.0      # бонус за заполненность рядов с кристаллами
 
 var look := false
+var set_fields := {}
 var mismatches := 0
 
 
 func _initialize() -> void:
-	var args := {"levels": "1-30", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0", "dump": "0"}
+	var args := {"levels": "1-50", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0", "dump": "0", "set": ""}
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--") and a.contains("="):
 			var kv := a.substr(2).split("=", true, 1)
@@ -49,6 +51,10 @@ func _initialize() -> void:
 	var base_seed := int(args.seed)
 	var max_pieces := int(args.max)
 	look = args.look == "1"
+	for kv in String(args.set).split(",", false):
+		var pr: PackedStringArray = kv.split(":")
+		var val = float(pr[1]) if pr[1].contains(".") else int(pr[1])
+		set_fields[pr[0]] = val
 
 	# --- бережём сохранение игрока ---
 	var had_save := FileAccess.file_exists(SAVE)
@@ -68,10 +74,11 @@ func _initialize() -> void:
 		_seed_search(l_from, l_to, games, base_seed, max_pieces, int(args.seeds), args.csv)
 		_restore(had_save, save_bytes)
 		return
-	var header := "lvl | ряды крист par | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь | медиана | par~40%"
+	var header := "lvl | ряды крист par | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь | медиана | par~40% | партий с каскадом%"
 	print(header)
-	lines.append("level,rows,crystals,par,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain,median_pieces,suggested_par")
+	lines.append("level,rows,crystals,par,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain,median_pieces,suggested_par,cascade_games_pct")
 	var t0 := Time.get_ticks_msec()
+	G.level_override = set_fields.duplicate()
 	for n in range(l_from, l_to + 1):
 		var wins := 0
 		var pieces_win := 0
@@ -80,6 +87,7 @@ func _initialize() -> void:
 		var clears := 0
 		var chain_sum := 0
 		var cascades := 0
+		var casc_games := 0
 		var maxchain_sum := 0
 		var rows_n := 0
 		var plist: Array = []
@@ -94,6 +102,8 @@ func _initialize() -> void:
 			clears += r.clears
 			cascades += r.cascades
 			maxchain_sum += r.max_chain
+			if r.max_chain >= 2:
+				casc_games += 1
 			if r.win:
 				wins += 1
 				pieces_win += r.pieces
@@ -107,12 +117,13 @@ func _initialize() -> void:
 		var row := [n, rows_n, G.crystals_total, G.par, G.fall_interval(),
 			100.0 * wins / games, float(pieces_win) / w, float(pieces_all) / games,
 			100.0 * st[1] / w, 100.0 * st[2] / w, 100.0 * st[3] / w,
-			float(chain_sum) / maxi(clears, 1), 100.0 * cascades / maxi(clears, 1), float(maxchain_sum) / games, med, sug]
-		print("%3d | %2d %2d %3d | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f | %3d | %3d" % [
-			row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15]])
+			float(chain_sum) / maxi(clears, 1), 100.0 * cascades / maxi(clears, 1), float(maxchain_sum) / games, med, sug,
+			100.0 * casc_games / games]
+		print("%3d | %2d %2d %3d | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f | %3d | %3d | %3.0f" % [
+			row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15], row[16]])
 		if args.get("dump", "") == "1":
 			print("PIECES %d %s" % [n, ",".join(plist.map(func(v): return str(v)))])
-		lines.append("%d,%d,%d,%d,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f,%d,%d" % row)
+		lines.append("%d,%d,%d,%d,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f,%d,%d,%.1f" % row)
 	print("время: %.1f с, несовпадений хода: %d" % [(Time.get_ticks_msec() - t0) / 1000.0, mismatches])
 	if args.csv != "":
 		var f := FileAccess.open(args.csv, FileAccess.WRITE)
@@ -136,12 +147,15 @@ func _restore(had_save: bool, save_bytes: PackedByteArray) -> void:
 
 
 func _stone_rows() -> int:
+	# ряды камня: в них не больше двух дыр (висячие блоки над камнем не считаются)
 	var n := 0
 	for y in ROWS:
+		var k := 0
 		for x in COLS:
 			if G.board[y * COLS + x] == G.STONE or G.board[y * COLS + x] == CRYSTAL:
-				n += 1
-				break
+				k += 1
+		if k >= COLS - 2:
+			n += 1
 	return n
 
 
@@ -334,17 +348,25 @@ func _execute(p: Dictionary) -> void:
 
 
 func _seed_search(l_from: int, l_to: int, games: int, base_seed: int, max_pieces: int, k_count: int, csv: String) -> void:
-	var out: Array = ["level,k,seed,win_pct,median,p40,avg_win"]
+	var out: Array = ["level,k,seed,win_pct,median,p40,avg_win,cascade_pct,cascade_games_pct"]
 	for n in range(l_from, l_to + 1):
 		for k in k_count:
 			var sd := n * 7919 + 13 + k * 104729
-			G.level_override = {"seed": sd}
+			G.level_override = set_fields.duplicate()
+			G.level_override["seed"] = sd
 			var plist: Array = []
 			var wins := 0
+			var clears := 0
+			var cascades := 0
+			var cg := 0
 			for gi in games:
 				seed(base_seed * 100003 + n * 1009 + gi)
 				G.start_level(n)
 				var r := _play(max_pieces)
+				clears += r.clears
+				cascades += r.cascades
+				if r.max_chain >= 2:
+					cg += 1
 				if r.win:
 					wins += 1
 					plist.append(r.pieces)
@@ -355,7 +377,8 @@ func _seed_search(l_from: int, l_to: int, games: int, base_seed: int, max_pieces
 			for v in plist:
 				avg += v
 			avg /= maxi(plist.size(), 1)
-			var line := "%d,%d,%d,%.1f,%d,%d,%.2f" % [n, k, sd, 100.0 * wins / games, med, p40, avg]
+			var line := "%d,%d,%d,%.1f,%d,%d,%.2f,%.1f,%.1f" % [n, k, sd, 100.0 * wins / games, med, p40, avg,
+				100.0 * cascades / maxi(clears, 1), 100.0 * cg / games]
 			print(line)
 			out.append(line)
 	G.level_override = {}

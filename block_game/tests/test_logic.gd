@@ -24,6 +24,11 @@ func run(g, sec: float) -> void:
 		t += 0.02
 
 func _initialize() -> void:
+	# Тест «Победа» сохраняет прогресс — бережём настоящее сохранение игрока.
+	var save_path := "user://save.cfg"
+	var had_save := FileAccess.file_exists(save_path)
+	var save_bytes := FileAccess.get_file_as_bytes(save_path) if had_save else PackedByteArray()
+
 	var g: Node2D = load("res://scripts/game.gd").new()
 	root.add_child(g)
 
@@ -42,6 +47,53 @@ func _initialize() -> void:
 	check(crystals_l1 == again, "уровень всегда одинаковый")
 	g.start_level(20)
 	check(g.crystals_total <= 8 and count(g, g.CRYSTAL) == g.crystals_total, "поздний уровень корректен")
+
+	# Висячие блоки (поле hang): над верхним рядом камня висит блок, под ним дыра,
+	# кристаллов столько же, сколько в таблице
+	var lv: Script = load("res://scripts/levels.gd")
+	var hang_ok := true
+	for n in range(1, lv.LEVELS.size() + 1):
+		var p: Dictionary = lv.params(n)
+		if p.get("hang", 0) <= 0:
+			continue
+		g.start_level(n)
+		var top: int = g.ROWS - clampi(p.rows, 1, 7)
+		var hanging := 0
+		for x in g.COLS:
+			if g.board[(top - 1) * g.COLS + x] == g.STONE and g.board[top * g.COLS + x] == -1:
+				hanging += 1
+		if hanging != 1 or count(g, g.CRYSTAL) != g.crystals_total:
+			hang_ok = false
+	check(hang_ok, "висячий блок над дырой на всех уровнях с hang")
+	var speed_ok := true
+	for n in range(1, 80):
+		if lv.params(n).speed > lv.MAX_SPEED:
+			speed_ok = false
+	check(speed_ok, "скорость не выше 0,26 с на клетку (ступень 21) и после 50-го")
+
+	# Уровень 1: вертикальная фигура в колодец даёт каскад
+	g.start_level(1)
+	var shaft := -1
+	for x in g.COLS:
+		if g.board[(g.ROWS - 1) * g.COLS + x] == -1:
+			shaft = x
+	g.next_type = 1  # палочка из трёх
+	g._spawn()
+	g.rotate_piece()
+	var guard := 0
+	while guard < 10:
+		var minx := 99
+		for c in g.piece_cells:
+			minx = mini(minx, c.x + g.piece_pos.x)
+		if minx == shaft or not g.move(1 if shaft > minx else -1):
+			break
+		guard += 1
+	g.hard_drop()
+	var max_chain: int = g.chain
+	for i in 60:
+		g.step(0.02)
+		max_chain = maxi(max_chain, g.chain)
+	check(max_chain >= 2, "уровень 1: каскад ×2 с первой фигуры")
 
 	# Стенки
 	g.start_level(1)
@@ -132,6 +184,13 @@ func _initialize() -> void:
 		g.board[i] = g.STONE if i % g.COLS != 0 else -1
 	g._spawn()
 	check(g.state == g.State.LOSE, "переполнение — поражение")
+
+	if had_save:
+		var f := FileAccess.open(save_path, FileAccess.WRITE)
+		f.store_buffer(save_bytes)
+		f.close()
+	elif FileAccess.file_exists(save_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
 
 	print("Итог: ", "ВСЁ ОК" if failed == 0 else "%d ошибок" % failed)
 	quit(1 if failed else 0)

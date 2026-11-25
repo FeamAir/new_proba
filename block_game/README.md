@@ -12,7 +12,7 @@
 
 Робот-игрок для проверки уровней:
 ```
-godot --headless --path block_game -s tools/level_bot.gd -- --levels=1-30 --games=50
+godot --headless --path block_game -s tools/level_bot.gd -- --levels=1-50 --games=50
 ```
 
 Тесты логики:
@@ -34,5 +34,6 @@ godot --headless --path block_game -s tests/test_logic.gd
 - [x] Версия 0.2: название, изюминка, звук, новый вид
 - [x] Версия 0.3: таблица из 30 уровней, подобранных роботом-игроком; переход на Godot 4.7 (Android 16 / API 36, память 16 КБ — требования Google Play 2026)
 - [x] Черновики документов для Google Play: `store/legal/`
+- [x] 50 уровней с «висячими» блоками: каскад ×2 с первого уровня (робот перепроверил par)
 - [ ] Ключ подписи для Google Play (создаётся на компьютере Владимира, не в облаке)
 - [ ] Страница в Google Play, закрытое тестирование (12 человек, 14 дней)
