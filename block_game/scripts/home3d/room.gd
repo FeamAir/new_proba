@@ -11,6 +11,7 @@ extends "res://scripts/home3d/kit.gd"
 ## Сверху: на нитке/верёвке с покачиванием (hang_style = "rope") или на высокой полке ("shelf").
 
 const HeroCard := preload("res://scripts/home3d/hero_card.gd")
+const TrophyShelf := preload("res://scripts/home3d/trophy_shelf.gd")
 const OrbitCam := preload("res://scripts/home3d/orbit_camera.gd")
 const Meta := preload("res://scripts/meta.gd")
 
@@ -64,6 +65,16 @@ var built := false
 var cam_light: OmniLight3D
 var _t := 0.0
 var _house: Node3D
+## 0.14: полка славы (scripts/home3d/trophy_shelf.gd). shelf_def задаёт комната в _init:
+## {style, pos (у стены, на полу), yaw (+Z — в комнату), rows [[высота, радиус стены]], room_r, spacing, scale,
+##  depth, focus_d — с какого расстояния смотреть на один кубок, view_d — на всю полку}
+var shelf_def := {}
+var shelf
+## Полученные кубки (номера залов) и ещё не «появившиеся» (показ при возвращении домой)
+var trophies_done: Array = []
+var trophies_hidden: Array = []
+## Яркость кубков в этой комнате (кубки светятся сами, без ламп)
+var trophy_light := 1.0
 
 
 # ---------- То, что задают наследники ----------
@@ -127,6 +138,7 @@ func build() -> void:
 	for spot in Meta.SPOTS:
 		_place(spot)
 	_markers()
+	_build_shelf()
 	_camera()
 	built = true
 	set_quality(high)
@@ -170,6 +182,9 @@ func set_quality(hq: bool) -> void:
 		(l as Light3D).shadow_enabled = hq and l == shadow_light
 	_light_budget()
 	_shadow_casters()
+	TrophyShelf.set_trophy_quality(hq, trophy_light)
+	if shelf:
+		shelf.set_high(hq)
 	if card_vp:
 		var sz := 512 if hq else 320
 		card_vp.size = Vector2i(sz, sz)
@@ -322,6 +337,68 @@ func _update_markers() -> void:
 			mi.position = spot_point(spot)  # метки — прямые дети комнаты (комната в начале координат)
 
 
+# ---------- Полка славы (0.14) ----------
+
+func _build_shelf() -> void:
+	if shelf_def.is_empty():
+		return
+	shelf = TrophyShelf.new()
+	shelf.name = "trophy_shelf"
+	shelf.position = shelf_def.pos
+	shelf.rotation.y = shelf_def.yaw
+	shelf.setup(shelf_def, trophies_done, high)
+	shelf.hidden = trophies_hidden.duplicate()
+	add_child(shelf)
+	shelf.build()
+
+
+## Кубки изменились (новый зал пройден, показ закончился): перестраиваются только кубки, не полка
+func set_trophies(done: Array, hidden_: Array) -> void:
+	trophies_done = done.duplicate()
+	trophies_hidden = hidden_.duplicate()
+	if shelf:
+		shelf.set_done(done, hidden_)
+
+
+## Показ: кубки появляются с блеском, камера подлетает к полке
+func reveal_trophies(halls: Array) -> void:
+	if shelf == null:
+		return
+	for n in halls:
+		trophies_hidden.erase(n)
+	shelf.reveal(halls)
+	focus_shelf()
+
+
+func focus_shelf() -> void:
+	if shelf == null:
+		return
+	shelf.set_spin(0)
+	cam.fly_to(shelf.center(), shelf.facing(), shelf_def.get("view_d", 1.9), 0.1)
+
+
+## Подлететь к кубку зала n: он медленно поворачивается на подставке
+func focus_trophy(n: int) -> void:
+	if shelf == null:
+		return
+	shelf.set_spin(n if shelf.has_trophy(n) else 0)
+	cam.fly_to(shelf.slot_center(n), shelf.slot_dir(n), shelf_def.get("focus_d", 0.7), 0.08)
+
+
+## К какому кубку подлетела камера (0 — ни к какому)
+func focused_trophy() -> int:
+	if shelf == null or not cam.focused:
+		return 0
+	for n in range(1, 11):
+		if cam.goal_pivot.distance_to(shelf.slot_center(n)) < 0.02:
+			return n
+	return 0
+
+
+func focused_shelf() -> bool:
+	return shelf != null and cam.focused and cam.goal_pivot.distance_to(shelf.center()) < 0.02
+
+
 # ---------- Герой ----------
 
 func _hero() -> void:
@@ -418,6 +495,9 @@ func pick(pos: Vector2, radius := 110.0) -> Dictionary:
 		cands.append({"type": "spot", "spot": spot, "at": f[0], "d": f[1]})
 	for f in features:
 		cands.append({"type": "feature", "name": f[2], "at": f[0], "d": f[1]})
+	if shelf:
+		for n in range(1, 11):
+			cands.append({"type": "trophy", "hall": n, "at": shelf.slot_center(n), "d": shelf_def.get("focus_d", 0.7)})
 	for c in cands:
 		var p: Vector3 = c.at
 		if cam.is_position_behind(p):
@@ -439,6 +519,11 @@ func focus(c: Dictionary) -> void:
 	if c.get("spot", "") != "":
 		focus_spot(c.spot)
 		return
+	if c.type == "trophy":
+		focus_trophy(c.hall)
+		return
+	if shelf:
+		shelf.set_spin(0)
 	cam.fly_to(c.at, _view_dir(c.at, c.type == "hero"), c.d)
 
 
@@ -525,6 +610,10 @@ func _process(delta: float) -> void:
 	_animate(anims)
 	for s in spot_anims:
 		_animate(spot_anims[s])
+	if shelf:
+		_animate(shelf.anims)
+		if shelf.spin_hall != 0 and focused_trophy() != shelf.spin_hall:
+			shelf.set_spin(0)
 	_light_anim(lights)
 	for s in spot_lights:
 		_light_anim(spot_lights[s])

@@ -275,6 +275,14 @@ var notice_sets := false
 ## 0.13: пол героев (герой -> "boy"/"girl"; нет записи — мальчик) и имена (герой -> имя; нет — без имени)
 var genders: Dictionary = {}
 var names: Dictionary = {}
+## 0.14: КУБКИ ЗАЛОВ. Кубок зала n (1..10) есть, если зал пройден (выводится из max_level, hall_done) —
+## поэтому старые сохранения получают кубки сами. Кубки общие для игрока: смена героя их не трогает,
+## они стоят на полке славы у любого героя. Рисунки — scripts/trophies.gd (2D) и scripts/home3d/trophy_*.gd (3D).
+## trophy_dates: номер зала -> дата получения "ГГГГ-ММ-ДД" (у залов, пройденных до 0.14, даты нет — «Пройден»).
+var trophy_dates: Dictionary = {}
+## Сколько кубков уже «появилось» на полке (камера один раз подлетает к полке при возвращении домой).
+## В старом сохранении поля нет (0): при первом входе в дом полка покажется со всеми кубками.
+var trophy_seen := 0
 
 
 # ---------- Залы ----------
@@ -331,6 +339,87 @@ static func depth(level: int) -> int:
 ## Пройден ли зал номер n (1..10): открыт уровень после его последнего.
 static func hall_done(n: int, max_level: int) -> bool:
 	return max_level > n * HALL_SIZE
+
+
+# ---------- Кубки (0.14) ----------
+
+## Сколько кубков у игрока (пройдено залов таблицы, 0..10).
+static func trophy_count(max_level: int) -> int:
+	return clampi((max_level - 1) / HALL_SIZE, 0, HALL_COUNT)
+
+
+## Номера залов (1..10), чьи кубки получены.
+static func trophies(max_level: int) -> Array:
+	var out := []
+	for n in range(1, trophy_count(max_level) + 1):
+		out.append(n)
+	return out
+
+
+## Название кубка зала n (1..10) на текущем языке.
+static func trophy_name(n: int) -> String:
+	return I18n.t("trophy_%d" % clampi(n, 1, HALL_COUNT))
+
+
+## Кубок за победу на уровне level: номер зала (1..10), если это последний уровень зала и он пройден
+## впервые (max_before — max_level до победы), иначе 0.
+static func trophy_for_win(level: int, max_before: int) -> int:
+	if level < HALL_SIZE or level > LAST_LEVEL or level % HALL_SIZE != 0 or max_before > level:
+		return 0
+	return level / HALL_SIZE
+
+
+## Вручить кубок за победу (вызывается до обновления max_level): запоминает дату. Возвращает номер зала или 0.
+func award_trophy(level: int, max_before: int, date := "") -> int:
+	var n := trophy_for_win(level, max_before)
+	if n > 0:
+		trophy_dates[n] = date if date != "" else Time.get_date_string_from_system()
+	return n
+
+
+## Дата получения кубка зала n ("ГГГГ-ММ-ДД") или "" (неизвестна — зал пройден до 0.14).
+func trophy_date(n: int) -> String:
+	return String(trophy_dates.get(n, ""))
+
+
+## Подпись «Пройден: 25.11.2026» / «Пройден» (дата неизвестна).
+func trophy_done_text(n: int) -> String:
+	var d := trophy_date(n)
+	if d == "":
+		return I18n.t("trophy_done")
+	return I18n.t("trophy_done_on") % format_date(d)
+
+
+## "2026-11-25" -> «25.11.2026» (ru) / «Nov 25, 2026» (en).
+static func format_date(d: String) -> String:
+	var p := d.split("-")
+	if p.size() != 3:
+		return d
+	var m := clampi(int(p[1]), 1, 12)
+	if I18n.lang == "ru":
+		return "%s.%s.%s" % [p[2], p[1], p[0]]
+	var months := ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+	return "%s %d, %s" % [months[m - 1], int(p[2]), p[0]]
+
+
+## Кубки, которые ещё не «появились» на полке (номера залов по порядку).
+func trophies_pending(max_level: int) -> Array:
+	var out := []
+	for n in range(trophy_seen + 1, trophy_count(max_level) + 1):
+		out.append(n)
+	return out
+
+
+func mark_trophies_seen(max_level: int) -> void:
+	trophy_seen = maxi(trophy_seen, trophy_count(max_level))
+
+
+static func _valid_date(d) -> bool:
+	if not (d is String) or d.length() != 10:
+		return false
+	var p: PackedStringArray = d.split("-")
+	return p.size() == 3 and p[0].is_valid_int() and p[1].is_valid_int() and p[2].is_valid_int() \
+		and int(p[1]) >= 1 and int(p[1]) <= 12 and int(p[2]) >= 1 and int(p[2]) <= 31
 
 
 # ---------- Осколки ----------
@@ -853,6 +942,8 @@ func save_to(cfg: ConfigFile) -> void:
 	cfg.set_value("meta", "notice_sets", notice_sets)
 	cfg.set_value("meta", "genders", genders)
 	cfg.set_value("meta", "names", names)
+	cfg.set_value("meta", "trophy_dates", trophy_dates)
+	cfg.set_value("meta", "trophy_seen", trophy_seen)
 
 
 func load_from(cfg: ConfigFile) -> void:
@@ -915,6 +1006,16 @@ func load_from(cfg: ConfigFile) -> void:
 		for k in nm:
 			if k is String and HEROES.has(k) and nm[k] is String and clean_name(nm[k]) != "":
 				names[k] = clean_name(nm[k])
+	# 0.14: даты кубков и сколько кубков уже показано на полке; в старом сохранении их нет
+	trophy_dates = {}
+	var td = cfg.get_value("meta", "trophy_dates", {})
+	if td is Dictionary:
+		for k in td:
+			var n := int(k) if (k is int or (k is String and k.is_valid_int())) else 0
+			if n >= 1 and n <= HALL_COUNT and _valid_date(td[k]):
+				trophy_dates[n] = td[k]
+	var ts = cfg.get_value("meta", "trophy_seen", 0)
+	trophy_seen = clampi(int(ts), 0, HALL_COUNT) if (ts is int or ts is float) else 0
 	decor_owned = []
 	var dow = cfg.get_value("meta", "decor_owned", [])
 	if dow is Array:

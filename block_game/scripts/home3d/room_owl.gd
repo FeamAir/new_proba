@@ -45,6 +45,10 @@ func _init() -> void:
 		elif s == "hang":
 			mark = Vector3(0, -0.85, 0)
 		spots[s] = {"pos": dir(a) * r + Vector3(0, d[2], 0), "yaw": face_center(a), "mark": mark, "stand": Vector3(0, 0.07, 0.24)}
+	# 0.14: полка славы — на стене напротив окна (за спиной камеры в обычном обзоре; места украшений не занимает)
+	shelf_def = {"style": "owl", "pos": dir(PI / 2.0) * R, "yaw": face_center(PI / 2.0), "room_r": R,
+		"rows": [[1.2, wall_r(1.2) - 0.06], [1.78, wall_r(1.78) - 0.06]], "spacing": 0.42, "scale": 1.15, "depth": 0.34,
+		"plaque_z": 0.205, "plaque_y": -0.03, "focus_d": 0.72, "view_d": 2.0}
 
 
 func _inside(p: Vector3) -> bool:
@@ -109,7 +113,7 @@ func _walls(h: Node3D) -> void:
 	# грибы-трутовики на стенах — маленькие «полочки» для уюта (больше на поздних ступенях)
 	var n_f := 3 if stage == 0 else 5
 	for k in n_f:
-		var a: float = [WIN_ANG + 2.2, WIN_ANG + 3.8, WIN_ANG + 5.6, WIN_ANG + 2.9, WIN_ANG + 4.6][k]
+		var a: float = [WIN_ANG + 2.2, WIN_ANG + 3.8, WIN_ANG + 5.6, WIN_ANG + 2.55, WIN_ANG + 4.6][k]
 		var hy: float = [1.1, 0.8, 1.3, 2.5, 2.2][k]
 		var f := node(h, dir(a) * (wall_r(hy) - 0.02) + Vector3(0, hy, 0), face_center(a))
 		for q in 2:
@@ -119,7 +123,7 @@ func _walls(h: Node3D) -> void:
 			put(f, sphere(0.19 * sz, 16), mat(Color("#F2D7A8"), 0.9, 0.0, false), off + Vector3(0, 0.035, 0), Vector3.ZERO, Vector3(1.3, 0.36, 0.88))
 	# сучки-дупляшки в коре
 	for k in 3:
-		var a: float = [WIN_ANG + 1.5, WIN_ANG + 3.4, WIN_ANG + 5.0][k]
+		var a: float = [WIN_ANG + 1.5, WIN_ANG + 4.0, WIN_ANG + 5.0][k]
 		var hy: float = [2.9, 1.8, 3.1][k]
 		var f := node(h, dir(a) * (wall_r(hy) - 0.03) + Vector3(0, hy, 0), face_center(a))
 		put(f, torus(0.07, 0.15, 18), mat(Color("#8A5A44"), 0.9), Vector3.ZERO, Vector3(PI / 2.0, 0, 0), Vector3(1.0, 1.0, 1.4))
@@ -373,7 +377,7 @@ func _details(h: Node3D) -> void:
 		# кристаллы, проросшие в коре
 		var cc := [Color("#B46CFF"), Color("#3FD0FF"), Color("#FF8FD8"), Color("#3DDC97")]
 		for i in 5:
-			var a := deg_to_rad([5.0, 50.0, 95.0, 140.0, 175.0][i])
+			var a := deg_to_rad([5.0, 50.0, 124.0, 145.0, 175.0][i])
 			var hy := 0.6 + hash1(i, 61) * 2.2
 			var p := dir(a) * (wall_r(hy) - 0.04) + Vector3(0, hy, 0)
 			var g := node(h, p, face_center(a))
