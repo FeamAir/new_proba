@@ -286,7 +286,7 @@ func _test_stats(g) -> void:
 	var lines := csv.strip_edges().split("\n")
 	check(lines[0] == "level,attempts,losses,wins,best_pieces,assists" and lines[1] == "5,6,2,2,9,0" and lines[2] == "6,1,0,0,0,0", "CSV: заголовок и строки по уровням")
 	# Скрытый экран: 5 касаний по номеру версии в паузе
-	check(AssistUI.version() == "0.9", "версия из настроек проекта: 0.9")
+	check(AssistUI.version() == str(ProjectSettings.get_setting("application/config/version")) and AssistUI.version() != "", "версия из настроек проекта: " + AssistUI.version())
 	g._set_state(g.State.PAUSED)
 	var vr: Vector2 = g.assist_ui.version_rect().get_center()
 	for i in 4:
