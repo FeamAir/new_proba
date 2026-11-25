@@ -3,7 +3,7 @@ INTERNAL NOTE (not shown on the published page):
 - Written for version 0.2: no ads, purchases, analytics, network or sign-in.
 - MUST be updated BEFORE releasing a version with AdMob, in-app purchases,
   Google Play Games or Firebase Analytics, together with data_safety.md.
-- Replace [EMAIL] with the contact address used in Play Console before publishing.
+- Replace maryking.textile@gmail.com with the contact address used in Play Console before publishing.
 -->
 
 # Cascado Privacy Policy
@@ -62,4 +62,4 @@ page with a new effective date.
 
 ## Contact
 
-For privacy questions, contact: [EMAIL]
+For privacy questions, contact: maryking.textile@gmail.com
