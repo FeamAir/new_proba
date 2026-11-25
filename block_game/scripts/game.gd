@@ -21,6 +21,7 @@ const REPEAT_DELAY := 0.17
 const REPEAT_RATE := 0.06
 const LINE_SCORES := [0, 100, 250, 450, 700]
 const SAVE_PATH := "user://save.cfg"
+const Levels := preload("res://scripts/levels.gd")
 
 const GEMS := [
 	Color("#B46CFF"), Color("#FF4D6D"), Color("#FFB547"), Color("#3DDC97"),
@@ -72,6 +73,7 @@ var crystals_total := 0
 var crystals_left := 0
 var pieces_used := 0
 var par := 0
+var speed_step := 1       # ступень скорости из таблицы уровней
 var last_stars := 0
 var score := 0
 var shown_score := 0.0
@@ -198,14 +200,17 @@ func start_level(n: int) -> void:
 	board.fill(EMPTY)
 	fall_dist.resize(ROWS * COLS)
 	fall_dist.fill(0)
+	# Параметры уровня берутся из таблицы scripts/levels.gd (кривая сложности).
+	var p: Dictionary = Levels.params(n)
 	var lr := RandomNumberGenerator.new()
-	lr.seed = n * 7919 + 13
-	var rows := mini(2 + (n + 1) / 2, 7)
-	crystals_total = mini(2 + n / 2, 8)
+	lr.seed = p.seed
+	var rows: int = clampi(p.rows, 1, 7)
+	crystals_total = clampi(p.c, 1, 8)
+	speed_step = p.speed
 	for r in rows:
 		var y := ROWS - 1 - r
 		var holes: Array = []
-		var count := 1 if lr.randf() < 0.6 else 2
+		var count := 2 if lr.randf() < p.h2 else 1
 		while holes.size() < count:
 			var hx := lr.randi_range(0, COLS - 1)
 			if not holes.has(hx):
@@ -213,19 +218,25 @@ func start_level(n: int) -> void:
 		for x in COLS:
 			if not holes.has(x):
 				board[y * COLS + x] = STONE
+	# Сначала кристаллы в самом нижнем ряду (deep), остальные — в любом камне.
+	var bottom: Array = []
 	var stones: Array = []
 	for i in board.size():
 		if board[i] == STONE:
-			stones.append(i)
-	for i in range(stones.size() - 1, 0, -1):
-		var j := lr.randi_range(0, i)
-		var tmp = stones[i]
-		stones[i] = stones[j]
-		stones[j] = tmp
-	for i in crystals_total:
+			if i >= (ROWS - 1) * COLS:
+				bottom.append(i)
+			else:
+				stones.append(i)
+	_shuffle(bottom, lr)
+	var deep: int = mini(p.deep, mini(bottom.size(), crystals_total))
+	for i in deep:
+		board[bottom[i]] = CRYSTAL
+	stones.append_array(bottom.slice(deep))
+	_shuffle(stones, lr)
+	for i in crystals_total - deep:
 		board[stones[i]] = CRYSTAL
 	crystals_left = crystals_total
-	par = rows * 3 + crystals_total
+	par = p.par
 	pieces_used = 0
 	score = 0
 	shown_score = 0.0
@@ -237,6 +248,14 @@ func start_level(n: int) -> void:
 	next_type = _pick_type(-1)
 	_set_state(State.PLAYING)
 	_spawn()
+
+
+func _shuffle(a: Array, lr: RandomNumberGenerator) -> void:
+	for i in range(a.size() - 1, 0, -1):
+		var j := lr.randi_range(0, i)
+		var tmp = a[i]
+		a[i] = a[j]
+		a[j] = tmp
 
 
 func _pick_type(avoid: int) -> int:
@@ -255,7 +274,7 @@ func _pick_type(avoid: int) -> int:
 
 
 func fall_interval() -> float:
-	return maxf(0.14, 0.9 * pow(0.94, level - 1))
+	return maxf(0.14, 0.9 * pow(0.94, speed_step - 1))
 
 
 func _set_state(s: State) -> void:

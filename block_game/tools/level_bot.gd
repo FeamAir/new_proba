@@ -62,9 +62,9 @@ func _initialize() -> void:
 	CRYSTAL = G.CRYSTAL
 
 	var lines: Array = []
-	var header := "lvl | ряды крист par | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь"
+	var header := "lvl | ряды крист par | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь | медиана | par~40%"
 	print(header)
-	lines.append("level,rows,crystals,par,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain")
+	lines.append("level,rows,crystals,par,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain,median_pieces,suggested_par")
 	var t0 := Time.get_ticks_msec()
 	for n in range(l_from, l_to + 1):
 		var wins := 0
@@ -76,6 +76,7 @@ func _initialize() -> void:
 		var cascades := 0
 		var maxchain_sum := 0
 		var rows_n := 0
+		var plist: Array = []
 		for gi in games:
 			seed(base_seed * 100003 + n * 1009 + gi)
 			G.start_level(n)
@@ -90,15 +91,20 @@ func _initialize() -> void:
 			if r.win:
 				wins += 1
 				pieces_win += r.pieces
+				plist.append(r.pieces)
 				st[r.stars] += 1
 		var w := maxi(wins, 1)
+		plist.sort()
+		var med: int = plist[plist.size() / 2] if plist.size() > 0 else 0
+		# предложение par: 3 звезды примерно в 40% побед робота
+		var sug: int = plist[int(plist.size() * 0.4)] if plist.size() > 0 else 0
 		var row := [n, rows_n, G.crystals_total, G.par, G.fall_interval(),
 			100.0 * wins / games, float(pieces_win) / w, float(pieces_all) / games,
 			100.0 * st[1] / w, 100.0 * st[2] / w, 100.0 * st[3] / w,
-			float(chain_sum) / maxi(clears, 1), 100.0 * cascades / maxi(clears, 1), float(maxchain_sum) / games]
-		print("%3d | %2d %2d %3d | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f" % [
-			row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[8], row[9], row[10], row[11], row[12], row[13]])
-		lines.append("%d,%d,%d,%d,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f" % row)
+			float(chain_sum) / maxi(clears, 1), 100.0 * cascades / maxi(clears, 1), float(maxchain_sum) / games, med, sug]
+		print("%3d | %2d %2d %3d | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f | %3d | %3d" % [
+			row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15]])
+		lines.append("%d,%d,%d,%d,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f,%d,%d" % row)
 	print("время: %.1f с, несовпадений хода: %d" % [(Time.get_ticks_msec() - t0) / 1000.0, mismatches])
 	if args.csv != "":
 		var f := FileAccess.open(args.csv, FileAccess.WRITE)
