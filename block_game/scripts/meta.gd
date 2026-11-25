@@ -64,44 +64,46 @@ const ITEMS := [
 	{"id": "ax_wave_cape", "hero": "axolotl", "slot": "back", "rarity": "legendary", "set": "axo_lagoon", "hall": 3, "forge": true, "draw": "fin_cape"},
 	{"id": "ax_plankton", "hero": "axolotl", "slot": "aura", "rarity": "legendary", "set": "axo_abyss", "hall": 5, "forge": true},
 	{"id": "ax_abyssal", "hero": "axolotl", "slot": "aura", "rarity": "super", "hall": 5, "forge": true, "covers": ["head"]},
-	# ---------- Щенок: весёлый спортсмен и приключенец ----------
+	# ---------- Щенок: весёлый спортсмен (0.13: спорт, цветочный пикник, супергерой) ----------
 	{"id": "pu_cap", "hero": "puppy", "slot": "head", "price": 20, "rarity": "common", "set": "pup_playground", "hall": 0},
 	{"id": "pu_whistle", "hero": "puppy", "slot": "neck", "price": 30, "rarity": "common", "set": "pup_playground", "hall": 0},
 	{"id": "pu_visor", "hero": "puppy", "slot": "eyes", "price": 50, "rarity": "rare", "set": "pup_playground", "hall": 0},
 	{"id": "pu_ball", "hero": "puppy", "slot": "companion", "price": 70, "rarity": "rare", "set": "pup_playground", "hall": 0},
 	{"id": "pu_skin_corgi", "hero": "puppy", "slot": "skin", "price": 120, "rarity": "epic", "set": "pup_playground", "hall": 0, "draw": "skin_moon"},
-	{"id": "pu_explorer_hat", "hero": "puppy", "slot": "head", "price": 45, "rarity": "common", "set": "pup_hike", "hall": 3},
-	{"id": "pu_bone_collar", "hero": "puppy", "slot": "neck", "price": 60, "rarity": "common", "set": "pup_hike", "hall": 3},
-	{"id": "pu_aviators", "hero": "puppy", "slot": "eyes", "price": 85, "rarity": "rare", "set": "pup_hike", "hall": 3},
-	{"id": "pu_firefly", "hero": "puppy", "slot": "companion", "price": 110, "rarity": "rare", "set": "pup_hike", "hall": 3, "draw": "firefly"},
-	{"id": "pu_backpack", "hero": "puppy", "slot": "back", "price": 160, "rarity": "epic", "set": "pup_hike", "hall": 3},
+	# 0.13: «Цветочный пикник» вместо «Похода» (милый набор; вещи похода возвращены осколками)
+	{"id": "pu_daisy_wreath", "hero": "puppy", "slot": "head", "price": 45, "rarity": "common", "set": "pup_picnic", "hall": 3},
+	{"id": "pu_flower_scarf", "hero": "puppy", "slot": "neck", "price": 60, "rarity": "common", "set": "pup_picnic", "hall": 3},
+	{"id": "pu_daisy_specs", "hero": "puppy", "slot": "eyes", "price": 85, "rarity": "rare", "set": "pup_picnic", "hall": 3},
+	{"id": "pu_basket", "hero": "puppy", "slot": "companion", "price": 110, "rarity": "rare", "set": "pup_picnic", "hall": 3},
+	{"id": "pu_skin_cotton", "hero": "puppy", "slot": "skin", "price": 160, "rarity": "epic", "set": "pup_picnic", "hall": 3},
 	{"id": "pu_bolt_band", "hero": "puppy", "slot": "head", "price": 65, "rarity": "common", "set": "pup_hero", "hall": 5},
 	{"id": "pu_hero_bandana", "hero": "puppy", "slot": "neck", "price": 85, "rarity": "common", "set": "pup_hero", "hall": 5},
 	{"id": "pu_jetpack", "hero": "puppy", "slot": "back", "price": 115, "rarity": "rare", "set": "pup_hero", "hall": 5, "draw": "rocket_pack"},
 	{"id": "pu_robo", "hero": "puppy", "slot": "companion", "price": 150, "rarity": "rare", "set": "pup_hero", "hall": 5},
 	{"id": "pu_skin_dalmatian", "hero": "puppy", "slot": "skin", "price": 230, "rarity": "epic", "set": "pup_hero", "hall": 5, "draw": "skin_gold"},
 	{"id": "pu_frisbee", "hero": "puppy", "slot": "companion", "rarity": "legendary", "set": "pup_playground", "hall": 0, "forge": true},
-	{"id": "pu_kite", "hero": "puppy", "slot": "back", "rarity": "legendary", "set": "pup_hike", "hall": 3, "forge": true},
+	{"id": "pu_petal_rainbow", "hero": "puppy", "slot": "aura", "rarity": "legendary", "set": "pup_picnic", "hall": 3, "forge": true},
 	{"id": "pu_aura_bolts", "hero": "puppy", "slot": "aura", "rarity": "legendary", "set": "pup_hero", "hall": 5, "forge": true},
 	{"id": "pu_hero", "hero": "puppy", "slot": "aura", "rarity": "super", "hall": 5, "forge": true, "covers": ["back", "eyes", "neck"]},
-	# ---------- Котик: уютный модник ----------
+	# ---------- Котик: уютный модник (0.13: уют, кот-детектив, бал-маскарад) ----------
 	{"id": "ki_pompom_hat", "hero": "kitten", "slot": "head", "price": 20, "rarity": "common", "set": "kit_cozy", "hall": 0},
 	{"id": "ki_bell_bow", "hero": "kitten", "slot": "neck", "price": 30, "rarity": "common", "set": "kit_cozy", "hall": 0},
 	{"id": "ki_yarn", "hero": "kitten", "slot": "companion", "price": 50, "rarity": "rare", "set": "kit_cozy", "hall": 0},
 	{"id": "ki_sweater", "hero": "kitten", "slot": "back", "price": 70, "rarity": "rare", "set": "kit_cozy", "hall": 0},
 	{"id": "ki_skin_tabby", "hero": "kitten", "slot": "skin", "price": 120, "rarity": "epic", "set": "kit_cozy", "hall": 0, "draw": "skin_mint"},
-	{"id": "ki_beret", "hero": "kitten", "slot": "head", "price": 45, "rarity": "common", "set": "kit_paris", "hall": 3},
-	{"id": "ki_heart_glasses", "hero": "kitten", "slot": "eyes", "price": 60, "rarity": "common", "set": "kit_paris", "hall": 3, "draw": "sunglasses"},
-	{"id": "ki_lace_collar", "hero": "kitten", "slot": "neck", "price": 85, "rarity": "rare", "set": "kit_paris", "hall": 3},
-	{"id": "ki_tail_bow", "hero": "kitten", "slot": "back", "price": 110, "rarity": "rare", "set": "kit_paris", "hall": 3},
-	{"id": "ki_aura_petals", "hero": "kitten", "slot": "aura", "price": 160, "rarity": "epic", "set": "kit_paris", "hall": 3},
+	# 0.13: «Кот-детектив» вместо «Парижского шика» (крутой набор; вещи шика возвращены осколками)
+	{"id": "ki_sleuth_hat", "hero": "kitten", "slot": "head", "price": 45, "rarity": "common", "set": "kit_detective", "hall": 3},
+	{"id": "ki_moustache", "hero": "kitten", "slot": "eyes", "price": 60, "rarity": "common", "set": "kit_detective", "hall": 3},
+	{"id": "ki_sleuth_badge", "hero": "kitten", "slot": "neck", "price": 85, "rarity": "rare", "set": "kit_detective", "hall": 3},
+	{"id": "ki_trench", "hero": "kitten", "slot": "back", "price": 110, "rarity": "rare", "set": "kit_detective", "hall": 3},
+	{"id": "ki_magnifier", "hero": "kitten", "slot": "companion", "price": 160, "rarity": "epic", "set": "kit_detective", "hall": 3},
 	{"id": "ki_masquerade", "hero": "kitten", "slot": "eyes", "price": 65, "rarity": "common", "set": "kit_ball", "hall": 5, "draw": "masquerade"},
 	{"id": "ki_cameo", "hero": "kitten", "slot": "neck", "price": 85, "rarity": "common", "set": "kit_ball", "hall": 5},
 	{"id": "ki_feather_hat", "hero": "kitten", "slot": "head", "price": 115, "rarity": "rare", "set": "kit_ball", "hall": 5},
 	{"id": "ki_ball_cloak", "hero": "kitten", "slot": "back", "price": 150, "rarity": "rare", "set": "kit_ball", "hall": 5, "draw": "ball_cloak"},
 	{"id": "ki_skin_siamese", "hero": "kitten", "slot": "skin", "price": 230, "rarity": "epic", "set": "kit_ball", "hall": 5, "draw": "skin_moon"},
 	{"id": "ki_teacup", "hero": "kitten", "slot": "companion", "rarity": "legendary", "set": "kit_cozy", "hall": 0, "forge": true},
-	{"id": "ki_parasol", "hero": "kitten", "slot": "back", "rarity": "legendary", "set": "kit_paris", "hall": 3, "forge": true},
+	{"id": "ki_clue_trail", "hero": "kitten", "slot": "aura", "rarity": "legendary", "set": "kit_detective", "hall": 3, "forge": true},
 	{"id": "ki_aura_fireworks", "hero": "kitten", "slot": "aura", "rarity": "legendary", "set": "kit_ball", "hall": 5, "forge": true},
 	{"id": "ki_starry", "hero": "kitten", "slot": "aura", "rarity": "super", "hall": 5, "forge": true, "covers": ["head"]},
 ]
@@ -116,10 +118,10 @@ const SETS := [
 	{"id": "axo_lagoon", "hero": "axolotl", "n": 2, "hall": 3, "col": Color("#FFC2E4"), "icon": "pearl"},
 	{"id": "axo_abyss", "hero": "axolotl", "n": 3, "hall": 5, "col": Color("#3FE0D0"), "icon": "drop"},
 	{"id": "pup_playground", "hero": "puppy", "n": 1, "hall": 0, "col": Color("#FFB547"), "icon": "ball"},
-	{"id": "pup_hike", "hero": "puppy", "n": 2, "hall": 3, "col": Color("#7CD86B"), "icon": "pine"},
+	{"id": "pup_picnic", "hero": "puppy", "n": 2, "hall": 3, "col": Color("#8FE3A0"), "icon": "daisy"},
 	{"id": "pup_hero", "hero": "puppy", "n": 3, "hall": 5, "col": Color("#FF5F6D"), "icon": "bolt"},
 	{"id": "kit_cozy", "hero": "kitten", "n": 1, "hall": 0, "col": Color("#FF9FC0"), "icon": "yarn"},
-	{"id": "kit_paris", "hero": "kitten", "n": 2, "hall": 3, "col": Color("#FF7AD9"), "icon": "heart"},
+	{"id": "kit_detective", "hero": "kitten", "n": 2, "hall": 3, "col": Color("#D9A86A"), "icon": "glass"},
 	{"id": "kit_ball", "hero": "kitten", "n": 3, "hall": 5, "col": Color("#B9A4FF"), "icon": "mask"},
 ]
 
@@ -135,13 +137,13 @@ const RECIPES := [
 	{"id": "ax_plankton", "hero": "axolotl", "set": "axo_abyss", "hall": 5, "cost": 250, "needs": ["ax_black_pearl", "ax_porthole", "ax_angler", "ax_squid", "ax_skin_abyss"]},
 	{"id": "ax_abyssal", "hero": "axolotl", "set": "", "hall": 5, "cost": 450, "needs": ["ax_seahorse", "ax_wave_cape", "ax_plankton"]},
 	{"id": "pu_frisbee", "hero": "puppy", "set": "pup_playground", "hall": 0, "cost": 120, "needs": ["pu_cap", "pu_whistle", "pu_visor", "pu_ball", "pu_skin_corgi"]},
-	{"id": "pu_kite", "hero": "puppy", "set": "pup_hike", "hall": 3, "cost": 180, "needs": ["pu_explorer_hat", "pu_bone_collar", "pu_aviators", "pu_firefly", "pu_backpack"]},
+	{"id": "pu_petal_rainbow", "hero": "puppy", "set": "pup_picnic", "hall": 3, "cost": 180, "needs": ["pu_daisy_wreath", "pu_flower_scarf", "pu_daisy_specs", "pu_basket", "pu_skin_cotton"]},
 	{"id": "pu_aura_bolts", "hero": "puppy", "set": "pup_hero", "hall": 5, "cost": 250, "needs": ["pu_bolt_band", "pu_hero_bandana", "pu_jetpack", "pu_robo", "pu_skin_dalmatian"]},
-	{"id": "pu_hero", "hero": "puppy", "set": "", "hall": 5, "cost": 450, "needs": ["pu_frisbee", "pu_kite", "pu_aura_bolts"]},
+	{"id": "pu_hero", "hero": "puppy", "set": "", "hall": 5, "cost": 450, "needs": ["pu_frisbee", "pu_petal_rainbow", "pu_aura_bolts"]},
 	{"id": "ki_teacup", "hero": "kitten", "set": "kit_cozy", "hall": 0, "cost": 120, "needs": ["ki_pompom_hat", "ki_bell_bow", "ki_yarn", "ki_sweater", "ki_skin_tabby"]},
-	{"id": "ki_parasol", "hero": "kitten", "set": "kit_paris", "hall": 3, "cost": 180, "needs": ["ki_beret", "ki_heart_glasses", "ki_lace_collar", "ki_tail_bow", "ki_aura_petals"]},
+	{"id": "ki_clue_trail", "hero": "kitten", "set": "kit_detective", "hall": 3, "cost": 180, "needs": ["ki_sleuth_hat", "ki_moustache", "ki_sleuth_badge", "ki_trench", "ki_magnifier"]},
 	{"id": "ki_aura_fireworks", "hero": "kitten", "set": "kit_ball", "hall": 5, "cost": 250, "needs": ["ki_masquerade", "ki_cameo", "ki_feather_hat", "ki_ball_cloak", "ki_skin_siamese"]},
-	{"id": "ki_starry", "hero": "kitten", "set": "", "hall": 5, "cost": 450, "needs": ["ki_teacup", "ki_parasol", "ki_aura_fireworks"]},
+	{"id": "ki_starry", "hero": "kitten", "set": "", "hall": 5, "cost": 450, "needs": ["ki_teacup", "ki_clue_trail", "ki_aura_fireworks"]},
 ]
 ## 0.12: доход за глубокие залы — +2 осколка к первой победе за каждый зал глубже первого
 const HALL_BONUS := 2
@@ -162,6 +164,17 @@ const LEGACY_PRICES := {
 }
 const LEGACY_FORGE := {"firefly_crown": 50, "seahorse": 80, "fullmoon_mantle": 100, "skin_constellation": 140,
 	"mountain_heart": 180, "wings_cascado": 300}
+
+## 0.13: вещи заменённых наборов («Парижский шик» котика, «Поход» щенка) и плата за ковку их наград —
+## при загрузке сохранения возвращаются осколками (один раз — сообщение «Гардероб обновлён», новые наборы).
+const REPLACED_013 := {"ki_beret": 45, "ki_heart_glasses": 60, "ki_lace_collar": 85, "ki_tail_bow": 110, "ki_aura_petals": 160,
+	"pu_explorer_hat": 45, "pu_bone_collar": 60, "pu_aviators": 85, "pu_firefly": 110, "pu_backpack": 160}
+const REPLACED_013_FORGE := {"ki_parasol": 180, "pu_kite": 180}
+
+## 0.13: мальчик или девочка (у каждого героя — свой выбор; по умолчанию мальчик) и имя героя.
+const GENDERS := ["boy", "girl"]
+## Имя: до 12 знаков, только буквы (любой алфавит), цифры, пробел и дефис.
+const NAME_MAX := 12
 
 ## Украшения дома: у каждого героя свой дом и свой набор. spots — куда можно поставить:
 ## floor (пол слева/справа), wall (стена или ветка слева/справа), hang (подвес сверху;
@@ -256,6 +269,11 @@ var forged: Array = []         # 0.12: id скованных в кузнице �
 var notice_refund := 0
 ## Сколько осколков вернула последняя загрузка (старые вещи); не 0 — игра сразу сохраняется.
 var migrated := 0
+## 0.13: вещи заменённых наборов вернулись осколками — сообщение говорит о новых наборах
+var notice_sets := false
+## 0.13: пол героев (герой -> "boy"/"girl"; нет записи — мальчик) и имена (герой -> имя; нет — без имени)
+var genders: Dictionary = {}
+var names: Dictionary = {}
 
 
 # ---------- Залы ----------
@@ -273,8 +291,18 @@ static func hall_name(h: int) -> String:
 	return I18n.t("hall_%d" % clampi(h, 0, HALLS.size() - 1))
 
 
-static func hero_name(kind: String) -> String:
+## Название вида героя; gender "girl" — женский вариант (ru: Совушка, Аксолотлинка, Собачка, Кошечка).
+static func hero_name(kind: String, gender := "") -> String:
+	if gender == "girl" and I18n.has("hero_%s_girl" % kind):
+		return I18n.t("hero_%s_girl" % kind)
 	return I18n.t("hero_" + kind)
+
+
+## Родительный падеж названия героя («вещи Совёнка / Совушки»).
+static func hero_gen(kind: String, gender := "") -> String:
+	if gender == "girl" and I18n.has("hero_gen_%s_girl" % kind):
+		return I18n.t("hero_gen_%s_girl" % kind)
+	return I18n.t("hero_gen_" + kind)
 
 
 static func slot_name(slot: String) -> String:
@@ -286,7 +314,10 @@ static func spot_name(spot: String) -> String:
 
 
 ## kind — герой: у окрасок для разных героев свои названия (ключ item_<id>_<герой>, если есть).
-static func item_name(id: String, kind := "") -> String:
+## gender (0.13) — у некоторых вещей название по полу героя (ключ item_<id>_boy / item_<id>_girl).
+static func item_name(id: String, kind := "", gender := "") -> String:
+	if gender != "" and I18n.has("item_%s_%s" % [id, gender]):
+		return I18n.t("item_%s_%s" % [id, gender])
 	if kind != "" and I18n.has("item_%s_%s" % [id, kind]):
 		return I18n.t("item_%s_%s" % [id, kind])
 	return I18n.t("item_" + id)
@@ -433,8 +464,13 @@ static func set_info(n: int) -> Dictionary:
 	return SETS[n - 1] if n >= 1 and n <= SETS.size() else {}
 
 
-static func set_title(n: int) -> String:
-	return I18n.t("set_" + SETS[n - 1].id) if n >= 1 and n <= SETS.size() else ""
+## gender (0.13) — у набора может быть название по полу героя (ключ set_<id>_girl).
+static func set_title(n: int, gender := "") -> String:
+	if n < 1 or n > SETS.size():
+		return ""
+	if gender == "girl" and I18n.has("set_%s_girl" % SETS[n - 1].id):
+		return I18n.t("set_%s_girl" % SETS[n - 1].id)
+	return I18n.t("set_" + SETS[n - 1].id)
 
 
 ## Наборы героя (номера в SETS), по порядку 1..3.
@@ -734,9 +770,72 @@ func set_hero(h: String) -> bool:
 	return switch_hero(h) >= 0
 
 
-## Наряд для рисования: слот -> id (без героя).
+## Наряд для рисования: слот -> id (без героя). 0.13: у девочки добавляется "gender": "girl"
+## (scripts/hero.gd рисует реснички и заколку; нет ключа — мальчик).
 func outfit() -> Dictionary:
-	return equipped.duplicate()
+	var o := equipped.duplicate()
+	o.merge(look(hero))
+	return o
+
+
+# ---------- 0.13: мальчик / девочка и имя ----------
+
+## "boy" или "girl" (по умолчанию — мальчик).
+func gender_of(kind: String) -> String:
+	return "girl" if genders.get(kind, "") == "girl" else "boy"
+
+
+func is_girl(kind: String) -> bool:
+	return gender_of(kind) == "girl"
+
+
+## Сменить пол героя: бесплатно, вещи и украшения не трогаются (это тот же герой).
+func set_gender(kind: String, gender: String) -> bool:
+	if not HEROES.has(kind) or not GENDERS.has(gender):
+		return false
+	genders[kind] = gender
+	return true
+
+
+## Вид героя для рисования без наряда (аватарки других героев, выбор друга).
+func look(kind: String) -> Dictionary:
+	return {"gender": "girl"} if is_girl(kind) else {}
+
+
+## Очистить имя: убрать запрещённые знаки (оставить буквы любого алфавита, цифры, пробел, дефис),
+## лишние пробелы, обрезать до NAME_MAX знаков.
+static func clean_name(s: String) -> String:
+	var re := RegEx.new()
+	re.compile("[^\\p{L}\\p{N} \\-]")
+	var o := re.sub(s, "", true)
+	while o.contains("  "):
+		o = o.replace("  ", " ")
+	o = o.strip_edges().substr(0, NAME_MAX).strip_edges()
+	return o
+
+
+## Дать имя герою. Пустое (после очистки) — не принимается (false).
+func set_hero_name(kind: String, s: String) -> bool:
+	var n := clean_name(s)
+	if not HEROES.has(kind) or n == "":
+		return false
+	names[kind] = n
+	return true
+
+
+func clear_hero_name(kind: String) -> void:
+	names.erase(kind)
+
+
+## Имя героя ("" — не задано).
+func name_of(kind: String) -> String:
+	return String(names.get(kind, ""))
+
+
+## Как называть героя: его имя, а без имени — название вида по полу (Совёнок / Совушка).
+func display_name(kind: String) -> String:
+	var n := name_of(kind)
+	return n if n != "" else hero_name(kind, gender_of(kind))
 
 
 # ---------- Сохранение ----------
@@ -750,6 +849,9 @@ func save_to(cfg: ConfigFile) -> void:
 	cfg.set_value("meta", "decor_placed", decor_placed)
 	cfg.set_value("meta", "forged", forged)
 	cfg.set_value("meta", "notice_refund", notice_refund)
+	cfg.set_value("meta", "notice_sets", notice_sets)
+	cfg.set_value("meta", "genders", genders)
+	cfg.set_value("meta", "names", names)
 
 
 func load_from(cfg: ConfigFile) -> void:
@@ -760,6 +862,7 @@ func load_from(cfg: ConfigFile) -> void:
 	# 0.12b: вещи — только своего героя. Старые общие вещи (0.6–0.12) и скованные награды
 	# возвращаются осколками по прежним ценам; вещи другого героя (не должно быть) — по новым.
 	migrated = 0
+	var sets_back := false
 	owned = []
 	var o = cfg.get_value("meta", "owned", [])
 	if o is Array:
@@ -767,7 +870,10 @@ func load_from(cfg: ConfigFile) -> void:
 			if not (id is String) or owned.has(id):
 				continue
 			var it := item(id)
-			if it.is_empty() and LEGACY_PRICES.has(id):
+			if it.is_empty() and REPLACED_013.has(id):
+				migrated += int(REPLACED_013[id])  # 0.13: вещь заменённого набора
+				sets_back = true
+			elif it.is_empty() and LEGACY_PRICES.has(id):
 				migrated += int(LEGACY_PRICES[id])
 			elif it.has("hero") and not it.get("forge", false):
 				if it.hero == hero:
@@ -780,7 +886,10 @@ func load_from(cfg: ConfigFile) -> void:
 		for id in fg:
 			if not (id is String) or forged.has(id):
 				continue
-			if item(id).is_empty() and LEGACY_FORGE.has(id):
+			if item(id).is_empty() and REPLACED_013_FORGE.has(id):
+				migrated += int(REPLACED_013_FORGE[id])
+				sets_back = true
+			elif item(id).is_empty() and LEGACY_FORGE.has(id):
 				migrated += int(LEGACY_FORGE[id])
 			elif is_forge(id):
 				if owner_of(id) == hero:
@@ -790,6 +899,21 @@ func load_from(cfg: ConfigFile) -> void:
 	shards += migrated
 	var nr = cfg.get_value("meta", "notice_refund", 0)
 	notice_refund = (maxi(0, int(nr)) if (nr is int or nr is float) else 0) + migrated
+	var ns = cfg.get_value("meta", "notice_sets", false)
+	notice_sets = (ns is bool and ns and notice_refund > 0) or sets_back
+	# 0.13: пол и имена; в старом сохранении их нет — мальчики без имён
+	genders = {}
+	var gd = cfg.get_value("meta", "genders", {})
+	if gd is Dictionary:
+		for k in gd:
+			if k is String and HEROES.has(k) and gd[k] is String and GENDERS.has(gd[k]):
+				genders[k] = gd[k]
+	names = {}
+	var nm = cfg.get_value("meta", "names", {})
+	if nm is Dictionary:
+		for k in nm:
+			if k is String and HEROES.has(k) and nm[k] is String and clean_name(nm[k]) != "":
+				names[k] = clean_name(nm[k])
 	decor_owned = []
 	var dow = cfg.get_value("meta", "decor_owned", [])
 	if dow is Array:

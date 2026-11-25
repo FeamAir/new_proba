@@ -79,6 +79,8 @@ var _icon := false   # рисуется значок для карточки (с
 var _gills: Array = []                   # жабры аксолотля: 6 ломаных по 7 точек (от головы к кончику)
 var _tail_mid := PackedVector2Array()    # ось хвоста котика (16 точек от тела к кончику)
 var _tail_w: Array = []                  # толщина хвоста котика по точкам
+## 0.13: рисуется девочка (реснички, заколка) или мальчик (бровки, хохолок) — ключ "gender" наряда
+var _girl := false
 
 
 # ---------- Объёмные сетки ----------
@@ -395,6 +397,7 @@ func draw(target: CanvasItem, kind: String, pos: Vector2, sc: float, outfit: Dic
 	_T = Transform2D.IDENTITY
 	_react = react
 	_head_only = head_only
+	_girl = is_girl(outfit)
 	var breath := 1.0 + 0.018 * sin(t * 2.2)
 	var sway := 0.025 * sin(t * 1.25)
 	if kind == "puppy" and not head_only:
@@ -514,6 +517,9 @@ func _owl(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only: 
 
 	# Ушки-пёрышки
 	_T = TH
+	# 0.13: у мальчика — торчащее пёрышко-хохолок на макушке (основание прячется за туловищем)
+	if not _girl and not hat_on(outfit):
+		_tuft("owl", Vector2(2, -84), body.lerp(dark, 0.35), t)
 	for sx in [-1.0, 1.0]:
 		var ek := ["owl_ear", sx, body]
 		var e := PackedVector2Array() if _cache.has(ek) else _chaikin(PackedVector2Array([Vector2(sx * 84, -46), Vector2(sx * 58, -60), Vector2(sx * 30, -80), Vector2(sx * 62, -108), Vector2(sx * 92, -138), Vector2(sx * 92, -90)]), 2)
@@ -542,7 +548,7 @@ func _owl(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only: 
 
 	# Румянец
 	for sx in [-1.0, 1.0]:
-		_glow(Vector2(sx * 62, 4), 17, 10, BLUSH)
+		_glow(Vector2(sx * 62, 4), 17, 10, _blush())
 
 	# Большие блестящие глаза
 	var b := blink(t)
@@ -556,6 +562,10 @@ func _owl(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only: 
 			_arc(ec + Vector2(0, -6), 19, 12, 0.15 * PI, 0.85 * PI, EYE_DARK, 6.0)
 			continue
 		_owl_eye(ec, b, Vector2(turn * 5.0, 0), p)
+	# 0.13: реснички / бровки, заколка-цветочек
+	_face_marks(Vector2(-37, -30), Vector2(37, -30), 31.0, 31.0, b, happy, dark.darkened(0.3), 4.2)
+	if _girl and not hat_on(outfit):
+		_clip("flower", Vector2(62, -78), 1.0, Color("#FF7FB8"), t)
 
 	# Клюв
 	var bk := PackedVector2Array([Vector2(-11, -9), Vector2(-5, -11), Vector2(5, -11), Vector2(11, -9), Vector2(4, 8), Vector2(0, 13), Vector2(-4, 8)])
@@ -696,7 +706,7 @@ func _axolotl(p: Dictionary, outfit: Dictionary, t: float, react: float, head_on
 	_glow(Vector2(0, -2), 66, 38, Color(p.belly, 0.6))
 	# Румянец и веснушки
 	for sx in [-1.0, 1.0]:
-		_glow(Vector2(sx * 66, 0), 21, 12, BLUSH)
+		_glow(Vector2(sx * 66, 0), 21, 12, _blush())
 		for f in [Vector2(56, -8), Vector2(64, -11), Vector2(72, -7)]:
 			_dot(Vector2(sx * f.x, f.y), 1.9, Color(gill.darkened(0.15), 0.55))
 
@@ -712,6 +722,10 @@ func _axolotl(p: Dictionary, outfit: Dictionary, t: float, react: float, head_on
 			_arc(ec + Vector2(0, -3), 13, 8, 0.15 * PI, 0.85 * PI, EYE_DARK, 5.0)
 			continue
 		_axo_eye(ec, b, p)
+	# 0.13: реснички / бровки, заколка-звёздочка
+	_face_marks(Vector2(-44, -30), Vector2(44, -30), 15.5, 18.0, b, happy, Color("#7A2A5C"), 3.6)
+	if _girl and not hat_on(outfit):
+		_clip("star", Vector2(36, -90), 1.3, Color("#FFD23C"), t)
 
 	# Ротик: маленькая улыбка; при касании — открытый счастливый
 	var mc := Vector2(0, -6)
@@ -904,11 +918,9 @@ func _puppy(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only
 		# белая проточина корги: от носа по лбу
 		_glow(Vector2(0, -56), 22, 42, Color(belly, 0.9))
 		_ball(Vector2(0, -50), 12, 36, belly, 0.0, 3.0, 0.1, 0.0)
-	# Хохолок на макушке (под шапками не виден)
-	if outfit.get("head", "") == "":
-		for i in 3:
-			var ang := (i - 1) * 0.55
-			_ball(Vector2(0, -108) + Vector2(0, -9).rotated(ang), 5.5, 10, body.lerp(p.dark, 0.25), ang, 1.2, 0.35, 0.0)
+	# 0.13: вихор на макушке — у мальчика (под шапками не виден)
+	if not _girl and not hat_on(outfit):
+		_tuft("puppy", Vector2(0, -110), body.lerp(p.dark, 0.3), t)
 	# Светлая мордочка
 	_glow(Vector2(0, -2), 70, 40, Color(belly, 0.75))
 	_ball(Vector2(0, -6), 40, 27, belly, 0.0, 2.2, 0.2, 0.0)
@@ -926,7 +938,7 @@ func _puppy(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only
 
 	# Румянец
 	for sx in [-1.0, 1.0]:
-		_glow(Vector2(sx * 62, -8), 19, 11, BLUSH)
+		_glow(Vector2(sx * 62, -8), 19, 11, _blush())
 
 	# Большие блестящие глаза; при касании — радостные дужки
 	var b := blink(t, 0.7)
@@ -940,6 +952,8 @@ func _puppy(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only
 			_arc(ec + Vector2(0, -4), 15, 9, 0.15 * PI, 0.85 * PI, EYE_DARK, 5.5)
 			continue
 		_pup_eye(ec, b, p)
+	# 0.13: реснички / бровки
+	_face_marks(Vector2(-38, -44), Vector2(38, -44), 17.0, 20.0, b, happy, dark.darkened(0.35), 3.8)
 
 	# Нос-пуговка с бликом
 	var nc := Vector2(0, -16)
@@ -965,6 +979,11 @@ func _puppy(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only
 	_line(PackedVector2Array([Vector2(0, -8), Vector2(0, -2)]), lip, 2.6)
 	_arc(Vector2(-6.5, -2), 6.5, 5.0, 0.0, PI, lip, 2.6, 10)
 	_arc(Vector2(6.5, -2), 6.5, 5.0, 0.0, PI, lip, 2.6, 10)
+	# 0.13: у девочки — бантик на левом ушке (под шапкой не виден)
+	if _girl and not hat_on(outfit):
+		var ang: float = -(0.1 + 0.05 * sin(t * 1.7 - 1.0)) + 0.6 * bounce
+		_T = TH * Transform2D(ang, Vector2(-68, -96))
+		_clip("bow", Vector2(-2, 10), 1.0, Color("#FF5F9A"), t)
 	_T = Transform2D.IDENTITY
 
 	_front_items(outfit, a, t)
@@ -1134,6 +1153,9 @@ func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_onl
 	for sx in [-1.0, 1.0]:
 		for k in 2:
 			_ball(Vector2(sx * (86 - k * 5), -10 + k * 14), 10, 6, body, sx * (0.35 + k * 0.4), 1.3, 0.3, 0.0)
+	# 0.13: у мальчика — пучок шерсти на макушке (под шапками не виден)
+	if not _girl and not hat_on(outfit):
+		_tuft("kitten", Vector2(0, -108), dark if points else body.lerp(dark, 0.45 if stripes else 0.3), t)
 	if stripes:
 		# «М» на лбу и полоски на щёчках
 		for i in 3:
@@ -1154,7 +1176,7 @@ func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_onl
 
 	# Румянец
 	for sx in [-1.0, 1.0]:
-		_glow(Vector2(sx * 62, -8), 19, 11, BLUSH)
+		_glow(Vector2(sx * 62, -8), 19, 11, _blush())
 
 	# Глаза: большие, с вертикальным зрачком-овалом; при касании — довольно щурится
 	var b := blink(t, 2.1)
@@ -1168,11 +1190,19 @@ func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_onl
 			_arc(ec + Vector2(0, -4), 15, 9, 0.15 * PI, 0.85 * PI, EYE_DARK, 5.5)
 			continue
 		_kit_eye(ec, b, p)
+	# 0.13: реснички / бровки, заколка-цветочек у ушка
+	_face_marks(Vector2(-38, -42), Vector2(38, -42), 21.0, 22.0, b, content, dark.darkened(0.35) if not points else Color("#3A2430"), 3.8)
+	if _girl and not hat_on(outfit):
+		_clip("flower", Vector2(50, -104), 1.15, Color("#FF8FC8"), t)
 
-	# Розовый носик-сердечко с бликом
+	# Носик: у девочки — розовое сердечко, у мальчика — кругленький треугольник; с бликом
 	var nc := Vector2(0, -17)
 	_T = TH * Transform2D(0.0, nc)
-	_shape(["kit_nose", p.nose], _heart(Vector2.ZERO, 9.5, 24), Vector2(0, -1), p.nose, 1.0, 0.9, 1.2)
+	if _girl:
+		_shape(["kit_nose", p.nose], _heart(Vector2.ZERO, 9.5, 24), Vector2(0, -1), p.nose, 1.0, 0.9, 1.2)
+	else:
+		var kn := PackedVector2Array() if _cache.has(["kit_nose_b", p.nose]) else _chaikin(PackedVector2Array([Vector2(-10, -6), Vector2(10, -6), Vector2(0, 6)]), 2)
+		_shape(["kit_nose_b", p.nose], kn, Vector2(0, -2), p.nose, 1.0, 0.9, 1.2)
 	_dot(Vector2(-3.5, -3.5), 1.8, Color(1, 1, 1, 0.8))
 	_T = TH
 	# Ротик «ω»; при мурлыкании чуть приоткрыт
@@ -1316,6 +1346,165 @@ func _kit_tail(p: Dictionary, t: float, env: float, react: float) -> void:
 	var tg2 := (mid[n - 1] - mid[n - 2]).normalized()
 	_ball(mid[n - 1] + tg2 * 3.0, 15, 15, tipc, 0.0, 1.2, 0.35)
 	_ball(p0, 14, 14, body, 0.0, 1.2, 0.35, 0.0)
+
+
+# ---------- 0.13: мальчик / девочка ----------
+## Отличия деликатные: у девочки — реснички, румянец чуть ярче, заколка (цветочек у совушки и кошечки,
+## звёздочка у аксолотлинки, бантик на ушке у собачки); у мальчика — озорные бровки и хохолок
+## (пёрышко у совёнка, вихор у щенка, пучок шерсти у котика; у аксолотля — только бровки).
+## Хохолок и заколка прячутся под головным убором (и под супер-наградой, закрывающей голову).
+
+## Девочка ли (ключ "gender" наряда; нет ключа — мальчик)
+static func is_girl(outfit: Dictionary) -> bool:
+	return outfit.get("gender", "") == "girl"
+
+
+## Надет ли головной убор (или супер-награда, которая занимает голову)
+static func hat_on(outfit: Dictionary) -> bool:
+	if String(outfit.get("head", "")) != "":
+		return true
+	return Meta.item(String(outfit.get("aura", ""))).get("covers", []).has("head")
+
+
+func _blush() -> Color:
+	return Color(1.0, 0.36, 0.6, 0.82) if _girl else BLUSH
+
+
+## Реснички (девочка) или бровки (мальчик) над обоими глазами. el / er — центры глаз, rx / ry —
+## полуоси глаза, b — моргание (1 — открыт), closed — глаза-дужки (радость, мурлыканье), w — толщина.
+func _face_marks(el: Vector2, er: Vector2, rx: float, ry: float, b: float, closed: bool, col: Color, w: float) -> void:
+	var lc := EYE_DARK.lerp(col, 0.3)
+	for sx in [-1.0, 1.0]:
+		var ec: Vector2 = el if sx < 0 else er
+		if _girl:
+			var shut := closed or b < 0.3
+			var ryb := ry * snappedf(b, 0.1)
+			if not shut:
+				# тёмная линия века по верхнему внешнему краю — глаз выразительнее
+				_arc(ec, rx * 1.0, ryb * 1.0, PI * (1.5 - sx * 0.12), PI * (1.5 + sx * 0.42), lc, w * 0.55, 10)
+			for i in 3:
+				var base: Vector2
+				var d: Vector2
+				if shut:
+					if i == 2:
+						continue
+					base = ec + Vector2(sx * rx * 0.9, -ry * 0.1 - i * w * 0.4)
+					d = Vector2(sx * cos(deg_to_rad(10.0 + i * 30.0)), -sin(deg_to_rad(10.0 + i * 30.0)))
+				else:
+					var th: float = deg_to_rad(16.0 + i * 24.0)
+					d = Vector2(sx * cos(th), -sin(th))
+					base = ec + Vector2(d.x * rx, d.y * ryb)
+				_lash(base, d, sx, rx * (0.5 if i != 1 else 0.58), w * 0.62, lc)
+		else:
+			# бровки: короткие пухлые дуги; правая чуть выше и круче — озорной вид
+			var lift := (w * 1.0 if sx > 0 else 0.0) + (w * 0.8 if closed else 0.0)
+			var c := ec + Vector2(sx * rx * 0.1, -ry - w * 2.2 - lift)
+			var hw := rx * 0.58
+			var arch := w * (1.2 if sx > 0 else 0.8)
+			var pts := PackedVector2Array()
+			for i in 7:
+				var s := i / 6.0
+				var x: float = lerpf(-hw, hw, s) * sx
+				pts.append(c + Vector2(x, -sin(s * PI) * arch - s * w * 0.6))
+			_taper(pts, w * 0.78, w * 0.45, col.lerp(EYE_DARK, 0.4))
+
+
+## Ресничка: сужающийся лепесток от века наружу, кончик подкручен
+func _lash(base: Vector2, d: Vector2, sx: float, ln: float, wb: float, col: Color) -> void:
+	var mid := base + d * ln * 0.55
+	var tip := mid + d.rotated(-sx * 0.55) * ln * 0.5
+	var c := PackedVector2Array()
+	for k in 7:
+		var s := k / 6.0
+		c.append(base.bezier_interpolate(base.lerp(mid, 0.6), mid, tip, s))
+	_taper(c, wb, 0.4, col, true)
+
+
+## Полоса вдоль ломаной c: толщина w0 в середине / у начала (from_base) и w1 на концах
+func _taper(c: PackedVector2Array, w0: float, w1: float, col: Color, from_base := false) -> void:
+	var l := PackedVector2Array()
+	var r := PackedVector2Array()
+	var n := c.size()
+	for k in n:
+		var s := k / float(n - 1)
+		var tg := (c[mini(k + 1, n - 1)] - c[maxi(k - 1, 0)]).normalized()
+		var wv: float = lerpf(w0, w1, s) if from_base else lerpf(w1, w0, sin(s * PI))
+		l.append(c[k] + tg.orthogonal() * wv)
+		r.append(c[k] - tg.orthogonal() * wv)
+	r.reverse()
+	l.append_array(r)
+	_fill(l, col)
+
+
+## Контур пряди / пёрышка: растёт от (0,0) вверх на ln, ширина у основания wd, изгиб bend (доля длины вбок)
+static func _lock_pts(ln: float, wd: float, bend: float) -> PackedVector2Array:
+	var l := PackedVector2Array()
+	var r := PackedVector2Array()
+	for i in 9:
+		var s := i / 8.0
+		var c := Vector2(bend * ln * s * s, -ln * s)
+		var tg := Vector2(2.0 * bend * ln * s, -ln).normalized()
+		var wv := wd * pow(1.0 - s, 0.75) * (0.75 + 0.25 * sin(minf(s * 2.0, 1.0) * PI * 0.5))
+		l.append(c + tg.orthogonal() * wv)
+		r.append(c - tg.orthogonal() * wv)
+	r.reverse()
+	l.append_array(r)
+	return l
+
+
+## Хохолок мальчика на макушке (base — в координатах головы); слегка покачивается
+func _tuft(kind: String, base: Vector2, col: Color, t: float) -> void:
+	var locks: Array = []
+	match kind:
+		"owl":
+			locks = [[-0.55, 26.0, 7.0, -0.3], [0.1, 44.0, 10.0, 0.45]]
+		"puppy":
+			locks = [[-0.4, 22.0, 8.0, -0.55], [0.35, 30.0, 9.0, 0.8], [-0.02, 27.0, 9.0, 0.4]]
+		_:
+			locks = [[-0.5, 20.0, 7.5, -0.4], [0.45, 20.0, 7.5, 0.4], [0.0, 28.0, 8.5, 0.15]]
+	var T0 := _T
+	var sw := 0.06 * sin(t * 2.3)
+	for i in locks.size():
+		var lk: Array = locks[i]
+		var key := ["tuft", kind, i, col]
+		var pts := PackedVector2Array() if _cache.has(key) else _lock_pts(lk[1], lk[2], lk[3])
+		_T = T0 * Transform2D(lk[0] + sw * (1.0 + i * 0.3), base)
+		_shape(key, pts, Vector2(lk[3] * lk[1] * 0.2, -lk[1] * 0.35), col, 1.3, 0.35, 1.2)
+		if kind == "owl" and i == 0:
+			# стержень пёрышка
+			var sp := PackedVector2Array()
+			for k in 6:
+				var s := k / 6.0
+				sp.append(Vector2(lk[3] * lk[1] * s * s, -lk[1] * s))
+			_line(sp, Color(col.lightened(0.45), 0.7), 1.6)
+	_T = T0
+
+
+## Заколка девочки: "flower" — цветочек, "star" — звёздочка, "bow" — бантик (pos — в текущих координатах)
+func _clip(kind: String, pos: Vector2, k: float, col: Color, t: float) -> void:
+	var T0 := _T
+	_T = T0 * Transform2D(0.0, Vector2(k, k), 0.0, pos)
+	match kind:
+		"flower":
+			for i in 5:
+				var ang := i * TAU / 5.0 - PI / 2.0 + 0.3
+				_ball(Vector2(cos(ang), sin(ang)) * 7.5, 6.5, 5.2, col, ang, 1.1, 0.45, 1.0)
+			_ball(Vector2.ZERO, 4.6, 4.6, Color("#FFD23C"), 0.0, 1.0, 0.7, 1.0)
+			_dot(Vector2(-1.5, -1.6), 1.3, Color(1, 1, 1, 0.9))
+		"star":
+			var key := ["clip_star", col]
+			var pts := PackedVector2Array() if _cache.has(key) else _chaikin(Sets.star_pts(Vector2.ZERO, 12.0, 5.6, 5, 0.25), 1)
+			_shape(key, pts, Vector2(-1, -1), col, 1.1, 0.8, 1.2)
+			_dot(Vector2(-3, -3.5), 1.8, Color(1, 1, 1, 0.9))
+		"bow":
+			for sx in [-1.0, 1.0]:
+				var tl := PackedVector2Array([Vector2(sx * 2, 2), Vector2(sx * 7, 3), Vector2(sx * 11, 15), Vector2(sx * 6, 13), Vector2(sx * 3, 17), Vector2(sx * -1, 5)])
+				_shape(["clip_bow_tail", sx, col], tl, Vector2(sx * 5, 8), col.darkened(0.12), 1.4)
+				_ball(Vector2(sx * 10, -2), 10, 7, col, sx * -0.3, 1.1, 0.5)
+				_dot(Vector2(sx * 12, -4), 1.6, Color(1, 1, 1, 0.85))
+				_dot(Vector2(sx * 7, 1), 1.3, Color(1, 1, 1, 0.75))
+			_ball(Vector2.ZERO, 4.5, 5, col.darkened(0.15), 0.0, 1.0, 0.6)
+	_T = T0
 
 
 # ---------- Вещи ----------
