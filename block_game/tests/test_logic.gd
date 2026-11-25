@@ -2,6 +2,7 @@ extends SceneTree
 ## Запуск: godot --headless --path block_game -s tests/test_logic.gd
 
 var failed := 0
+const I18n := preload("res://scripts/i18n.gd")
 
 func check(cond: bool, msg: String) -> void:
 	if cond:
@@ -235,10 +236,10 @@ func _initialize() -> void:
 		g.step(0.02)
 		max_chain = maxi(max_chain, g.chain)
 		for pp in g.popups:
-			if String(pp.get("text", "")) == "КАСКАД ×3":
+			if String(pp.get("text", "")) == I18n.t("cascade") % 3:
 				combo_popup = true
 	check(max_chain == 3, "построенная позиция даёт цепочку ×3 (вышло ×%d)" % max_chain)
-	check(combo_popup, "надпись «КАСКАД ×3»")
+	check(combo_popup, "надпись «КАСКАД ×3» (на текущем языке: %s)" % (I18n.t("cascade") % 3))
 	check(g.state == g.State.PLAYING, "после цепочки ×3 игра продолжается")
 
 	# Разрезанная очисткой фигура падает частями
@@ -292,6 +293,7 @@ func _initialize() -> void:
 	check(g.state == g.State.LOSE, "переполнение — поражение")
 
 	_test_meta(g, max_chain)
+	_test_i18n(g)
 
 	if had_save:
 		var f := FileAccess.open(save_path, FileAccess.WRITE)
@@ -453,3 +455,82 @@ func _test_meta(g, _chain3: int) -> void:
 	var m3 = Meta.new()
 	m3.load_from(bad)
 	check(m3.hero == "" and m3.shards == 0 and m3.owned == ["bow"] and m3.equipped.is_empty() and m3.decor_placed.owl.is_empty(), "испорченные мета-данные отбрасываются")
+
+
+# ---------- Локализация (scripts/i18n.gd) ----------
+
+func _test_i18n(g) -> void:
+	var Meta: Script = load("res://scripts/meta.gd")
+	var Screens: Script = load("res://scripts/screens.gd")
+	# Автоопределение по языку телефона
+	check(I18n.detect("ru") == "ru", "язык телефона ru -> русский")
+	check(I18n.detect("en") == "en" and I18n.detect("de") == "en" and I18n.detect("") == "en", "другой язык телефона -> английский")
+	# Все ключи есть в обоих языках, и %d/%s совпадают
+	var miss: Array = I18n.missing_keys()
+	check(miss.is_empty(), "все ключи переведены во всех языках (пропуски: %s)" % [miss])
+	var fmt_ok := true
+	for k in I18n.STR[I18n.DEFAULT]:
+		for l in I18n.LANGS:
+			var a: String = I18n.STR[I18n.DEFAULT][k]
+			var b: String = I18n.STR[l].get(k, "")
+			if a.count("%d") != b.count("%d") or a.count("%s") != b.count("%s"):
+				fmt_ok = false
+				printerr("    формат различается: ", l, ":", k)
+	check(fmt_ok, "подстановки %d/%s одинаковые во всех языках")
+	# У каждой вещи, украшения, зала, героя, вкладки, места есть название
+	var need: Array = []
+	for it in Meta.ITEMS + Meta.DECOR:
+		need.append("item_" + it.id)
+	for h in Meta.HALLS.size():
+		need.append("hall_%d" % h)
+	for h in Meta.HEROES:
+		need.append_array(["hero_" + h, "house_" + h, "pick_lives_" + h])
+	for sl in Meta.SLOTS:
+		need.append("slot_" + sl)
+	for sp in Meta.SPOTS:
+		need.append("spot_" + sp)
+	var names_ok := true
+	for l in I18n.LANGS:
+		for k in need:
+			if not I18n.STR[l].has(k):
+				names_ok = false
+				printerr("    нет перевода: ", l, ":", k)
+	check(names_ok, "названия всех вещей, украшений, залов, героев и мест переведены")
+	# Переключение языка
+	check(I18n.set_lang("en") and I18n.t("cascade") % 3 == "CASCADE ×3" and Meta.hall_name(5) == "Endless Depths", "английский: CASCADE ×3, Endless Depths")
+	check(Meta.lock_reason("necklace", 999, 1) == "Clear Amethyst Hall first" and Meta.item_name("cape") == "Starry cape", "английский: причина замка и название вещи")
+	check(Screens.shards_word(1) == "shard" and Screens.shards_word(5) == "shards", "английский: shard / shards")
+	check(I18n.set_lang("ru") and I18n.t("cascade") % 3 == "КАСКАД ×3" and Meta.hall_name(0) == "Аметистовый зал", "русский: КАСКАД ×3, Аметистовый зал")
+	check(Screens.shards_word(1) == "осколок" and Screens.shards_word(3) == "осколка" and Screens.shards_word(11) == "осколков" and Screens.shards_word(21) == "осколок", "русский: осколок / осколка / осколков")
+	check(not I18n.set_lang("xx") and I18n.lang == "ru", "неизвестный язык не ставится")
+	check(I18n.t("no_such_key") == "no_such_key", "нет ключа — показывается сам ключ, без падения")
+	# Выбор сохраняется в save.cfg ([settings] language)
+	g.set_language("en")
+	var cfg := ConfigFile.new()
+	cfg.load("user://save.cfg")
+	check(cfg.get_value("settings", "language", "") == "en", "язык записан в save.cfg")
+	I18n.lang = "ru"
+	g._load()
+	check(I18n.lang == "en", "язык из сохранения загружается")
+	g.toggle_language()
+	I18n.lang = "en"
+	g._load()
+	check(I18n.lang == "ru", "переключатель: en -> ru, сохраняется")
+	# Кнопка языка в меню паузы
+	g._layout()  # раскладка кнопок меню (в тесте _ready мог ещё не сработать)
+	g.start_level(1)
+	g._set_state(g.State.PAUSED)
+	g._pause_menu_tap(g.menu_buttons["language"].get_center())
+	check(I18n.lang == "en" and g.state == g.State.PAUSED, "кнопка «Язык» в паузе переключает язык")
+	# Старое сохранение без поля language — по языку телефона
+	var old := ConfigFile.new()
+	old.set_value("progress", "max_level", 3)
+	old.set_value("settings", "music", true)
+	old.save("user://save.cfg")
+	I18n.lang = "xx"
+	g._load()
+	check(I18n.lang == I18n.detect(OS.get_locale_language()), "старое сохранение без языка — по языку телефона (%s)" % I18n.lang)
+	var bad := ConfigFile.new()
+	bad.set_value("settings", "language", 42)
+	I18n.load_from(bad, "ru")
+	check(I18n.lang == "ru", "испорченное поле языка — автоопределение")

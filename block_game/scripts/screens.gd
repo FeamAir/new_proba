@@ -105,6 +105,30 @@ func _button(name: String, r: Rect2, label: String, primary := false, size := 36
 	_text(Vector2(r.position.x, r.get_center().y + size * 0.36), label, size, DARK_TEXT if primary else g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 
 
+## Кнопка языка: глобус и код (EN / RU). Нажатие — следующий язык, выбор сохраняется.
+func _lang_button(r: Rect2) -> void:
+	rects["lang"] = r
+	_pill(r, Color(0.1, 0.06, 0.2, 0.78))
+	var c := r.position + Vector2(30, r.size.y / 2.0)
+	var rad := 14.0
+	g.draw_arc(c, rad, 0, TAU, 28, g.TEXT, 2.5, true)
+	g.draw_line(c - Vector2(rad, 0), c + Vector2(rad, 0), g.TEXT, 2.0, true)
+	g.draw_line(c - Vector2(0, rad), c + Vector2(0, rad), g.TEXT, 2.0, true)
+	g.draw_set_transform(c, 0.0, Vector2(0.45, 1.0))
+	g.draw_arc(Vector2.ZERO, rad, 0, TAU, 28, g.TEXT, 2.5, true)
+	g.draw_set_transform(Vector2.ZERO)
+	_text(Vector2(r.position.x + 50, r.position.y + r.size.y / 2.0 + 11), I18n.lang_code(), 30, g.TEXT)
+
+
+func _tap_lang(pos: Vector2) -> bool:
+	if not rects.get("lang", Rect2()).has_point(pos):
+		return false
+	g.play("click")
+	g.toggle_language()
+	say(I18n.lang_name())
+	return true
+
+
 func _back_button() -> void:
 	var r := Rect2(20, 30, 92, 76)
 	rects["back"] = r
@@ -172,9 +196,13 @@ func draw_pick() -> void:
 		_ctext(r.get_center().x, r.end.y - 30, I18n.t("pick_lives_" + kind), 24, g.DIM, r.size.x)
 	_button("ok", Rect2(160, 880 + oy, 400, 120), I18n.t("pick_ok"), true, 50, pick_choice != "")
 	_ctext(g.W / 2.0, 1070 + oy, I18n.t("pick_hint"), 26, g.DIM)
+	_lang_button(Rect2(g.W - 136, 24 + oy * 0.5, 116, 58))
+	_toast(1120 + oy)
 
 
 func tap_pick(pos: Vector2) -> void:
+	if _tap_lang(pos):
+		return
 	for kind in Meta.HEROES:
 		if rects.get("hero_" + kind, Rect2()).has_point(pos):
 			pick_choice = kind
@@ -214,6 +242,7 @@ func draw_home() -> void:
 	avatar(Vector2(72, 72), 48)
 	rects["avatar"] = Rect2(20, 20, 104, 104)
 	_counters(g.W - 20, 44)
+	_lang_button(Rect2(140, 44, 116, 58))
 	g._draw_title(Vector2(g.W / 2.0, 200), 80, 6.0)
 	# нижняя полоса с кнопками
 	var by := H - 340.0
@@ -241,6 +270,7 @@ func draw_home() -> void:
 	_text(Vector2(140, H - 74), I18n.t("map"), 38, g.TEXT)
 	_hanger_icon(Vector2(430, H - 88))
 	_text(Vector2(470, H - 74), I18n.t("wardrobe"), 36, g.TEXT)
+	_toast(260)
 	_fade_over(Rect2(0, 0, g.W, H))
 
 
@@ -258,6 +288,8 @@ func _hanger_icon(c: Vector2) -> void:
 
 
 func tap_home(pos: Vector2) -> void:
+	if _tap_lang(pos):
+		return
 	if rects.get("play", Rect2()).has_point(pos):
 		g.play("click")
 		g.start_level(g.max_level)
@@ -584,7 +616,7 @@ func draw_map() -> void:
 		var sub := I18n.t("map_range") % [Meta.depth(first), Meta.depth(first + 9)] if h < 5 else I18n.t("map_below") % Meta.depth(51)
 		if h == 5 and g.max_level <= 50:
 			sub = I18n.t("map_locked")
-		g._rbox(Rect2(110, y0 + 30, 500, 110), Color(0.06, 0.035, 0.13, 0.85), 30)
+		g._rbox(Rect2(70, y0 + 30, 580, 110), Color(0.06, 0.035, 0.13, 0.85), 30)
 		_shadow_text(g.W / 2.0, y0 + 80, Meta.hall_name(h), 44, col)
 		_ctext(g.W / 2.0, y0 + 122, sub, 26, g.DIM)
 	# точки уровней

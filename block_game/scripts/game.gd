@@ -155,7 +155,7 @@ func _ready() -> void:
 
 
 func _layout() -> void:
-	H = maxf(1280.0, get_viewport_rect().size.y)
+	H = maxf(1280.0, get_viewport_rect().size.y) if is_inside_tree() else 1280.0
 	var btn_h := 116.0
 	var btn_y := H - btn_h - 20.0
 	var top := 160.0
@@ -167,7 +167,7 @@ func _layout() -> void:
 	for i in names.size():
 		buttons[names[i]] = Rect2(16 + i * (w + 12), btn_y, w, btn_h)
 	var mw := 460.0
-	var y0 := H * 0.5 - 160.0
+	var y0 := H * 0.5 - 220.0
 	var items := ["resume", "music", "sound", "language", "restart", "menu"]
 	for i in items.size():
 		menu_buttons[items[i]] = Rect2((W - mw) / 2.0, y0 + i * 104.0, mw, 88)
