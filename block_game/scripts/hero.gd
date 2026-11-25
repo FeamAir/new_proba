@@ -1063,6 +1063,10 @@ func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_onl
 	_T = TH
 	# Голова: круглая, с пушистыми щёчками
 	_shape(["kit_head", body], _kit_head(), Vector2(-8, -48), body, 1.15, 0.45)
+	# пушистые щёчки: маленькие прядки по бокам
+	for sx in [-1.0, 1.0]:
+		for k in 2:
+			_ball(Vector2(sx * (90 - k * 4), -12 + k * 16), 12, 7, body, sx * (0.25 + k * 0.35), 1.3, 0.3, 0.0)
 	if stripes:
 		# «М» на лбу и полоски на щёчках
 		for i in 3:
@@ -1155,12 +1159,6 @@ func _kit_head() -> PackedVector2Array:
 		if v.y > 0.0:
 			v.x *= 1.0 + 0.05 * sin(th)
 			v.y *= 0.95
-		# пушистые щёчки: по две «прядки» с боков
-		var a2 := th if th < PI else TAU - th
-		var side := minf(absf(a2 - 0.42), absf(a2 - (PI - 0.42)))
-		if side < 0.32 and th < PI:
-			var u := (0.32 - side) / 0.32
-			v *= 1.0 + 0.07 * u * (0.5 + 0.5 * cos(side * 30.0))
 		pts.append(v + Vector2(0, -38))
 	_store(key, pts)
 	return pts
