@@ -29,6 +29,10 @@ const Meta := preload("res://scripts/meta.gd")
 const Screens := preload("res://scripts/screens.gd")
 ## Тексты на разных языках (английский, русский): scripts/i18n.gd
 const I18n := preload("res://scripts/i18n.gd")
+## 0.9: обучение (scripts/tutorial.gd), помощь и счётчик попыток (scripts/assist.gd, assist_ui.gd)
+const Tutorial := preload("res://scripts/tutorial.gd")
+const Assist := preload("res://scripts/assist.gd")
+const AssistUI := preload("res://scripts/assist_ui.gd")
 ## true — после очистки падают все группы поля (и камень уровня над дырами ниже линии);
 ## false — только то, что выше нижней очищенной линии (ниже неё поле не трогается).
 const FALL_ALL := false
@@ -95,6 +99,9 @@ var big_chains := 0        # цепочек ×3 и выше в этой парт
 var last_reward := {}      # начисление осколков за последнюю победу (Meta.win_reward)
 var meta = Meta.new()
 var screens
+var tut = Tutorial.new()      # 0.9: обучение
+var assist = Assist.new()     # 0.9: помощь, попытки, подарок новичку
+var assist_ui
 
 var fall_timer := 0.0
 var lock_timer := 0.0
@@ -146,6 +153,7 @@ func _ready() -> void:
 	piece_ids.resize(ROWS * COLS)
 	piece_ids.fill(0)
 	screens = Screens.new(self)
+	assist_ui = AssistUI.new(self)
 	_load()
 	_setup_audio()
 	for i in 28:
@@ -167,8 +175,8 @@ func _layout() -> void:
 	for i in names.size():
 		buttons[names[i]] = Rect2(16 + i * (w + 12), btn_y, w, btn_h)
 	var mw := 460.0
-	var y0 := H * 0.5 - 220.0
-	var items := ["resume", "music", "sound", "language", "restart", "menu"]
+	var y0 := H * 0.5 - 260.0
+	var items := ["resume", "music", "sound", "language", "tutorial", "restart", "menu"]
 	for i in items.size():
 		menu_buttons[items[i]] = Rect2((W - mw) / 2.0, y0 + i * 104.0, mw, 88)
 
@@ -275,8 +283,23 @@ func start_level(n: int) -> void:
 	popups.clear()
 	rng.seed = randi()
 	next_type = _pick_type(-1)
+	_apply_assist(n)
+	tut.on_start(self)
+	if tut.wants_first_piece(n):
+		next_type = Tutorial.FIRST_PIECE
 	_set_state(State.PLAYING)
 	_spawn()
+
+
+## 0.9: попытка засчитывается; принятая «Подсказка кристалла» убирает нижние ряды камня.
+func _apply_assist(n: int) -> void:
+	var rows: int = assist.on_start(n)
+	if rows <= 0:
+		return
+	var res: Dictionary = Assist.apply_boost(board, COLS, ROWS, EMPTY, CRYSTAL, rows, crystals_total)
+	crystals_left = crystals_total - int(res.freed)
+	if res.rows > 0:
+		_popup(I18n.t("boost_popup"), board_pos + Vector2(COLS * CELL / 2.0, (ROWS - 4) * CELL), CRYSTAL_COL, 34)
 
 
 func _shuffle(a: Array, lr: RandomNumberGenerator) -> void:
@@ -327,6 +350,8 @@ func _spawn() -> void:
 	has_piece = true
 	if not fits(piece_cells, piece_pos):
 		_lose()
+	else:
+		tut.on_spawn(self)
 
 
 func fits(cells: Array, pos: Vector2i) -> bool:
@@ -347,6 +372,7 @@ func move(dx: int) -> bool:
 		piece_pos.x += dx
 		_moved()
 		play("move", randf_range(0.97, 1.03), -4.0)
+		tut.on_action(self, "move")
 		return true
 	return false
 
@@ -366,6 +392,7 @@ func rotate_piece() -> bool:
 			piece_pos += k
 			_moved()
 			play("rotate")
+			tut.on_action(self, "rotate")
 			return true
 	return false
 
@@ -376,6 +403,7 @@ func soft_drop() -> bool:
 	if fits(piece_cells, piece_pos + Vector2i(0, 1)):
 		piece_pos.y += 1
 		fall_timer = 0.0
+		tut.on_action(self, "soft")
 		return true
 	return false
 
@@ -427,6 +455,7 @@ func _lock(silent := false) -> void:
 	if not silent:
 		play("land")
 	chain = 0
+	tut.on_action(self, "lock")
 	if not _check_lines():
 		_after_chain()
 
@@ -470,6 +499,7 @@ func _check_lines() -> bool:
 	if chain >= 2:
 		_popup(I18n.t("cascade") % chain, Vector2(px, mid_y - 50), ACCENT, 46)
 		play("combo%d" % mini(chain - 1, 5))
+		tut.on_cascade(self)
 	else:
 		play("line%d" % mini(n, 4))
 	_popup("+%d" % gained, Vector2(px, mid_y), TEXT, 38)
@@ -509,6 +539,12 @@ func _win() -> void:
 	has_piece = false
 	last_stars = 3 if pieces_used <= par else (2 if pieces_used <= int(par * 1.4) else 1)
 	last_reward = Meta.win_reward(not stars.has(level), stars.get(level, 0), last_stars, big_chains)
+	# 0.9: «Подарок новичку» за самую первую победу в игре
+	var gift: int = assist.take_gift(total_stars())
+	if gift > 0:
+		last_reward.gift = gift
+		last_reward.total += gift
+	assist.on_win(level, pieces_used)
 	meta.shards += last_reward.total
 	stars[level] = maxi(stars.get(level, 0), last_stars)
 	max_level = maxi(max_level, level + 1)
@@ -525,6 +561,9 @@ func _win() -> void:
 
 func _lose() -> void:
 	has_piece = false
+	assist.on_lose(level)
+	if assist.track:
+		_save()
 	_set_state(State.LOSE)
 	play("gameover")
 
@@ -540,6 +579,8 @@ func step(delta: float) -> void:
 				return
 			if fits(piece_cells, piece_pos + Vector2i(0, 1)):
 				lock_timer = 0.0
+				if tut.holds_fall():  # 0.9: пока на экране шаг обучения, фигура сама не падает
+					return
 				fall_timer += delta
 				if fall_timer >= fall_interval():
 					fall_timer = 0.0
@@ -549,10 +590,14 @@ func step(delta: float) -> void:
 				if lock_timer >= LOCK_DELAY:
 					_lock()
 		State.CLEARING:
+			if tut.is_info():  # 0.9: каскад «замирает», пока на экране пояснение обучения
+				return
 			clear_timer -= delta
 			if clear_timer <= 0.0:
 				_finish_clear()
 		State.SETTLE:
+			if tut.is_info():
+				return
 			settle_timer -= delta
 			if settle_timer <= 0.0:
 				fall_dist.fill(0)
@@ -577,6 +622,11 @@ func _load() -> void:
 	# язык: из [settings] language; в старом сохранении его нет — по языку телефона
 	I18n.load_from(cfg, OS.get_locale_language())
 	meta.load_from(cfg)  # старое сохранение без [meta] — значения по умолчанию
+	# 0.9: [tutorial] и [stats]; в старом сохранении их нет — значения по умолчанию
+	tut.load_from(cfg, max_level)
+	assist.load_from(cfg)
+	if not cfg.has_section("stats") and total_stars() > 0:
+		assist.gift_given = true  # игрок с прогрессом — не новичок
 	# Подарок игрокам версий до 0.6: осколки за уже пройденное (один раз, пока нет раздела [meta]).
 	if not cfg.has_section("meta") and max_level > 1:
 		meta.shards += legacy_gift(total_stars())
@@ -606,6 +656,8 @@ func _save() -> void:
 	cfg.set_value("settings", "sfx", sfx_on)
 	I18n.save_to(cfg)
 	meta.save_to(cfg)
+	tut.save_to(cfg)
+	assist.save_to(cfg)
 	cfg.save(SAVE_PATH)
 
 
@@ -641,7 +693,10 @@ func _update_effects(delta: float) -> void:
 			p.p += p.v * delta
 			p.rot += delta * 6.0
 	particles = particles.filter(func(p): return p.life > 0.0)
+	var hold_popups: bool = tut.is_info() and state == State.CLEARING  # 0.9: «КАСКАД ×2» видно, пока идёт пояснение
 	for p in popups:
+		if hold_popups and p.life < 0.6:
+			continue
 		p.life -= delta
 		p.p.y -= 50.0 * delta
 	popups = popups.filter(func(p): return p.life > 0.0)
@@ -658,6 +713,8 @@ func _process(delta: float) -> void:
 	step(delta)
 	_update_effects(delta)
 	screens.update(delta)
+	tut.update(delta)
+	assist_ui.update(delta)
 	for idx in held.keys():
 		var n: String = held[idx]
 		if n in ["left", "right", "soft"]:
@@ -679,6 +736,8 @@ func _notification(what: int) -> void:
 			State.WARDROBE:
 				if not screens.cancel_try():  # сначала снимается примерка
 					go_home()
+			State.PAUSED when assist_ui.stats_open:
+				assist_ui.stats_open = false
 			State.PAUSED, State.WIN, State.LOSE, State.MAP:
 				go_home()
 			State.PICK_HERO:
@@ -736,23 +795,30 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 			go_home()
 			return
 		State.HOME:
-			screens.tap_home(pos)
+			if not assist_ui.tap_home(pos):
+				screens.tap_home(pos)
 			return
 		State.PICK_HERO:
 			screens.tap_pick(pos)
 			return
 		State.WARDROBE:
+			tut.wardrobe_tap(self)
 			screens.tap_wardrobe(pos)
 			return
 		State.MAP:
 			screens.map_down(idx, pos)
 			return
 		State.WIN, State.LOSE:
+			if state == State.LOSE and assist_ui.tap_lose(pos):
+				return
 			screens.tap_end(pos)
 			return
 		State.PAUSED:
-			_pause_menu_tap(pos)
+			if not assist_ui.tap_pause(pos):
+				_pause_menu_tap(pos)
 			return
+	if tut.on_tap(self, pos):  # 0.9: шаг-пояснение обучения закрывается касанием
+		return
 	if pause_rect.grow(12).has_point(pos):
 		if state == State.PLAYING:
 			play("pause")
@@ -782,6 +848,10 @@ func _pause_menu_tap(pos: Vector2) -> void:
 					sfx_on = not sfx_on
 					_save()
 				"language": toggle_language()
+				"tutorial":  # 0.9: повтор обучения — уровень 1 с первыми шагами
+					tut.replay()
+					_save()
+					start_level(1)
 				"restart": start_level(level)
 				"menu": go_home()
 			return
@@ -850,6 +920,7 @@ func _draw() -> void:
 	match state:
 		State.HOME:
 			screens.draw_home()
+			assist_ui.draw_home_goal()
 			return
 		State.PICK_HERO, State.WARDROBE, State.MAP:
 			_draw_background()
@@ -857,6 +928,7 @@ func _draw() -> void:
 				screens.draw_pick()
 			elif state == State.WARDROBE:
 				screens.draw_wardrobe()
+				_draw_wardrobe_hint()
 			else:
 				screens.draw_map()
 			return
@@ -869,7 +941,22 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO)
 	_draw_controls()
 	_draw_effects()
+	if state in [State.PLAYING, State.CLEARING, State.SETTLE]:
+		tut.draw(self)
 	_draw_overlay()
+
+
+## 0.9: подсказка при первом заходе в гардероб — на первой карточке вещи.
+func _draw_wardrobe_hint() -> void:
+	if not tut.wardrobe_hint() or screens.tryon.active():
+		return
+	var first := Rect2()
+	for k in screens.rects:
+		if String(k).begins_with("item_"):
+			var r: Rect2 = screens.rects[k]
+			if first.size.x <= 0 or r.position.y < first.position.y or (r.position.y == first.position.y and r.position.x < first.position.x):
+				first = r
+	tut.draw_wardrobe(self, first)
 
 
 func _draw_background() -> void:
@@ -1097,15 +1184,21 @@ func _draw_overlay() -> void:
 			_center_text(I18n.t("pause_title"), menu_buttons["resume"].position.y - 50, 60, TEXT)
 			var labels := {"resume": I18n.t("pause_resume"), "music": I18n.t("pause_music") % I18n.t("on" if music_on else "off"),
 				"sound": I18n.t("pause_sound") % I18n.t("on" if sfx_on else "off"), "language": I18n.t("pause_lang") % I18n.lang_name(),
-				"restart": I18n.t("pause_restart"), "menu": I18n.t("home")}
+				"restart": I18n.t("pause_restart"), "menu": I18n.t("home"), "tutorial": I18n.t("pause_tutorial")}
 			for n in menu_buttons:
 				var r: Rect2 = menu_buttons[n]
 				_rbox(r, ACCENT if n == "resume" else BTN, 24)
 				draw_string(font, Vector2(r.position.x, r.get_center().y + 13), labels[n], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 34, Color("#2A1A0A") if n == "resume" else TEXT)
+			assist_ui.draw_pause_version()
+			if assist_ui.stats_open:
+				assist_ui.draw_stats()
 		State.WIN:
 			screens.draw_win()
 		State.LOSE:
-			screens.draw_lose()
+			if assist_ui.offers(level):
+				assist_ui.draw_lose()
+			else:
+				screens.draw_lose()
 
 
 func _draw_splash() -> void:

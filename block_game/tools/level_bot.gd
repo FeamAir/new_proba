@@ -68,6 +68,8 @@ func _initialize() -> void:
 
 	G = load("res://scripts/game.gd").new()
 	root.add_child(G)
+	G.tut.enabled = false     # 0.9: без обучения и без счётчика попыток
+	G.assist.track = false
 	COLS = G.COLS
 	ROWS = G.ROWS
 	EMPTY = G.EMPTY
