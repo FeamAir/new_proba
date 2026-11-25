@@ -37,7 +37,7 @@ var mismatches := 0
 
 
 func _initialize() -> void:
-	var args := {"levels": "1-30", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0"}
+	var args := {"levels": "1-30", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0", "dump": "0"}
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--") and a.contains("="):
 			var kv := a.substr(2).split("=", true, 1)
@@ -110,6 +110,8 @@ func _initialize() -> void:
 			float(chain_sum) / maxi(clears, 1), 100.0 * cascades / maxi(clears, 1), float(maxchain_sum) / games, med, sug]
 		print("%3d | %2d %2d %3d | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f | %3d | %3d" % [
 			row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15]])
+		if args.get("dump", "") == "1":
+			print("PIECES %d %s" % [n, ",".join(plist.map(func(v): return str(v)))])
 		lines.append("%d,%d,%d,%d,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f,%d,%d" % row)
 	print("время: %.1f с, несовпадений хода: %d" % [(Time.get_ticks_msec() - t0) / 1000.0, mismatches])
 	if args.csv != "":

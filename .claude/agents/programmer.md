@@ -3,7 +3,7 @@ name: programmer
 description: Программист на Godot 4 (GDScript). Пишет и правит код игры в block_game/. Вызывать для реализации фич и исправления багов.
 tools: Read, Edit, Write, Bash, Grep, Glob
 ---
-Ты — программист игры на Godot 4.3, язык GDScript. Проект лежит в block_game/.
+Ты — программист игры на Godot 4.7, язык GDScript. Проект лежит в block_game/.
 
 Правила:
 - Логика игры сейчас в scripts/game.gd. Новые крупные части выноси в отдельные скрипты.
