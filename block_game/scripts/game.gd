@@ -33,6 +33,8 @@ const I18n := preload("res://scripts/i18n.gd")
 const Tutorial := preload("res://scripts/tutorial.gd")
 const Assist := preload("res://scripts/assist.gd")
 const AssistUI := preload("res://scripts/assist_ui.gd")
+## 0.12: Кристальная кузница (scripts/forge_ui.gd)
+const ForgeUI := preload("res://scripts/forge_ui.gd")
 ## true — после очистки падают все группы поля (и камень уровня над дырами ниже линии);
 ## false — только то, что выше нижней очищенной линии (ниже неё поле не трогается).
 const FALL_ALL := false
@@ -66,7 +68,7 @@ const KICKS := [Vector2i(0, 0), Vector2i(-1, 0), Vector2i(1, 0), Vector2i(-2, 0)
 const SFX_NAMES := ["move", "rotate", "land", "drop", "line1", "line2", "line3", "line4",
 	"combo1", "combo2", "combo3", "combo4", "combo5", "crystal", "levelup", "gameover", "click", "pause"]
 
-enum State { SPLASH, HOME, PLAYING, PAUSED, CLEARING, SETTLE, WIN, LOSE, PICK_HERO, WARDROBE, MAP }
+enum State { SPLASH, HOME, PLAYING, PAUSED, CLEARING, SETTLE, WIN, LOSE, PICK_HERO, WARDROBE, MAP, FORGE }
 
 var state := State.SPLASH
 var state_time := 0.0
@@ -102,6 +104,7 @@ var screens
 var tut = Tutorial.new()      # 0.9: обучение
 var assist = Assist.new()     # 0.9: помощь, попытки, подарок новичку
 var assist_ui
+var forge_ui                  # 0.12: Кристальная кузница
 
 var fall_timer := 0.0
 var lock_timer := 0.0
@@ -154,6 +157,7 @@ func _ready() -> void:
 	piece_ids.fill(0)
 	screens = Screens.new(self)
 	assist_ui = AssistUI.new(self)
+	forge_ui = ForgeUI.new(self)
 	_load()
 	_setup_audio()
 	for i in 28:
@@ -538,7 +542,7 @@ func _after_chain() -> void:
 func _win() -> void:
 	has_piece = false
 	last_stars = 3 if pieces_used <= par else (2 if pieces_used <= int(par * 1.4) else 1)
-	last_reward = Meta.win_reward(not stars.has(level), stars.get(level, 0), last_stars, big_chains)
+	last_reward = Meta.win_reward(not stars.has(level), stars.get(level, 0), last_stars, big_chains, level)
 	# 0.9: «Подарок новичку» за самую первую победу в игре
 	var gift: int = assist.take_gift(total_stars())
 	if gift > 0:
@@ -715,6 +719,8 @@ func _process(delta: float) -> void:
 	screens.update(delta)
 	tut.update(delta)
 	assist_ui.update(delta)
+	if forge_ui:
+		forge_ui.update(delta)
 	for idx in held.keys():
 		var n: String = held[idx]
 		if n in ["left", "right", "soft"]:
@@ -736,6 +742,8 @@ func _notification(what: int) -> void:
 			State.WARDROBE:
 				if not screens.cancel_try():  # сначала снимается примерка
 					go_home()
+			State.FORGE:
+				forge_ui.back()
 			State.PAUSED when assist_ui.stats_open:
 				assist_ui.stats_open = false
 			State.PAUSED, State.WIN, State.LOSE, State.MAP:
@@ -807,6 +815,9 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 			return
 		State.MAP:
 			screens.map_down(idx, pos)
+			return
+		State.FORGE:
+			forge_ui.tap(pos)
 			return
 		State.WIN, State.LOSE:
 			if state == State.LOSE and assist_ui.tap_lose(pos):
@@ -921,6 +932,10 @@ func _draw() -> void:
 		State.HOME:
 			screens.draw_home()
 			assist_ui.draw_home_goal()
+			return
+		State.FORGE:
+			_draw_background()
+			forge_ui.draw()
 			return
 		State.PICK_HERO, State.WARDROBE, State.MAP:
 			_draw_background()

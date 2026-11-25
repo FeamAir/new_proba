@@ -243,7 +243,7 @@ func _test_halls() -> void:
 	# Условия вещей «пройти зал N» по-прежнему про залы 1..10
 	var cond_ok := true
 	for it in Meta.ITEMS + Meta.DECOR:
-		if it.has("hall"):
+		if it.has("hall") and not it.get("forge", false):  # 0.12: награды кузницы куются, а не покупаются
 			var n: int = it.hall
 			if n < 1 or n > Meta.HALL_COUNT:
 				cond_ok = false

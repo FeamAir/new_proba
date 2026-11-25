@@ -167,7 +167,7 @@ func tap_home(pos: Vector2) -> bool:
 				break
 		g.screens.open_wardrobe("home")
 	else:
-		g.screens.open_wardrobe(gl.slot)
+		g.screens.open_wardrobe(gl.slot, gl.id)
 	return true
 
 

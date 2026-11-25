@@ -8,6 +8,10 @@ const Hero := preload("res://scripts/hero.gd")
 const Home := preload("res://scripts/home.gd")
 const I18n := preload("res://scripts/i18n.gd")
 const TryOn := preload("res://scripts/tryon.gd")
+## 0.12: редкости (рамки и блеск карточек)
+const Rarity := preload("res://scripts/rarity.gd")
+## 0.12: вещей на странице гардероба (2 ряда по 3)
+const PAGE_SIZE := 6
 
 const NODE_GAP := 130.0     # шаг между уровнями на карте
 const HALL_HEAD := 240.0    # место под заголовок зала
@@ -39,6 +43,7 @@ var tryon = TryOn.new()     # примерка некупленной вещи /
 var fx_t := 99.0            # секунд с покупки (короткий эффект)
 var fx_at := Vector2.ZERO
 var focus := Vector2.ZERO   # где на сцене гардероба герой / место примерки
+var page := 0               # 0.12: страница вещей во вкладке гардероба
 
 
 func _init(game) -> void:
@@ -264,6 +269,7 @@ func draw_home() -> void:
 	rects["avatar"] = Rect2(20, 20, 104, 104)
 	_counters(g.W - 20, 44)
 	_lang_button(Rect2(140, 44, 116, 58))
+	g.forge_ui.draw_home_button()  # 0.12: вход в Кристальную кузницу
 	g._draw_title(Vector2(g.W / 2.0, 200), 80, 6.0)
 	# нижняя полоса с кнопками
 	var by := H - 410.0  # 0.9: под «Играть» — цель «До следующей вещи» (assist_ui.gd)
@@ -309,7 +315,7 @@ func _hanger_icon(c: Vector2) -> void:
 
 
 func tap_home(pos: Vector2) -> void:
-	if _tap_lang(pos):
+	if _tap_lang(pos) or g.forge_ui.tap_home_button(pos):
 		return
 	if rects.get("play", Rect2()).has_point(pos):
 		g.play("click")
@@ -334,19 +340,40 @@ func tap_home(pos: Vector2) -> void:
 
 # ---------- Гардероб ----------
 
-func open_wardrobe(t := "head") -> void:
+## focus_id (0.12) — открыть страницу вкладки, где эта вещь.
+func open_wardrobe(t := "head", focus_id := "") -> void:
 	tab = t
+	page = 0
+	if focus_id != "" and t != "home":
+		var i := Meta.items_in(t).map(func(it): return it.id).find(focus_id)
+		page = maxi(0, i) / PAGE_SIZE
 	tryon.clear()
 	g._set_state(g.State.WARDROBE)
+
+
+## Вкладки гардероба: слоты вещей и «Дом» (0.12: + спутник и сияние)
+func wr_tabs() -> Array:
+	var tabs := Meta.SLOTS.duplicate()
+	tabs.append("home")
+	return tabs
+
+
+func _wr_items(kind: String) -> Array:
+	return Meta.decor_for(kind, spot) if tab == "home" else Meta.items_in(tab)
+
+
+func page_count(n: int) -> int:
+	return maxi(1, (n + PAGE_SIZE - 1) / PAGE_SIZE)
 
 
 func _wr_layout() -> Dictionary:
 	var H: float = g.H
 	var card_h := 200.0
 	var grid_y := H - 24.0 - card_h * 2 - 14.0
-	var tabs_y := grid_y - 80.0
+	var pager_y := grid_y - 58.0
+	var tabs_y := pager_y - 74.0
 	var chips_y := tabs_y - 76.0
-	return {"grid_y": grid_y, "card_h": card_h, "tabs_y": tabs_y, "chips_y": chips_y,
+	return {"grid_y": grid_y, "card_h": card_h, "tabs_y": tabs_y, "chips_y": chips_y, "pager_y": pager_y,
 		"stage": Rect2(20, 122, 680, chips_y - 134.0)}
 
 
@@ -378,7 +405,7 @@ func draw_wardrobe() -> void:
 		for k in 5:
 			g.draw_circle(st.get_center() + Vector2(0, 40), 260 - k * 45, Color(0.45, 0.25, 0.8, 0.05 + k * 0.015), true, -1.0, true)
 		g.draw_colored_polygon(_ellipse(Vector2(st.get_center().x, st.end.y - 60), 210, 26), Color(0.2, 0.12, 0.36, 0.9))
-		var sc: float = WR_SCALE.get(kind, 1.4)
+		var sc: float = WR_SCALE.get(kind, 1.4) * (0.8 if tryon.outfit(g.meta).get("aura", "") == "wings_cascado" else 1.0)
 		var hp := Vector2(st.get_center().x, st.end.y - 60 - 112 * sc)
 		hero.draw(g, kind, hp, sc, tryon.outfit(g.meta), g.t_total, react)
 		rects["hero"] = Rect2(hp - Vector2(150, 170), Vector2(300, 320))
@@ -394,6 +421,25 @@ func draw_wardrobe() -> void:
 	_pill(shr, Color(0.1, 0.06, 0.2, 0.85))
 	shard_icon(shr.position + Vector2(32, 29), 17)
 	_text(shr.position + Vector2(58, 42), str(g.meta.shards), 34, g.CRYSTAL_COL)
+	# 0.12: кнопка Кристальной кузницы и счётчик коллекции
+	var fr := Rect2(shr.position.x - 100, 38, 88, 58)
+	rects["forge"] = fr
+	g._rbox(fr, g.BTN, 22)
+	g.draw_polyline(_rr_outline(fr.grow(-1), 21), Color("#9FF6FF", 0.45), 2.0, true)
+	g.forge_ui.anvil_icon(fr.get_center() + Vector2(0, 2), 40)
+	if g.meta.forge_ready_any(g.max_level):
+		var pc := fr.position + Vector2(fr.size.x - 8, 6)
+		var ps := 1.0 + 0.25 * sin(g.t_total * 8.0)
+		g.draw_circle(pc, 15 * ps, Color(OK_COL, 0.3), true, -1.0, true)
+		g.draw_circle(pc, 11, OK_COL, true, -1.0, true)
+		g.draw_string(g.font, pc + Vector2(-11, 7), "!", HORIZONTAL_ALIGNMENT_CENTER, 22, 20, DARK_TEXT)
+	if tab != "home":
+		var col_lbl := I18n.t("collection") % [g.meta.collection_count(), Meta.collection_total()]
+		var cw0: float = g.font.get_string_size(col_lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 30.0
+		var cpr := Rect2(st.end.x - cw0 - 12, st.position.y + 12, cw0, 36)
+		_pill(cpr, Color(0.1, 0.06, 0.2, 0.85))
+		_text(Vector2(cpr.position.x, cpr.position.y + 25), col_lbl, 20, Color("#FFD9F4"), cpr.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+		_text(Vector2(st.position.x + 18, st.position.y + 38), Meta.slot_name(tab), 28, Color(g.TEXT, 0.85))
 	# строка под сценой: герои или места для украшений
 	if tab == "home":
 		var n := Meta.SPOTS.size()
@@ -422,24 +468,28 @@ func draw_wardrobe() -> void:
 			hero.draw_avatar(g, h, r.position + Vector2(29, 31), 20, tryon.outfit(g.meta), g.t_total, g.ACCENT if sel else g.DIM)
 			var nm := Meta.hero_name(h)
 			_text(Vector2(r.position.x + 59, r.position.y + 40), nm, fit_size(nm, r.size.x - 66, 24), g.ACCENT if sel else g.TEXT)
-	# вкладки
-	var tabs := Meta.SLOTS.duplicate()
-	tabs.append("home")
-	var tw: float = (g.W - 40.0 - (tabs.size() - 1) * 8.0) / tabs.size()
+	# вкладки (0.12: значками — их восемь; название вкладки — на сцене)
+	var tabs := wr_tabs()
+	var tw: float = (g.W - 40.0 - (tabs.size() - 1) * 6.0) / tabs.size()
 	for i in tabs.size():
 		var tname: String = tabs[i]
-		var r := Rect2(20 + i * (tw + 8), L.tabs_y, tw, 64)
+		var r := Rect2(20 + i * (tw + 6), L.tabs_y, tw, 64)
 		rects["tab_" + tname] = r
 		var sel := tname == tab
 		g._rbox(r, g.ACCENT if sel else Color("#2A1A4F"), 18)
-		var label: String = I18n.t("tab_home") if tname == "home" else Meta.slot_name(tname)
-		_text(Vector2(r.position.x, r.position.y + 41), label, 22, DARK_TEXT if sel else g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
-	# сетка вещей
-	var items: Array = Meta.decor_for(kind, spot) if tab == "home" else Meta.items_in(tab)
+		_tab_icon(tname, r.get_center(), DARK_TEXT if sel else g.TEXT)
+	# сетка вещей по страницам
+	var items: Array = _wr_items(kind)
+	var pages := page_count(items.size())
+	page = clampi(page, 0, pages - 1)
+	_pager(L, pages)
 	var cw2: float = (g.W - 40.0 - 2 * 14.0) / 3.0
-	for i in mini(items.size(), 6):
+	for j in PAGE_SIZE:
+		var i := page * PAGE_SIZE + j
+		if i >= items.size():
+			break
 		var it: Dictionary = items[i]
-		var r := Rect2(20 + (i % 3) * (cw2 + 14), L.grid_y + (i / 3) * (L.card_h + 14), cw2, L.card_h)
+		var r := Rect2(20 + (j % 3) * (cw2 + 14), L.grid_y + (j / 3) * (L.card_h + 14), cw2, L.card_h)
 		rects["item_" + it.id] = r
 		_card(it, r, kind)
 	if tryon.active():
@@ -456,22 +506,132 @@ func _ellipse(c: Vector2, rx: float, ry: float) -> PackedVector2Array:
 	return pts
 
 
+## 0.12: строка страниц «‹  ● ○ ○  ›» над сеткой (стрелки — если страниц больше одной)
+func _pager(L: Dictionary, pages: int) -> void:
+	if pages <= 1:
+		return
+	var y: float = L.pager_y
+	var lr := Rect2(20, y, 132, 46)
+	var rr := Rect2(g.W - 152, y, 132, 46)
+	rects["page_prev"] = lr
+	rects["page_next"] = rr
+	for k in 2:
+		var r: Rect2 = [lr, rr][k]
+		var on: bool = page > 0 if k == 0 else page < pages - 1
+		g._rbox(r, g.BTN if on else Color(g.BTN, 0.4), 20)
+		var c := r.get_center()
+		var sx := -1.0 if k == 0 else 1.0
+		g.draw_colored_polygon(PackedVector2Array([c + Vector2(sx * 14, 0), c + Vector2(-sx * 8, -13), c + Vector2(-sx * 8, 13)]), Color(g.TEXT, 1.0 if on else 0.3))
+	for i in pages:
+		var c := Vector2(g.W / 2.0 + (i - (pages - 1) / 2.0) * 30.0, y + 23)
+		if i == page:
+			g.draw_circle(c, 10, g.ACCENT, true, -1.0, true)
+		else:
+			g.draw_circle(c, 7, Color(g.TEXT, 0.3), true, -1.0, true)
+
+
+## Значки вкладок гардероба
+func _tab_icon(name: String, c: Vector2, col: Color) -> void:
+	match name:
+		"head":
+			g.draw_colored_polygon(PackedVector2Array([c + Vector2(-16, 10), c + Vector2(2, -18), c + Vector2(16, 10)]), col)
+			g.draw_circle(c + Vector2(2, -18), 5, col, true, -1.0, true)
+			g.draw_rect(Rect2(c + Vector2(-19, 8), Vector2(38, 6)), col)
+		"eyes":
+			for sx in [-1.0, 1.0]:
+				g.draw_arc(c + Vector2(sx * 11, 2), 9, 0, TAU, 18, col, 3.5, true)
+			g.draw_line(c + Vector2(-3, 0), c + Vector2(3, 0), col, 3.0, true)
+		"neck":
+			for sx in [-1.0, 1.0]:
+				g.draw_colored_polygon(PackedVector2Array([c, c + Vector2(sx * 18, -11), c + Vector2(sx * 18, 11)]), col)
+			g.draw_circle(c, 5, col, true, -1.0, true)
+		"back":
+			g.draw_colored_polygon(PackedVector2Array([c + Vector2(-9, -16), c + Vector2(9, -16), c + Vector2(19, 16), c + Vector2(-19, 16)]), col)
+			g.draw_circle(c + Vector2(0, -15), 4, Color("#FFC83A"), true, -1.0, true)
+		"skin":
+			g.draw_circle(c, 17, col, true, -1.0, true)
+			var cols := [Color("#FF5FA8"), Color("#3FE0D0"), Color("#FFD23C"), Color("#B46CFF")]
+			for k in 4:
+				g.draw_circle(c + Vector2(cos(k * TAU / 4.0 - 0.6), sin(k * TAU / 4.0 - 0.6)) * 9.0, 4.5, cols[k], true, -1.0, true)
+		"companion":
+			g.draw_circle(c + Vector2(4, 3), 8, col, true, -1.0, true)
+			g.draw_set_transform(c + Vector2(-5, -6), -0.5, Vector2(1, 0.55))
+			g.draw_circle(Vector2.ZERO, 9, Color(col, 0.65), true, -1.0, true)
+			g.draw_set_transform(c + Vector2(5, -9), 0.4, Vector2(1, 0.55))
+			g.draw_circle(Vector2.ZERO, 9, Color(col, 0.65), true, -1.0, true)
+			g.draw_set_transform(Vector2.ZERO)
+			g.draw_circle(c + Vector2(4, 3), 3.5, Color("#FFE27A"), true, -1.0, true)
+		"aura":
+			Rarity.star4(g, c, 13, col)
+			g.draw_arc(c, 19, 0, TAU, 28, Color(col, 0.6), 2.5, true)
+		"home":
+			g.draw_colored_polygon(PackedVector2Array([c + Vector2(-18, -2), c + Vector2(0, -18), c + Vector2(18, -2)]), col)
+			g.draw_rect(Rect2(c + Vector2(-13, -3), Vector2(26, 19)), col)
+			g.draw_rect(Rect2(c + Vector2(-4, 5), Vector2(8, 11)), Color("#2A1A4F") if col != DARK_TEXT else g.ACCENT)
+
+
+## 0.12: значок набора на карточке (в цвете набора)
+func set_badge(n: int, c: Vector2, r: float) -> void:
+	var col: Color = Meta.set_info(n).col
+	g.draw_circle(c, r + 3, Color(0.06, 0.03, 0.12, 0.9), true, -1.0, true)
+	g.draw_circle(c, r, Color(col, 0.28), true, -1.0, true)
+	g.draw_arc(c, r, 0, TAU, 20, col, 2.0, true)
+	match n:
+		1:  # светлячок
+			g.draw_circle(c, r * 0.6, Color(col, 0.35), true, -1.0, true)
+			g.draw_circle(c, r * 0.32, Color("#F5FF8A"), true, -1.0, true)
+		2:  # ракушка
+			var pts := PackedVector2Array([c + Vector2(0, r * 0.55)])
+			for i in 9:
+				var a := lerpf(PI * 1.1, PI * 1.9, i / 8.0)
+				pts.append(c + Vector2(cos(a), sin(a) + 0.3) * r * 0.62)
+			g.draw_colored_polygon(pts, col)
+		3:  # полумесяц
+			g.draw_circle(c, r * 0.55, col, true, -1.0, true)
+			g.draw_circle(c + Vector2(r * 0.25, -r * 0.12), r * 0.45, Color(0.09, 0.05, 0.18), true, -1.0, true)
+		4:  # планета
+			g.draw_circle(c, r * 0.36, col, true, -1.0, true)
+			g.draw_set_transform(c, -0.35, Vector2(1, 0.32))
+			g.draw_arc(Vector2.ZERO, r * 0.68, 0, TAU, 20, col, 3.0, true)
+			g.draw_set_transform(Vector2.ZERO)
+		5:  # кристалл
+			g.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r * 0.62), c + Vector2(r * 0.45, -r * 0.1), c + Vector2(0, r * 0.62), c + Vector2(-r * 0.45, -r * 0.1)]), col)
+			g.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r * 0.62), c + Vector2(r * 0.45, -r * 0.1), c + Vector2(0, -r * 0.05)]), Color(1, 1, 1, 0.6))
+
+
 func _card(it: Dictionary, r: Rect2, kind: String) -> void:
 	var is_decor := it.has("home")
 	var on: bool = g.meta.placed_at(kind, spot) == it.id if is_decor else g.meta.is_equipped(it.id)
 	var own: bool = g.meta.is_owned(it.id)
 	var lock: String = "" if own else Meta.lock_reason(it.id, g.total_stars(), g.max_level)
+	var forge_item: bool = Meta.is_forge(it.id)
+	var rar := "" if is_decor else Meta.rarity(it.id)
+	var seed := float(it.id.hash() % 101) * 0.37
 	g._rbox(r, Color("#3A2468") if on else Color("#24173F"), 22)
+	if rar != "":
+		Rarity.frame(g, r, rar, g.t_total, 22.0, seed)
 	if on:
-		g.draw_polyline(_rr_outline(r.grow(-2), 20), OK_COL, 4.0, true)
+		g.draw_polyline(_rr_outline(r.grow(-7), 16), OK_COL, 3.0, true)
 	var ic := r.position + Vector2(r.size.x / 2.0, 66)
 	if lock != "":
 		g.draw_circle(ic, 56, Color(0, 0, 0, 0.25), true, -1.0, true)
+	elif rar != "":
+		Rarity.icon_glow(g, rar, ic, 120, g.t_total, seed)
 	if is_decor:
 		home.draw_decor_icon(g, it.id, ic, 118, g.t_total)
 	else:
 		hero.draw_item_icon(g, it.id, it.slot, kind, ic, 120, g.t_total)
 	g.draw_set_transform(Vector2.ZERO)
+	if rar != "":
+		if lock == "" or own:
+			Rarity.icon_fx(g, rar, ic, 120, g.t_total, seed, Rect2(r.position + Vector2(6, 6), Vector2(r.size.x - 12, 128)))
+		# камушек редкости в углу и значок набора
+		var gc := r.position + Vector2(20, 20)
+		var gcol := Rarity.frame_col(rar, g.t_total, seed)
+		g.draw_colored_polygon(PackedVector2Array([gc + Vector2(0, -9), gc + Vector2(7, 0), gc + Vector2(0, 9), gc + Vector2(-7, 0)]), gcol)
+		g.draw_colored_polygon(PackedVector2Array([gc + Vector2(0, -9), gc + Vector2(7, 0), gc + Vector2(0, -1)]), Color(1, 1, 1, 0.55))
+		if Meta.set_of(it.id) > 0:
+			set_badge(Meta.set_of(it.id), r.position + Vector2(r.size.x - 22, 22), 14.0)
 	if lock != "":
 		g._rbox(Rect2(r.position, Vector2(r.size.x, 132)), Color(0.08, 0.04, 0.15, 0.5), 22)
 	if tryon.id == it.id:
@@ -486,6 +646,10 @@ func _card(it: Dictionary, r: Rect2, kind: String) -> void:
 		_ctext(cx, sy, I18n.t("card_placed") if is_decor else I18n.t("card_worn"), 24, OK_COL, r.size.x)
 	elif own:
 		_ctext(cx, sy, I18n.t("card_place") if is_decor else I18n.t("card_wear"), 24, g.ACCENT, r.size.x)
+	elif forge_item and Meta.hall_done(int(it.hall), g.max_level):
+		# 0.12: награда кузницы — не продаётся, куётся
+		g.forge_ui.anvil_icon(Vector2(r.position.x + 40, sy - 10), 30)
+		_ctext(cx + 16, sy, I18n.t("card_forge"), 24, Color("#9FF6FF"), r.size.x - 40)
 	elif lock != "":
 		_lock_icon(Vector2(r.position.x + 30, sy - 10), 16, g.DIM)
 		var short := ""
@@ -556,10 +720,21 @@ func _try_panel(L: Dictionary, kind: String) -> void:
 	# название и состояние
 	var tx: float = r.position.x + 106
 	var tw: float = pr.position.x - tx - 10
-	_text(Vector2(tx, r.position.y + 42), Meta.item_name(tryon.id, kind), 30, g.TEXT, tw)
+	var tnm := Meta.item_name(tryon.id, kind)
+	_text(Vector2(tx, r.position.y + 42), tnm, fit_size(tnm, tw, 30), g.TEXT, tw)
 	var line := I18n.t("try_hint")
 	var col: Color = g.DIM
-	if st == "poor":
+	if not it.has("home"):
+		# 0.12: редкость (и набор) — под названием, цветом редкости
+		var rar := Meta.rarity(tryon.id)
+		var rl := Meta.rarity_name(rar)
+		if Meta.set_of(tryon.id) > 0:
+			rl += " · " + Meta.set_title(Meta.set_of(tryon.id))
+		_text(Vector2(r.position.x + 16, r.position.y + 112), rl, fit_size(rl, r.size.x - 32, 20), Rarity.frame_col(rar, g.t_total), r.size.x - 32)
+	if Meta.is_forge(tryon.id) and Meta.hall_done(int(it.hall), g.max_level):
+		line = Meta.lock_reason(tryon.id, g.total_stars(), g.max_level)
+		col = Color("#9FF6FF")
+	elif st == "poor":
 		var n: int = tryon.shortage(g.meta)
 		line = I18n.t("poor_n") % [n, I18n.forms("shards_gen_forms", n)]
 		col = BAD_COL
@@ -573,6 +748,10 @@ func _try_panel(L: Dictionary, kind: String) -> void:
 	var by: float = r.end.y - 70
 	_button("try_cancel", Rect2(r.position.x + 14, by, 230, 58), I18n.t("cancel"), false, 30)
 	var br := Rect2(r.position.x + 258, by, r.size.x - 272, 58)
+	if Meta.is_forge(tryon.id):
+		# 0.12: награду кузницы не купить — кнопка ведёт в кузницу
+		_button("try_forge", br, I18n.t("to_forge"), true, 30)
+		return
 	var ok := st == "ok"
 	_button("try_buy", br, "", ok, 32, ok)
 	var label := I18n.t("buy_for") % tryon.price()
@@ -632,7 +811,11 @@ func tap_wardrobe(pos: Vector2) -> void:
 		if String(n).begins_with("item_") and rects[n].has_point(pos):
 			on_card = true
 	if tryon.active() and not on_card:
-		if rects.get("try_buy", Rect2()).has_point(pos):
+		if rects.get("try_forge", Rect2()).has_point(pos):
+			tryon.clear()
+			g.play("click")
+			g.forge_ui.open()
+		elif rects.get("try_buy", Rect2()).has_point(pos):
 			_confirm_try()
 		elif rects.get("try_cancel", Rect2()).has_point(pos) or not rects.get("try_panel", Rect2()).has_point(pos):
 			cancel_try()
@@ -641,13 +824,27 @@ func tap_wardrobe(pos: Vector2) -> void:
 		g.play("click")
 		g.go_home()
 		return
-	var tabs := Meta.SLOTS.duplicate()
-	tabs.append("home")
-	for tname in tabs:
+	if rects.get("forge", Rect2()).has_point(pos):
+		g.play("click")
+		g.forge_ui.open()
+		return
+	for tname in wr_tabs():
 		if rects.get("tab_" + tname, Rect2()).has_point(pos):
 			g.play("click")
+			if tab != tname:
+				page = 0
 			tab = tname
 			return
+	var kind0: String = g.meta.hero if g.meta.hero != "" else "owl"
+	var pages := page_count(_wr_items(kind0).size())
+	if rects.get("page_prev", Rect2()).has_point(pos) and page > 0:
+		g.play("click")
+		page -= 1
+		return
+	if rects.get("page_next", Rect2()).has_point(pos) and page < pages - 1:
+		g.play("click")
+		page += 1
+		return
 	for h in Meta.HEROES:
 		if tab != "home" and rects.get("chip_" + h, Rect2()).has_point(pos):
 			if g.meta.hero != h:
@@ -662,6 +859,7 @@ func tap_wardrobe(pos: Vector2) -> void:
 			if rects.get("chip_" + sp, Rect2()).has_point(pos) or rects.get("spot_" + sp, Rect2()).has_point(pos):
 				g.play("click")
 				spot = sp
+				page = 0
 				return
 	if rects.get("hero", Rect2()).has_point(pos) and tab != "home":
 		poke_hero()
@@ -917,7 +1115,7 @@ func draw_win() -> void:
 		_text(Vector2(box.position.x + 140, box.position.y + 84), "+%d %s" % [shown, shards_word(shown)], int(46 * bump), g.CRYSTAL_COL)
 		var parts: Array = []
 		if rw.get("win", 0) > 0:
-			parts.append(I18n.t("win_first" if rw.get("win", 0) == Meta.WIN_FIRST else "win_repeat") % rw.win)
+			parts.append(I18n.t("win_first" if rw.get("first", false) else "win_repeat") % rw.win)
 		if rw.get("stars", 0) > 0:
 			parts.append(I18n.t("win_stars") % rw.stars)
 		if rw.get("chains", 0) > 0:

@@ -237,7 +237,7 @@ func _test_goal_gift(g) -> void:
 	check(Assist.next_goal(m, "axolotl", 0, 1).id == "axo_starfish", "украшения — только своего дома")
 	m.shards = 0
 	for it in Meta.ITEMS + Meta.DECOR:
-		if it.price <= 30 and not m.is_owned(it.id):
+		if it.has("price") and it.price <= 30 and not m.is_owned(it.id):
 			if it.has("home"):
 				m.decor_owned.append(it.id)
 			else:
