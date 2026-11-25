@@ -33,6 +33,15 @@ const PALETTES := {
 		"skin_moon": {"body": Color("#D8DEFA"), "dark": Color("#A6B0E0"), "belly": Color("#F9FAFF"), "gill": Color("#7682FF"), "tip": Color("#D6DAFF")},
 		"skin_gold": {"body": Color("#FFCF70"), "dark": Color("#E8A848"), "belly": Color("#FFF3D2"), "gill": Color("#FF7428"), "tip": Color("#FFD6A6")},
 	},
+	## Щенок: у тех же вещей окраски — свои, «собачьи» (названия — i18n: item_skin_*_puppy).
+	##   ""  — золотистый ретривер; skin_mint — шоколадный; skin_moon — рыжий корги (белая проточина);
+	##   skin_gold — далматинец (пятна, тёмные ушки).
+	"puppy": {
+		"": {"body": Color("#F5CB8C"), "dark": Color("#DE9F57"), "belly": Color("#FFF2DE"), "nose": Color("#3F2622"), "eye": Color("#6B3E26")},
+		"skin_mint": {"body": Color("#AE7149"), "dark": Color("#7E482B"), "belly": Color("#EDCDA8"), "nose": Color("#2C1814"), "eye": Color("#4A2618")},
+		"skin_moon": {"body": Color("#F59A4A"), "dark": Color("#DC7430"), "belly": Color("#FFF7EE"), "nose": Color("#33201C"), "eye": Color("#6B3A22"), "blaze": true},
+		"skin_gold": {"body": Color("#F8F6FB"), "dark": Color("#463E52"), "belly": Color("#FFFFFF"), "nose": Color("#2C2433"), "eye": Color("#4A3A5E"), "spots": Color("#3A3346")},
+	},
 }
 
 ## Общий кэш сеток (на все экземпляры): ключ — параметры детали
@@ -756,6 +765,227 @@ func _axo_tail(p: Dictionary, t: float, env: float, react: float) -> void:
 			var b0 := a0 + 5
 			tidx.append_array([a0, b0, b0 + 1, a0, b0 + 1, a0 + 1])
 	RenderingServer.canvas_item_add_triangle_array(_rid, tidx, tpts, cc[2])
+
+
+# ---------- Щенок ----------
+
+## Пятна далматинца: [центр, rx, ry, наклон]
+const PUP_SPOTS_HEAD := [[Vector2(-62, -78), 10.0, 8.0, 0.4], [Vector2(56, -94), 7.0, 5.5, -0.3], [Vector2(74, -50), 7.5, 9.0, 0.2],
+	[Vector2(-30, -104), 6.0, 5.0, 0.0], [Vector2(-80, -34), 5.0, 6.0, 0.0], [Vector2(20, -12), 4.0, 3.5, 0.0]]
+const PUP_SPOTS_BODY := [[Vector2(-44, 50), 9.0, 7.5, 0.3], [Vector2(40, 84), 7.0, 6.0, -0.2], [Vector2(50, 44), 5.5, 5.0, 0.0],
+	[Vector2(-64, 100), 8.0, 6.5, 0.4], [Vector2(70, 94), 6.5, 5.5, 0.0], [Vector2(-14, 98), 4.5, 4.0, 0.0]]
+
+
+func _puppy(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only: bool) -> void:
+	var env := react_env(react)
+	# Голова чуть покачивается; при касании — радостно мотает головой
+	var tilt := 0.05 * sin(t * 0.9)
+	if env > 0.0:
+		tilt += 0.13 * env * sin(react * 9.0)
+	var pivot := Vector2(0, 30)
+	var hp := func(v: Vector2) -> Vector2: return (v - pivot).rotated(tilt) + pivot
+	var TH := Transform2D(tilt, pivot) * Transform2D(0.0, -pivot)
+	var a := _anchors("puppy", hp, tilt)
+	var body: Color = p.body
+	var dark: Color = p.dark
+	var belly: Color = p.belly
+	var spots: bool = p.has("spots")
+
+	if not head_only:
+		_glow(Vector2(0, 122), 100, 15, Color(0.03, 0.0, 0.1, 0.5))
+		_back_items(outfit, a, t, true)
+		_pup_tail(p, t, env, react)
+		# Задние лапки (пухлые бёдрышки) и туловище
+		for sx in [-1.0, 1.0]:
+			_ball(Vector2(sx * 52, 96), 34, 27, body.darkened(0.04), sx * 0.3, 1.1)
+			_ball(Vector2(sx * 70, 116), 19, 11, belly if spots else body.lerp(belly, 0.45), 0.0, 1.0, 0.3, 1.0)
+		_ball(Vector2(0, 70), 64, 54, body, 0.0, 1.15)
+		# пушистая светлая грудка
+		_glow(Vector2(0, 66), 44, 40, Color(belly, 0.95))
+		_ball(Vector2(0, 62), 30, 26, belly, 0.0, 2.6, 0.12, 0.0)
+		if spots:
+			for s in PUP_SPOTS_BODY:
+				_ball(s[0], s[1], s[2], p.spots, s[3], 2.4, 0.15, 0.0)
+		# Передние лапки с подушечками-пальчиками
+		for sx in [-1.0, 1.0]:
+			_ball(Vector2(sx * 25, 90), 17, 24, body, 0.0, 1.1, 0.35)
+			var pc := Vector2(sx * 27, 110)
+			var pawc := body.lerp(belly, 0.55)
+			_ball(pc, 21, 13.5, pawc, 0.0, 1.1, 0.4)
+			for k in 3:
+				_ball(pc + Vector2((k - 1) * 10.0, 7.5 - absf(k - 1) * 1.5), 5.6, 4.6, pawc.lerp(Color.WHITE, 0.25), 0.0, 1.0, 0.3, 1.0)
+
+	_T = TH
+	# Голова: круглая, с пухлыми щёчками
+	_shape(["pup_head", body], _pup_head(), Vector2(-8, -48), body, 1.15, 0.45)
+	if spots:
+		for s in PUP_SPOTS_HEAD:
+			_ball(s[0], s[1], s[2], p.spots, s[3], 2.4, 0.15, 0.0)
+	if p.has("blaze"):
+		# белая проточина корги: от носа по лбу
+		_glow(Vector2(0, -56), 22, 42, Color(belly, 0.9))
+		_ball(Vector2(0, -50), 12, 36, belly, 0.0, 3.0, 0.1, 0.0)
+	# Хохолок на макушке (под шапками не виден)
+	if outfit.get("head", "") == "":
+		for i in 3:
+			var hc := Vector2(-9 + i * 9, -114 + absf(i - 1) * 3)
+			_ball(hc, 8, 11, body.lightened(0.04), (i - 1) * 0.5, 1.2, 0.35, 0.0)
+	# Светлая мордочка
+	_glow(Vector2(0, -2), 70, 40, Color(belly, 0.75))
+	_ball(Vector2(0, -6), 40, 27, belly, 0.0, 2.2, 0.2, 0.0)
+
+	# Висячие ушки: покачиваются, при касании подпрыгивают
+	var bounce := env * absf(sin(react * 10.0))
+	for sx in [-1.0, 1.0]:
+		# мягкая тень от ушка на голове
+		_glow(Vector2(sx * 80, -50), 26, 48, Color(dark.darkened(0.45), 0.22))
+	for sx in [-1.0, 1.0]:
+		var ang: float = sx * (0.1 + 0.05 * sin(t * 1.7 + sx)) - sx * 0.6 * bounce
+		_T = TH * Transform2D(ang, Vector2(sx * 68, -96))
+		_shape(["pup_ear", sx, dark], _pup_ear(sx), Vector2(sx * 10, 40), dark, 1.3, 0.35)
+	_T = TH
+
+	# Румянец
+	for sx in [-1.0, 1.0]:
+		_glow(Vector2(sx * 62, -8), 19, 11, BLUSH)
+
+	# Большие блестящие глаза; при касании — радостные дужки
+	var b := blink(t, 0.7)
+	var happy := env > 0.4
+	for sx in [-1.0, 1.0]:
+		var ec := Vector2(sx * 38, -44)
+		if happy:
+			_arc(ec + Vector2(0, 6), 15, 13, 1.1 * PI, 1.9 * PI, EYE_DARK, 6.0)
+			continue
+		if b < 0.3:
+			_arc(ec + Vector2(0, -4), 15, 9, 0.15 * PI, 0.85 * PI, EYE_DARK, 5.5)
+			continue
+		_pup_eye(ec, b, p)
+
+	# Нос-пуговка с бликом
+	var nc := Vector2(0, -16)
+	_T = TH * Transform2D(0.0, nc)
+	var nose := PackedVector2Array() if _cache.has(["pup_nose", p.nose]) else _chaikin(PackedVector2Array([Vector2(-15, -7), Vector2(15, -7), Vector2(4, 9), Vector2(-4, 9)]), 2)
+	_shape(["pup_nose", p.nose], nose, Vector2(0, -1), p.nose, 1.0, 0.95, 1.4)
+	_oval(Vector2(-5, -3.5), 5.5, 2.8, Color(1, 1, 1, 0.85), -0.15)
+	_dot(Vector2(6, -3), 1.4, Color(1, 1, 1, 0.6))
+	_T = TH
+
+	# Ротик-«w»; при касании — открыт и высунут язычок
+	var lip := Color(p.nose, 0.85)
+	var o := smoothstep(0.05, 0.4, env)
+	if o > 0.0:
+		var m := PackedVector2Array()
+		for i in 13:
+			var a2 := lerpf(0.0, PI, i / 12.0)
+			m.append(Vector2(cos(a2) * 11.0, -1.0 + sin(a2) * (3.0 + 9.0 * o)))
+		_vgrad(m, Color("#6E2A3A"), Color("#A23E58"))
+		var tw := sin(react * 14.0) * 1.5 * o
+		_ball(Vector2(tw, 6.0 + 9.0 * o), 9.5, 6.0 + 7.0 * o, Color("#FF7E9C"), 0.0, 1.2, 0.55, 0.0)
+		_line(PackedVector2Array([Vector2(tw, 3.0 + 6.0 * o), Vector2(tw, 6.0 + 12.0 * o)]), Color("#D9506F"), 1.8)
+	_line(PackedVector2Array([Vector2(0, -8), Vector2(0, -2)]), lip, 2.6)
+	_arc(Vector2(-6.5, -2), 6.5, 5.0, 0.0, PI, lip, 2.6, 10)
+	_arc(Vector2(6.5, -2), 6.5, 5.0, 0.0, PI, lip, 2.6, 10)
+	_T = Transform2D.IDENTITY
+
+	_front_items(outfit, a, t)
+
+
+## Контур головы: круг с чуть более широкими щёчками внизу (кэш)
+func _pup_head() -> PackedVector2Array:
+	var key := ["pup_head_pts"]
+	if _cache.has(key):
+		return _cache[key]
+	var pts := PackedVector2Array()
+	for i in 48:
+		var th := TAU * i / 48.0
+		var v := Vector2(cos(th) * 94.0, sin(th) * 78.0)
+		if v.y > 0.0:
+			v.x *= 1.0 + 0.07 * sin(th)
+			v.y *= 0.96
+		pts.append(v + Vector2(0, -38))
+	_store(key, pts)
+	return pts
+
+
+## Ушко (точка крепления — 0,0; висит вниз), sx — сторона
+func _pup_ear(sx: float) -> PackedVector2Array:
+	var key := ["pup_ear_pts", sx]
+	if _cache.has(key):
+		return _cache[key]
+	var base := [Vector2(-14, 2), Vector2(-4, -12), Vector2(12, -10), Vector2(26, 10), Vector2(40, 48), Vector2(42, 78),
+		Vector2(30, 98), Vector2(8, 102), Vector2(-8, 88), Vector2(-14, 50)]
+	var pts := PackedVector2Array()
+	for v in base:
+		pts.append(Vector2(v.x * sx, v.y))
+	pts = _chaikin(pts, 2)
+	_store(key, pts)
+	return pts
+
+
+func _pup_eye(ec: Vector2, b: float, p: Dictionary) -> void:
+	b = snappedf(b, 0.1)
+	var rx := 17.0
+	var ry := 20.0 * b
+	var key := ["pup_eye", b, p.eye]
+	var ms = _cache.get(key)
+	if ms == null:
+		var outl := _ell(Vector2.ZERO, rx, ry, 0.0, 30)
+		var low: Color = p.eye
+		var pts := PackedVector2Array([Vector2(0, ry * 0.1)])
+		var cols := PackedColorArray([EYE_DARK.lerp(low, 0.3)])
+		for v in outl:
+			pts.append(v)
+			cols.append(EYE_DARK.lerp(low, clampf(v.y / maxf(ry, 1.0) * 0.95 + 0.15, 0.0, 1.0)))
+		var idx := PackedInt32Array()
+		for i in 30:
+			idx.append_array([0, 1 + i, 1 + (i + 1) % 30])
+		var ep := PackedVector2Array()
+		var ec2 := PackedColorArray()
+		for i in 31:
+			ep.append(pts[1 + i % 30])
+			ec2.append(cols[1 + i % 30])
+		ms = [pts, cols, idx, ep, ec2]
+		_store(key, ms)
+	_put(ms, ec, 1.6)
+	_oval(ec + Vector2(-5.5, -8 * b), 6.6, 7.0 * b, Color(1, 1, 1, 0.97), -0.4)
+	_dot(ec + Vector2(6, 7.5 * b), 3.0 * b, Color(1, 1, 1, 0.92))
+	_dot(ec + Vector2(2, -12 * b), 1.5 * b, Color(1, 1, 1, 0.7))
+
+
+## Хвостик: виляет всегда, при касании — быстро-быстро
+func _pup_tail(p: Dictionary, t: float, env: float, react: float) -> void:
+	var ang := 0.22 * sin(t * 5.0) + env * 0.45 * sin(react * 26.0)
+	_T = Transform2D(ang, Vector2(54, 92))
+	var key := ["pup_tail_pts"]
+	var pts = _cache.get(key)
+	if pts == null:
+		pts = PackedVector2Array()
+		var mid := PackedVector2Array()
+		for i in 9:
+			var s := i / 8.0
+			mid.append(Vector2.ZERO.bezier_interpolate(Vector2(26, -2), Vector2(46, -18), Vector2(46, -48), s))
+		var l := PackedVector2Array()
+		var r := PackedVector2Array()
+		for i in 9:
+			var s := i / 8.0
+			var tg := (mid[mini(i + 1, 8)] - mid[maxi(i - 1, 0)]).normalized()
+			var w := lerpf(13.0, 10.0, s) + sin(s * PI) * 2.0
+			l.append(mid[i] + tg.orthogonal() * w)
+			r.append(mid[i] - tg.orthogonal() * w)
+		# круглый пушистый кончик
+		var tip := mid[8]
+		var tg2 := (mid[8] - mid[7]).normalized()
+		for i in range(1, 8):
+			l.append(tip + tg2.orthogonal().rotated(PI * i / 8.0) * 10.0)
+		r.reverse()
+		l.append_array(r)
+		pts = l
+		_store(key, pts)
+	_shape(["pup_tail", p.body], pts, Vector2(30, -18), p.body, 1.2, 0.4)
+	var tipc: Color = p.dark if p.has("spots") else p.body.lerp(p.belly, 0.5)
+	_ball(Vector2(46, -48), 10, 10, tipc, 0.0, 1.3, 0.35, 0.0)
+	_T = Transform2D.IDENTITY
 
 
 # ---------- Вещи ----------
