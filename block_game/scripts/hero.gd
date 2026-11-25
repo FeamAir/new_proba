@@ -1,5 +1,5 @@
 extends RefCounted
-## Герои Cascado — совёнок и аксолотль — и вещи гардероба. Всё рисуется кодом.
+## Герои Cascado — совёнок, аксолотль и щенок — и вещи гардероба. Всё рисуется кодом.
 ## Использование: Hero.new().draw(canvas_item, "owl", центр, масштаб, наряд, время, react)
 ##   наряд — словарь слот -> id вещи (scripts/meta.gd), react — секунд с последнего касания.
 ## Герой нарисован в своих координатах: туловище около (0, 0), ширина ~200, ноги на y ≈ 115.
@@ -351,9 +351,14 @@ func draw(target: CanvasItem, kind: String, pos: Vector2, sc: float, outfit: Dic
 	_T = Transform2D.IDENTITY
 	var breath := 1.0 + 0.018 * sin(t * 2.2)
 	var sway := 0.025 * sin(t * 1.25)
+	if kind == "puppy" and not head_only:
+		# при касании щенок радостно подпрыгивает (два прыжка)
+		pos.y -= absf(sin(clampf(react / REACT_TIME, 0.0, 1.0) * TAU)) * 14.0 * sc * react_env(react)
 	ci.draw_set_transform(pos, sway, Vector2(sc, sc * breath))
 	var p := palette(kind, outfit)
-	if kind == "axolotl":
+	if kind == "puppy":
+		_puppy(p, outfit, t, react, head_only)
+	elif kind == "axolotl":
 		_axolotl(p, outfit, t, react, head_only)
 	else:
 		_owl(p, outfit, t, react, head_only)
@@ -368,6 +373,8 @@ func draw_avatar(target: CanvasItem, kind: String, c: Vector2, r: float, outfit:
 	target.draw_circle(c + Vector2(0, r * 0.35), r * 0.7, Color(ring, 0.18), true, -1.0, true)
 	if kind == "axolotl":
 		draw(target, kind, c + Vector2(0, r * 0.22), r / 118.0, outfit, t, react, true)
+	elif kind == "puppy":
+		draw(target, kind, c + Vector2(0, r * 0.3), r / 118.0, outfit, t, react, true)
 	else:
 		draw(target, kind, c + Vector2(0, r * 0.12), r / 125.0, outfit, t, react, true)
 	target.draw_arc(c, r + 2, 0, TAU, 64, ring, 5.0, true)
@@ -376,6 +383,11 @@ func draw_avatar(target: CanvasItem, kind: String, c: Vector2, r: float, outfit:
 # ---------- Точки крепления ----------
 
 func _anchors(kind: String, hp: Callable, tilt: float) -> Dictionary:
+	if kind == "puppy":
+		# макушка — между висячими ушками; ошейник — под подбородком
+		return {"top": hp.call(Vector2(0, -106)), "top_w": 100.0, "tilt": tilt,
+			"eye_l": hp.call(Vector2(-38, -44)), "eye_r": hp.call(Vector2(38, -44)), "eye_rad": 24.0, "temple": 92.0,
+			"neck": Vector2(0, 42), "neck_w": 124.0, "back": Vector2(0, 66), "back_w": 136.0, "kind": kind}
 	if kind == "axolotl":
 		return {"top": Vector2(0, -92), "top_w": 116.0, "tilt": tilt,
 			"eye_l": Vector2(-44, -30), "eye_r": Vector2(44, -30), "eye_rad": 22.0, "temple": 96.0,
@@ -1170,6 +1182,9 @@ func _backpack(a: Dictionary, t: float, behind: bool) -> void:
 		if a.kind == "axolotl":
 			top = b + Vector2(sx * 40, -22) * k
 			bot = b + Vector2(sx * 50, 30) * k
+		elif a.kind == "puppy":
+			top = b + Vector2(sx * 46, -30) * k
+			bot = b + Vector2(sx * 58, 26) * k
 		var strap := PackedVector2Array([top, top.lerp(bot, 0.5) + Vector2(sx * 4, 0), bot])
 		ci.draw_polyline(strap, Color("#B5521E"), 15.0 * k + 2.0, true)
 		ci.draw_polyline(strap, Color("#2EC4B6"), 10.0 * k, true)
