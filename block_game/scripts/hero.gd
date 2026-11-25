@@ -1062,8 +1062,6 @@ func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_onl
 		_shape(["kit_ear_in", sx, p.inner], _kit_ear(sx, 0.62), Vector2(sx * 4, -18), p.inner, 2.0, 0.25, 0.0)
 	_T = TH
 	# Голова: круглая, с пушистыми щёчками
-	for sx in [-1.0, 1.0]:
-		_ball(Vector2(sx * 80, -6), 26, 20, body, sx * 0.5, 1.2, 0.35)
 	_shape(["kit_head", body], _kit_head(), Vector2(-8, -48), body, 1.15, 0.45)
 	if stripes:
 		# «М» на лбу и полоски на щёчках
@@ -1119,7 +1117,7 @@ func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_onl
 		for k in 3:
 			var y0 := -10.0 + k * 7.0
 			var wv := sin(t * 1.3 + k) * 1.2
-			_line(PackedVector2Array([Vector2(sx * 40, y0), Vector2(sx * 66, y0 - 3 + k * 2 + wv), Vector2(sx * 90, y0 - 2 + k * 6 + wv)]), wcol, 1.8)
+			_line(PackedVector2Array([Vector2(sx * 40, y0), Vector2(sx * 62, y0 - 3 + k * 2 + wv), Vector2(sx * 84, y0 - 2 + k * 6 + wv)]), wcol, 1.8)
 	_T = Transform2D.IDENTITY
 
 	# Мурлыканье: ноты и сердечки поднимаются над головой
@@ -1157,6 +1155,12 @@ func _kit_head() -> PackedVector2Array:
 		if v.y > 0.0:
 			v.x *= 1.0 + 0.05 * sin(th)
 			v.y *= 0.95
+		# пушистые щёчки: по две «прядки» с боков
+		var a2 := th if th < PI else TAU - th
+		var side := minf(absf(a2 - 0.42), absf(a2 - (PI - 0.42)))
+		if side < 0.32 and th < PI:
+			var u := (0.32 - side) / 0.32
+			v *= 1.0 + 0.07 * u * (0.5 + 0.5 * cos(side * 30.0))
 		pts.append(v + Vector2(0, -38))
 	_store(key, pts)
 	return pts
@@ -1199,20 +1203,52 @@ func _kit_tail(p: Dictionary, t: float, env: float, react: float) -> void:
 	var p3 := Vector2(100 + sway * 22.0, -14).lerp(Vector2(66 + sin(react * 12.0) * 6.0, -70), up)
 	var body: Color = p.body
 	var tipc: Color = p.dark if p.has("points") or p.has("stripes") else (p.belly if p.has("socks") else body.lerp(p.belly, 0.4))
-	var n := 13
+	var n := 16
+	var mid := PackedVector2Array()
+	var nrm: Array[Vector2] = []
+	var ws: Array[float] = []
+	for i in n:
+		mid.append(p0.bezier_interpolate(c1, c2, p3, i / float(n - 1)))
 	for i in n:
 		var s := i / float(n - 1)
-		var c := p0.bezier_interpolate(c1, c2, p3, s)
-		var r := snappedf(lerpf(14.0, 12.0, s) + sin(s * PI) * 2.0, 0.5)
-		var col := body
-		if p.has("stripes") and i % 3 == 1:
-			col = p.dark
-		if p.has("points"):
-			col = body.lerp(p.dark, smoothstep(0.2, 0.7, s))
-			col = Color(snappedf(col.r, 0.05), snappedf(col.g, 0.05), snappedf(col.b, 0.05))
-		if i == n - 1:
-			col = tipc
-		_ball(c, r, r, col, 0.0, 1.2, 0.35, 0.0 if i < n - 1 else 1.2)
+		var tg := (mid[mini(i + 1, n - 1)] - mid[maxi(i - 1, 0)]).normalized()
+		var nv := tg.orthogonal()
+		if nv.x < 0.0:
+			nv = -nv  # нормаль — в сторону света справа налево одинаково для обеих поз
+		nrm.append(nv)
+		ws.append(lerpf(13.0, 13.5, s) + sin(s * PI) * 2.5)
+	# Цвета трубки (зависят от палитры): по 5 полос поперёк, кольца у полосатого, тёмный конец у сиамского
+	var key := ["kit_tail_cols", body, p.dark, p.has("stripes"), p.has("points")]
+	var cc = _cache.get(key)
+	if cc == null:
+		cc = PackedColorArray()
+		var fs := [1.0, 0.55, 0.0, -0.55, -1.0]
+		for i in n:
+			var s := i / float(n - 1)
+			var base := body
+			if p.has("stripes") and int(s * 7.0) % 2 == 1:
+				base = body.lerp(p.dark, 0.85)
+			if p.has("points"):
+				base = body.lerp(p.dark, smoothstep(0.15, 0.6, s))
+			var m := _mat(base, 0.35)
+			for f in fs:
+				var v2: Vector2 = Vector2(-0.6, -0.8) * f
+				cc.append(_shade(Vector3(v2.x, v2.y, sqrt(maxf(1.0 - f * f, 0.0)) * 1.1).normalized(), m))
+		_store(key, cc)
+	var tpts := PackedVector2Array()
+	for i in n:
+		for f in [1.0, 0.55, 0.0, -0.55, -1.0]:
+			tpts.append(mid[i] + nrm[i] * ws[i] * f)
+	var tidx := PackedInt32Array()
+	for i in n - 1:
+		for j in 4:
+			var a0 := i * 5 + j
+			tidx.append_array([a0, a0 + 5, a0 + 6, a0, a0 + 6, a0 + 1])
+	RenderingServer.canvas_item_add_triangle_array(_rid, tidx, _T * tpts, cc)
+	# пушистый круглый кончик
+	var tg2 := (mid[n - 1] - mid[n - 2]).normalized()
+	_ball(mid[n - 1] + tg2 * 3.0, 15, 15, tipc, 0.0, 1.2, 0.35)
+	_ball(p0, 14, 14, body, 0.0, 1.2, 0.35, 0.0)
 
 
 # ---------- Вещи ----------
