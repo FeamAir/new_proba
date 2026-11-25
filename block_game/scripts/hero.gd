@@ -19,6 +19,9 @@ const LIGHT := Vector3(-0.48, -0.70, 0.53)
 ## Кольца сетки (доля радиуса): гуще к краю, где освещение меняется быстрее
 const RINGS := [0.45, 0.72, 0.88, 0.965, 1.0]
 const EYE_DARK := Color("#1A0E30")
+## 0.12: вещи наборов (голова/глаза/шея/спина) и «живые» вещи (спутники, сияния, узоры окрасок)
+const Sets := preload("res://scripts/hero_sets.gd")
+const Magic := preload("res://scripts/hero_magic.gd")
 
 const PALETTES := {
 	"owl": {
@@ -26,12 +29,27 @@ const PALETTES := {
 		"skin_mint": {"body": Color("#4CC79E"), "dark": Color("#2C9474"), "belly": Color("#D2F8E8"), "face": Color("#F0FFF8"), "iris": Color("#FFC24A")},
 		"skin_moon": {"body": Color("#9DB0E4"), "dark": Color("#6A7CB8"), "belly": Color("#EBF0FF"), "face": Color("#FAFBFF"), "iris": Color("#7FD8FF")},
 		"skin_gold": {"body": Color("#F2B240"), "dark": Color("#C27E1E"), "belly": Color("#FFEBB5"), "face": Color("#FFF9E6"), "iris": Color("#FF8A3D")},
+		# 0.12: окраски наборов (узоры и мерцание — scripts/hero_magic.gd, skin_fx)
+		"skin_moss": {"body": Color("#5DBB4A"), "dark": Color("#3A8A34"), "belly": Color("#DDF5B8"), "face": Color("#F4FFE6"), "iris": Color("#FFD23C")},
+		"skin_pearl": {"body": Color("#F2E2F2"), "dark": Color("#CDB0D8"), "belly": Color("#FFFFFF"), "face": Color("#FFFDFE"), "iris": Color("#7FD8FF")},
+		"skin_midnight": {"body": Color("#34409A"), "dark": Color("#222A6E"), "belly": Color("#7A88E0"), "face": Color("#D0D8FF"), "iris": Color("#FFE066")},
+		"skin_nebula": {"body": Color("#B05BD8"), "dark": Color("#6A3AB0"), "belly": Color("#FFC2EC"), "face": Color("#FFF0FB"), "iris": Color("#6FE3FF")},
+		"skin_amethyst": {"body": Color("#9A5CE8"), "dark": Color("#6A34B8"), "belly": Color("#E8D4FF"), "face": Color("#F8F0FF"), "iris": Color("#FF7AD9")},
+		"skin_constellation": {"body": Color("#24319A"), "dark": Color("#141A48"), "belly": Color("#46549E"), "face": Color("#B4C2FF"), "iris": Color("#FFD23C")},
+		# мастер-филин Ух (кузница): седой, серебристо-лиловый
+		"_elder": {"body": Color("#9C93B4"), "dark": Color("#6A6084"), "belly": Color("#EEEAF6"), "face": Color("#FAF8FF"), "iris": Color("#FFB23E")},
 	},
 	"axolotl": {
 		"": {"body": Color("#FFB5D0"), "dark": Color("#EE86AC"), "belly": Color("#FFE9F2"), "gill": Color("#FF4E92"), "tip": Color("#FFC4DC")},
 		"skin_mint": {"body": Color("#97E8C6"), "dark": Color("#5FC49D"), "belly": Color("#E8FFF6"), "gill": Color("#16B58A"), "tip": Color("#B8F7DF")},
 		"skin_moon": {"body": Color("#D8DEFA"), "dark": Color("#A6B0E0"), "belly": Color("#F9FAFF"), "gill": Color("#7682FF"), "tip": Color("#D6DAFF")},
 		"skin_gold": {"body": Color("#FFCF70"), "dark": Color("#E8A848"), "belly": Color("#FFF3D2"), "gill": Color("#FF7428"), "tip": Color("#FFD6A6")},
+		"skin_moss": {"body": Color("#8FD86E"), "dark": Color("#5DAF45"), "belly": Color("#E8FFD6"), "gill": Color("#2E9E4A"), "tip": Color("#D9F77A")},
+		"skin_pearl": {"body": Color("#FBEFF6"), "dark": Color("#E2C8DC"), "belly": Color("#FFFFFF"), "gill": Color("#7FC8FF"), "tip": Color("#FFD1EC")},
+		"skin_midnight": {"body": Color("#3B4BA8"), "dark": Color("#283478"), "belly": Color("#7C8BE0"), "gill": Color("#FFD95A"), "tip": Color("#FFF2B0")},
+		"skin_nebula": {"body": Color("#E79BE8"), "dark": Color("#B866C8"), "belly": Color("#FFE4FA"), "gill": Color("#6A6BFF"), "tip": Color("#8FE6FF")},
+		"skin_amethyst": {"body": Color("#B98AF5"), "dark": Color("#8A5ED0"), "belly": Color("#F1E6FF"), "gill": Color("#FF5FC8"), "tip": Color("#FFC4F0")},
+		"skin_constellation": {"body": Color("#2A38A4"), "dark": Color("#18205A"), "belly": Color("#4A5AB8"), "gill": Color("#FFC83A"), "tip": Color("#FFF0A8")},
 	},
 	## Щенок: у тех же вещей окраски — свои, «собачьи» (названия — i18n: item_skin_*_puppy).
 	##   ""  — золотистый ретривер; skin_mint — шоколадный; skin_moon — рыжий корги (белая проточина);
@@ -41,6 +59,14 @@ const PALETTES := {
 		"skin_mint": {"body": Color("#AE7149"), "dark": Color("#7E482B"), "belly": Color("#EDCDA8"), "nose": Color("#2C1814"), "eye": Color("#4A2618")},
 		"skin_moon": {"body": Color("#F59A4A"), "dark": Color("#DC7430"), "belly": Color("#FFF7EE"), "nose": Color("#33201C"), "eye": Color("#6B3A22"), "blaze": true},
 		"skin_gold": {"body": Color("#F8F6FB"), "dark": Color("#463E52"), "belly": Color("#FFFFFF"), "nose": Color("#2C2433"), "eye": Color("#4A3A5E"), "spots": Color("#3A3346")},
+		## 0.12: «мох» — зелёный с жёлтыми огоньками; «перламутр» — белый с серыми ушками;
+		##   «полночь» — с белой проточиной; «туманность», «аметист», «созвездие» — сказочные
+		"skin_moss": {"body": Color("#7CC45E"), "dark": Color("#4E9A3C"), "belly": Color("#E6FAD0"), "nose": Color("#2C3A22"), "eye": Color("#3E5A24")},
+		"skin_pearl": {"body": Color("#FFF4FA"), "dark": Color("#C8B4D4"), "belly": Color("#FFFFFF"), "nose": Color("#6A4A5E"), "eye": Color("#5A6AA8")},
+		"skin_midnight": {"body": Color("#3A47A0"), "dark": Color("#232B6C"), "belly": Color("#C8D0FF"), "nose": Color("#12152E"), "eye": Color("#2A2458"), "blaze": true},
+		"skin_nebula": {"body": Color("#D98BE6"), "dark": Color("#9C5AC8"), "belly": Color("#FFE0F6"), "nose": Color("#4A2A5E"), "eye": Color("#5A2A7A")},
+		"skin_amethyst": {"body": Color("#A877EE"), "dark": Color("#7446C2"), "belly": Color("#EEDDFF"), "nose": Color("#3A1E5E"), "eye": Color("#4A2A7A")},
+		"skin_constellation": {"body": Color("#2A37A0"), "dark": Color("#161C4C"), "belly": Color("#4E5CA8"), "nose": Color("#0E1030"), "eye": Color("#262860")},
 	},
 	## Котик: ""  — рыжий/персиковый; skin_mint — серый полосатый (полоски);
 	##   skin_moon — сиамский (тёмные ушки, мордочка, лапки и хвост); skin_gold — чёрный с белой манишкой.
@@ -49,6 +75,13 @@ const PALETTES := {
 		"skin_mint": {"body": Color("#B2AFC2"), "dark": Color("#6C6882"), "belly": Color("#F3F1F8"), "inner": Color("#FFB0C6"), "iris": Color("#F4C34E"), "nose": Color("#FF8FB0"), "whisk": Color(1, 1, 1, 0.85), "stripes": true},
 		"skin_moon": {"body": Color("#F8F0E4"), "dark": Color("#7A5A50"), "belly": Color("#FFFCF6"), "inner": Color("#E8A0A8"), "iris": Color("#62C2FF"), "nose": Color("#C9707E"), "whisk": Color(1, 1, 1, 0.85), "points": true},
 		"skin_gold": {"body": Color("#4E465E"), "dark": Color("#332D40"), "belly": Color("#FFFFFF"), "inner": Color("#F49AB6"), "iris": Color("#FFD23C"), "nose": Color("#FF8FB0"), "whisk": Color(1, 1, 1, 0.9), "socks": true},
+		## 0.12: «мох» — полосатый зелёный; «перламутр» — сиамский лилового окраса; «полночь» — в белых носочках
+		"skin_moss": {"body": Color("#7ACB5C"), "dark": Color("#3F8A34"), "belly": Color("#EAFBD8"), "inner": Color("#FFB0C6"), "iris": Color("#FFD23C"), "nose": Color("#FF8FB0"), "whisk": Color(1, 1, 1, 0.85), "stripes": true},
+		"skin_pearl": {"body": Color("#FFF4FA"), "dark": Color("#B9A0CC"), "belly": Color("#FFFFFF"), "inner": Color("#FFB8D0"), "iris": Color("#7FD8FF"), "nose": Color("#E890B0"), "whisk": Color(1, 1, 1, 0.9), "points": true},
+		"skin_midnight": {"body": Color("#34409A"), "dark": Color("#1E2660"), "belly": Color("#C8D0FF"), "inner": Color("#8C7CE0"), "iris": Color("#FFE066"), "nose": Color("#B49CFF"), "whisk": Color(1, 1, 1, 0.9), "socks": true},
+		"skin_nebula": {"body": Color("#C77BE0"), "dark": Color("#8C4FBF"), "belly": Color("#FFE4F8"), "inner": Color("#FF9FD8"), "iris": Color("#6FE3FF"), "nose": Color("#FF7FC0"), "whisk": Color(1, 1, 1, 0.85)},
+		"skin_amethyst": {"body": Color("#A06FE8"), "dark": Color("#6E3FBF"), "belly": Color("#F0E4FF"), "inner": Color("#FFB0E0"), "iris": Color("#FF7AD9"), "nose": Color("#FF8FC0"), "whisk": Color(1, 1, 1, 0.85)},
+		"skin_constellation": {"body": Color("#26339C"), "dark": Color("#141A48"), "belly": Color("#46549E"), "inner": Color("#7A6CD0"), "iris": Color("#FFD23C"), "nose": Color("#B49CFF"), "whisk": Color(1, 1, 1, 0.9)},
 	},
 }
 
@@ -59,6 +92,10 @@ var ci: CanvasItem
 var _rid: RID
 ## Текущее локальное преобразование деталей (голова/вещь) внутри координат героя
 var _T := Transform2D.IDENTITY
+## 0.12: для спутников и сияний — секунд с касания и «только голова» (аватарка) текущего рисования
+var _react := 99.0
+var _head_only := false
+var _icon := false   # рисуется значок для карточки (сияние — компактнее)
 
 
 # ---------- Объёмные сетки ----------
@@ -226,6 +263,10 @@ func _overlay(key, outline: PackedVector2Array, ctr: Vector2, flat := 1.0) -> vo
 
 func _glow(c: Vector2, rx: float, ry: float, col: Color, rot := 0.0) -> void:
 	col.a = snappedf(col.a, 0.04)
+	# 0.12: размеры округляются, чтобы «дышащие» свечения не строили новую сетку каждый кадр
+	var qs := 1.0 if maxf(rx, ry) < 40.0 else 3.0
+	rx = maxf(snappedf(rx, qs), 1.0)
+	ry = maxf(snappedf(ry, qs), 1.0)
 	var key := ["g", rx, ry, snappedf(rot, 0.02), col]
 	var ms = _cache.get(key)
 	if ms == null:
@@ -297,6 +338,8 @@ func _arc(c: Vector2, rx: float, ry: float, a0: float, a1: float, col: Color, w:
 
 
 func _sparkle(c: Vector2, r: float, col: Color) -> void:
+	if r < 0.4 or col.a <= 0.01:
+		return  # 0.12: гаснущая искра — не рисуем вырожденный многоугольник
 	_fill(PackedVector2Array([c + Vector2(0, -r), c + Vector2(r * 0.22, -r * 0.22), c + Vector2(r, 0), c + Vector2(r * 0.22, r * 0.22),
 		c + Vector2(0, r), c + Vector2(-r * 0.22, r * 0.22), c + Vector2(-r, 0), c + Vector2(-r * 0.22, -r * 0.22)]), col)
 
@@ -366,6 +409,10 @@ func draw(target: CanvasItem, kind: String, pos: Vector2, sc: float, outfit: Dic
 	ci = target
 	_rid = target.get_canvas_item()
 	_T = Transform2D.IDENTITY
+	_react = react
+	_head_only = head_only
+	if outfit.get("aura", "") == "wings_cascado" and not head_only:
+		pos.y -= (7.0 + 6.0 * sin(t * 1.7)) * sc  # 0.12: с Крыльями Каскада герой слегка парит
 	var breath := 1.0 + 0.018 * sin(t * 2.2)
 	var sway := 0.025 * sin(t * 1.25)
 	if kind == "puppy" and not head_only:
@@ -387,6 +434,9 @@ func draw(target: CanvasItem, kind: String, pos: Vector2, sc: float, outfit: Dic
 
 ## Аватарка: голова героя в наряде, в круге.
 func draw_avatar(target: CanvasItem, kind: String, c: Vector2, r: float, outfit: Dictionary, t: float, ring: Color, react := 99.0) -> void:
+	# 0.12: Крылья Каскада видны и за аватаркой (на экране победы — взмахивают и сыплют искры)
+	if outfit.get("aura", "") == "wings_cascado" and r >= 30.0:
+		_avatar_extra(target, "wings", c, r, t, react)
 	target.draw_circle(c, r + 4, OUT, true, -1.0, true)
 	target.draw_circle(c, r, Color("#2A1A4F"), true, -1.0, true)
 	target.draw_circle(c + Vector2(0, r * 0.35), r * 0.7, Color(ring, 0.18), true, -1.0, true)
@@ -397,11 +447,46 @@ func draw_avatar(target: CanvasItem, kind: String, c: Vector2, r: float, outfit:
 	else:
 		draw(target, kind, c + Vector2(0, r * 0.12), r / 125.0, outfit, t, react, true)
 	target.draw_arc(c, r + 2, 0, TAU, 64, ring, 5.0, true)
+	# 0.12: морской конёк-страж рядом с аватаркой (на экране победы делает сальто)
+	if outfit.get("companion", "") == "seahorse" and r >= 30.0:
+		_avatar_extra(target, "seahorse", c, r, t, react)
+
+
+func _avatar_extra(target: CanvasItem, what: String, c: Vector2, r: float, t: float, react: float) -> void:
+	ci = target
+	_rid = target.get_canvas_item()
+	_T = Transform2D.IDENTITY
+	var k := r / 78.0
+	var a := {"top": Vector2(0, -72), "center": Vector2.ZERO, "size": 52.0, "comp": Vector2.ZERO, "kind": "avatar", "tilt": 0.0, "top_w": 100.0}
+	if what == "wings":
+		target.draw_set_transform(c, 0.0, Vector2(k, k))
+		Magic.aura(self, "wings_cascado", a, t, react, false)
+	else:
+		target.draw_set_transform(c + Vector2(r * 1.08, -r * 0.25), 0.0, Vector2(k, k) * 0.8)
+		Magic.companion(self, "seahorse", a, t, react, true)
+	_T = Transform2D.IDENTITY
+	target.draw_set_transform(Vector2.ZERO)
 
 
 # ---------- Точки крепления ----------
 
 func _anchors(kind: String, hp: Callable, tilt: float) -> Dictionary:
+	var d := _anchors_base(kind, hp, tilt)
+	# 0.12: спутник (comp), середина и размер героя для сияний, поворот головы для узоров окраски
+	d.hp = hp
+	match kind:
+		"kitten":
+			d.merge({"comp": Vector2(126, -104), "center": Vector2(0, 6), "size": 114.0})
+		"puppy":
+			d.merge({"comp": Vector2(132, -100), "center": Vector2(0, 6), "size": 118.0})
+		"axolotl":
+			d.merge({"comp": Vector2(140, -78), "center": Vector2(0, 14), "size": 120.0})
+		_:
+			d.merge({"comp": Vector2(128, -72), "center": Vector2(0, 10), "size": 118.0})
+	return d
+
+
+func _anchors_base(kind: String, hp: Callable, tilt: float) -> Dictionary:
 	if kind == "kitten":
 		# макушка — между треугольными ушками
 		return {"top": hp.call(Vector2(0, -106)), "top_w": 94.0, "tilt": tilt,
@@ -1253,28 +1338,58 @@ func _kit_tail(p: Dictionary, t: float, env: float, react: float) -> void:
 # ---------- Вещи ----------
 
 func _back_items(outfit: Dictionary, a: Dictionary, t: float, behind: bool) -> void:
-	match outfit.get("back", ""):
+	var live: bool = behind and not _head_only and a.kind != "icon"
+	if live:
+		# 0.12: сияние и спутник позади героя
+		Magic.aura(self, outfit.get("aura", ""), a, t, _react, false)
+		Magic.companion(self, outfit.get("companion", ""), a, t, _react, false)
+	var bk: String = outfit.get("back", "")
+	match bk:
 		"cape": _cape(a, t, behind)
 		"backpack": _backpack(a, t, behind)
+		_: Sets.dispatch_back(self, bk, a, t, behind)
+	_T = Transform2D.IDENTITY
 
 
 func _front_items(outfit: Dictionary, a: Dictionary, t: float) -> void:
+	Magic.skin_fx(self, outfit, a, t, _head_only)  # 0.12: узоры окрасок наборов
 	_back_items(outfit, a, t, false)
-	match outfit.get("neck", ""):
+	var nk: String = outfit.get("neck", "")
+	match nk:
 		"scarf": _scarf(a)
 		"bowtie": _bowtie(a)
 		"necklace": _necklace(a, t)
-	match outfit.get("eyes", ""):
+		"_apron": Magic.master_apron(self, a, t)
+		_: Sets.dispatch_neck(self, nk, a, t)
+	_T = Transform2D.IDENTITY
+	var ey: String = outfit.get("eyes", "")
+	match ey:
 		"crystal_glasses": _crystal_glasses(a, t)
 		"sunglasses": _sunglasses(a)
 		"monocle": _monocle(a, t)
-	match outfit.get("head", ""):
+		"_master": Magic.master_eyes(self, a, t)
+		_: Sets.dispatch_eyes(self, ey, a, t)
+	_T = Transform2D.IDENTITY
+	var hd: String = outfit.get("head", "")
+	match hd:
 		"bow": _bow(a)
 		"cap": _cap(a)
 		"miner": _miner(a, t)
 		"crown": _crown(a, t)
 		"wreath": _wreath(a, t)
+		_: Sets.dispatch_head(self, hd, a, t)
 	_T = Transform2D.IDENTITY
+	if not _head_only and a.kind != "icon":
+		# 0.12: спутник и сияние впереди, блеск редких вещей
+		Magic.companion(self, outfit.get("companion", ""), a, t, _react, true)
+		Magic.aura(self, outfit.get("aura", ""), a, t, _react, true)
+		Magic.rarity_fx(self, outfit, a, t)
+	_T = Transform2D.IDENTITY
+
+
+## 0.12: мастер-филин Ух — старый филин-ювелир (экран кузницы, scripts/forge_ui.gd)
+func draw_master(target: CanvasItem, pos: Vector2, sc: float, t: float, react := 99.0) -> void:
+	draw(target, "owl", pos, sc, {"skin": "_elder", "eyes": "_master", "neck": "_apron"}, t, react)
 
 
 ## Преобразование «головы шириной 100» (от макушки, с наклоном головы)
@@ -1698,7 +1813,8 @@ func _rrect(r: Rect2, rad: float) -> PackedVector2Array:
 
 # ---------- Значок вещи для гардероба ----------
 
-## Рисует вещь отдельно, в квадрате размером size вокруг c. Окраска — мини-аватаркой героя.
+## Рисует вещь отдельно, в квадрате размером size вокруг c. Окраска — мини-аватаркой героя,
+## сияние (0.12) — маленьким героем в этом сиянии, спутник — крупно сам по себе.
 func draw_item_icon(target: CanvasItem, id: String, slot: String, kind: String, c: Vector2, size: float, t: float) -> void:
 	ci = target
 	_rid = target.get_canvas_item()
@@ -1706,35 +1822,88 @@ func draw_item_icon(target: CanvasItem, id: String, slot: String, kind: String, 
 	if slot == "skin":
 		draw_avatar(target, kind, c, size * 0.36, {"skin": id}, t, palette(kind, {"skin": id}).body)
 		return
+	if slot == "aura":
+		# сияние вокруг аватарки героя (дешевле, чем целый герой на каждой карточке)
+		var k := size / 300.0
+		var a0 := {"top": Vector2(0, -64), "center": Vector2(0, 4), "size": 66.0, "comp": Vector2.ZERO, "kind": "icon", "tilt": 0.0, "top_w": 100.0}
+		_icon = true
+		ci.draw_set_transform(c, 0.0, Vector2(k, k))
+		Magic.aura(self, id, a0, t + 0.7, 99.0, false)
+		ci.draw_set_transform(Vector2.ZERO)
+		var ring: Color = palette(kind, {}).body
+		draw_avatar(target, kind, c + Vector2(0, size * 0.02), size * 0.2, {}, t, ring)
+		ci = target
+		_rid = target.get_canvas_item()
+		_T = Transform2D.IDENTITY
+		ci.draw_set_transform(c, 0.0, Vector2(k, k))
+		Magic.aura(self, id, a0, t + 0.7, 99.0, true)
+		ci.draw_set_transform(Vector2.ZERO)
+		_icon = false
+		return
 	var sc := size / 200.0
 	ci.draw_set_transform(c, 0.0, Vector2(sc, sc))
 	var a := {"top": Vector2(0, 40), "top_w": 120.0, "tilt": 0.0,
 		"eye_l": Vector2(-44, 0), "eye_r": Vector2(44, 0), "eye_rad": 34.0, "temple": 90.0,
-		"neck": Vector2(0, 0), "neck_w": 170.0, "back": Vector2(0, -40), "back_w": 150.0, "kind": "icon"}
+		"neck": Vector2(0, 0), "neck_w": 170.0, "back": Vector2(0, -40), "back_w": 150.0, "kind": "icon",
+		"comp": Vector2.ZERO, "center": Vector2.ZERO, "size": 30.0, "hp": func(v): return v}
 	match slot:
+		"companion":
+			ci.draw_set_transform(c, 0.0, Vector2(sc, sc) * (1.45 if id == "seahorse" else 2.0))
+			_react = 99.0
+			Magic.companion(self, id, a, t, 99.0, false)
+			Magic.companion(self, id, a, t, 99.0, true)
 		"head":
-			var oy := {"bow": 0.0, "cap": 10.0, "miner": 0.0, "crown": 0.0, "wreath": 0.0}
+			var oy := {"bow": 0.0, "cap": 10.0, "miner": 0.0, "crown": 0.0, "wreath": 0.0, "acorn_cap": 4.0,
+				"bluebell_hat": 10.0, "coral_tiara": 6.0, "top_hat": 28.0, "space_helmet": 26.0, "crystal_diadem": 8.0, "firefly_crown": 18.0}
 			a.top = Vector2(0, 20 + oy.get(id, 0.0))
-			if id == "bow":
+			if id == "bow" or id == "shell_clip":
 				a.top = Vector2(-36, 10)
 				a.top_w = 180.0
 			_front_items({"head": id}, a, t)
 		"eyes":
-			if id == "monocle":
+			if id == "monocle" or id == "amethyst_monocle":
 				a.eye_r = Vector2(-20, -30)
 				a.eye_rad = 42.0
+			elif id == "dive_mask":
+				a.top = Vector2(0, 10)
+				a.eye_l = Vector2(-40, 24)
+				a.eye_r = Vector2(40, 24)
+				a.eye_rad = 28.0
+				a.temple = 80.0
+			elif id == "masquerade" or id == "star_lorgnette":
+				a.eye_l = Vector2(-40, -6)
+				a.eye_r = Vector2(40, -6)
+				a.eye_rad = 28.0
+			elif id == "flight_goggles" or id == "daisy_glasses":
+				a.eye_l = Vector2(-40, 0)
+				a.eye_r = Vector2(40, 0)
+				a.eye_rad = 28.0
+				a.temple = 82.0
 			_front_items({"eyes": id}, a, t)
 		"neck":
 			a.neck = Vector2(0, -20)
+			if id == "comet_scarf":
+				a.neck = Vector2(-24, -30)
+				a.neck_w = 140.0
+			elif id == "star_compass" or id == "mountain_heart":
+				a.neck = Vector2(0, -40)
 			_front_items({"neck": id}, a, t)
 		"back":
 			if id == "backpack":
 				a.back = Vector2(-84, 10)
 				a.back_w = 220.0
 				_back_items({"back": id}, a, t, true)
+			elif id == "rocket_pack":
+				a.back = Vector2(0, -6)
+				a.back_w = 190.0
+				_back_items({"back": id}, a, t, true)
+			elif id == "dragonfly_wings":
+				a.back = Vector2(0, 14)
+				a.back_w = 150.0
+				_back_items({"back": id}, a, t, true)
 			else:
 				a.back = Vector2(0, -50)
-				a.back_w = 150.0
+				a.back_w = 140.0 if id == "fullmoon_mantle" else 150.0
 				a.neck = Vector2(28, -55)
 				a.neck_w = 0.0
 				_back_items({"back": id}, a, t, true)
