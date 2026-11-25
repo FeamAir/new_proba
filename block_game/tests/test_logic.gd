@@ -32,6 +32,7 @@ func _initialize() -> void:
 
 	var g: Node2D = load("res://scripts/game.gd").new()
 	root.add_child(g)
+	g.tut.enabled = false  # 0.9: обучение проверяется в tests/test_v09.gd
 
 	g.start_level(1)
 	check(g.state == g.State.PLAYING and g.has_piece, "уровень 1 стартует, есть фигура")

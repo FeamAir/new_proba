@@ -266,7 +266,7 @@ func draw_home() -> void:
 	_lang_button(Rect2(140, 44, 116, 58))
 	g._draw_title(Vector2(g.W / 2.0, 200), 80, 6.0)
 	# нижняя полоса с кнопками
-	var by := H - 340.0
+	var by := H - 410.0  # 0.9: под «Играть» — цель «До следующей вещи» (assist_ui.gd)
 	g.draw_polygon(PackedVector2Array([Vector2(0, by - 60), Vector2(g.W, by - 60), Vector2(g.W, H), Vector2(0, H)]),
 		PackedColorArray([Color(0.04, 0.02, 0.1, 0), Color(0.04, 0.02, 0.1, 0), Color(0.04, 0.02, 0.1, 0.9), Color(0.04, 0.02, 0.1, 0.9)]))
 	var hall: Dictionary = Meta.hall(g.max_level)
@@ -923,6 +923,8 @@ func draw_win() -> void:
 		if rw.get("chains", 0) > 0:
 			parts.append(I18n.t("win_chains") % rw.chains)
 		_ctext(box.get_center().x, box.position.y + 136, " · ".join(parts), 24, g.DIM, box.size.x - 20)
+		if rw.get("gift", 0) > 0:  # 0.9: подарок новичку — ярлык на нижнем краю
+			_badge(Vector2(box.get_center().x, box.end.y - 16), I18n.t("win_gift") % rw.gift, 22)
 		# летящие искорки
 		if st < 2.0:
 			for i in 8:
