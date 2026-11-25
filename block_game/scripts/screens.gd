@@ -44,6 +44,9 @@ var fx_t := 99.0            # секунд с покупки (короткий �
 var fx_at := Vector2.ZERO
 var focus := Vector2.ZERO   # где на сцене гардероба герой / место примерки
 var page := 0               # 0.12: страница вещей во вкладке гардероба
+## 0.14: гардероб открыт с экрана «Дом» по «+» у места (или по цели «Можно купить») — после покупки
+## или размещения украшения игрок сразу возвращается домой, камера 3D-дома подлетает к новой вещи
+var from_home_spot := false
 
 
 func _init(game) -> void:
@@ -492,6 +495,8 @@ func open_wardrobe(t := "head", focus_id := "") -> void:
 		var i := Meta.items_in(t, _kind()).map(func(it): return it.id).find(focus_id)
 		page = maxi(0, i) / PAGE_SIZE
 	tryon.clear()
+	# 0.14: вкладку «Дом» с экрана «Дом» открывает только «+» у места (кнопка «Гардероб» — другие вкладки)
+	from_home_spot = t == "home" and g.state == g.State.HOME
 	g._set_state(g.State.WARDROBE)
 
 
@@ -596,6 +601,7 @@ func draw_wardrobe() -> void:
 		var col_lbl := I18n.t("collection") % [g.meta.collection_count(), Meta.collection_total(kind)]
 		var cw0: float = g.font.get_string_size(col_lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 30.0
 		var cpr := Rect2(st.end.x - cw0 - 12, st.position.y + 12, cw0, 36)
+		rects["collection"] = cpr
 		_pill(cpr, Color(0.1, 0.06, 0.2, 0.85))
 		_text(Vector2(cpr.position.x, cpr.position.y + 25), col_lbl, 20, Color("#FFD9F4"), cpr.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 		_text(Vector2(st.position.x + 18, st.position.y + 38), Meta.slot_name(tab), 28, Color(g.TEXT, 0.85))
@@ -616,7 +622,8 @@ func draw_wardrobe() -> void:
 			var has: bool = g.meta.placed_at(kind, sp) != ""
 			if has and not sel:
 				g.draw_circle(r.position + Vector2(r.size.x - 12, 12), 6, OK_COL, true, -1.0, true)
-			_text(Vector2(r.position.x, r.position.y + 38), Meta.spot_name(sp), 17, DARK_TEXT if sel else g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+			var spn := Meta.spot_name(sp)
+			_text(Vector2(r.position.x, r.position.y + 38), spn, fit_size(spn, r.size.x - 8, 17), DARK_TEXT if sel else g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 	else:
 		var nh := Meta.HEROES.size()
 		var hw: float = (g.W - 40.0 - (nh - 1) * 8.0) / nh
@@ -997,6 +1004,7 @@ func cancel_try() -> bool:
 
 func _confirm_try() -> void:
 	var id: String = tryon.id
+	var decor_spot: String = tryon.spot if tryon.is_decor() else ""
 	match tryon.confirm(g.meta, g.total_stars(), g.max_level):
 		"bought", "owned":
 			g.play("crystal")
@@ -1005,6 +1013,8 @@ func _confirm_try() -> void:
 			fx_t = 0.0
 			fx_at = focus
 			g._save()
+			if decor_spot != "" and from_home_spot:
+				return_home_to(decor_spot)
 		"poor":
 			g.play("gameover", 1.3, -8.0)
 		_:
@@ -1083,6 +1093,28 @@ func tap_wardrobe(pos: Vector2) -> void:
 		if rects.get("item_" + it.id, Rect2()).has_point(pos):
 			tap_card(it.id, kind)
 			return
+	# 0.14: касание по пустому месту сцены (или шапки) — назад, откуда пришёл (домой)
+	if is_empty_tap(pos):
+		g.play("click")
+		g.go_home()
+
+
+## Пустое место гардероба: сцена или шапка, мимо кнопок (их касания обработаны раньше).
+## Промежутки между карточками, вкладками и чипами — не «пусто»: промах по кнопке не уводит из гардероба.
+func is_empty_tap(pos: Vector2) -> bool:
+	if rects.get("collection", Rect2()).has_point(pos) or rects.get("hero", Rect2()).has_point(pos):
+		return false
+	var st: Rect2 = _wr_layout().stage
+	return st.has_point(pos) or pos.y < st.position.y
+
+
+## 0.14: после покупки / размещения украшения (гардероб открыт «+» с экрана «Дом») — домой,
+## камера 3D-дома подлетает к месту новой вещи (в 2D-доме — просто дом).
+func return_home_to(sp: String) -> void:
+	from_home_spot = false
+	if g.home3d and g.home3d.showing_stage():
+		g.home3d.show_spot = sp
+	g.go_home()
 
 
 ## Нажатие на карточку вещи / украшения (для текущей вкладки и места).
@@ -1109,6 +1141,8 @@ func tap_card(id: String, kind: String) -> void:
 			g.play("crystal")
 			poke_hero()
 			g._save()
+			if tab == "home" and from_home_spot:
+				return_home_to(spot)  # 0.14: «Разместить» купленное — сразу домой, к нему
 		"off":
 			tryon.clear()
 			g.play("click")

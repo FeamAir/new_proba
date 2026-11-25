@@ -46,6 +46,8 @@ var builds := 0             # сколько раз строился дом (д�
 var last_build_ms := 0.0
 
 var _pending_spot := ""
+## 0.14: при возврате из гардероба на экран «Дом» камера летит к этому месту (новое украшение), а не к герою
+var show_spot := ""
 var _pending_t := 0.0
 var _stage_spot := ""
 var _auto_done := false
@@ -299,7 +301,11 @@ func _sync(delta: float) -> void:
 		room.set_placed(g.meta.decor_placed.get(kind, {}))
 		if room.highlight != "":
 			room.set_highlight("")
-		if _stage_spot != "":
+		if show_spot != "" and mode == "home":
+			room.focus_spot(show_spot)
+			show_spot = ""
+			_stage_spot = ""
+		elif _stage_spot != "":
 			_stage_spot = ""
 			if _pending_spot == "":
 				room.cam.fly_home()

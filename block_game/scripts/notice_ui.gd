@@ -284,7 +284,7 @@ func _draw_switch(H: float, k: float) -> void:
 		Vector2(ax + 40 + bob, y), Vector2(ax + 8 + bob, y + 34), Vector2(ax + 8 + bob, y + 18), Vector2(ax - 26 + bob, y + 18)]), g.ACCENT)
 	_text(g.W / 2.0 - 150, y + 116, g.meta.display_name(old), 28, g.DIM, 260)
 	_text(g.W / 2.0 + 150, y + 116, g.meta.display_name(to), 28, g.ACCENT, 260)
-	# 0.13: склонение по полу (вещи Совёнка / Совушки); с именем — «Имя: вещи и украшения будут сняты»
+	# 0.13: склонение по полу (вещи Совёнка / Совушки); с именем — «Имя: вещи и украшения вернутся осколками»
 	var body: String
 	if g.meta.name_of(old) != "":
 		body = I18n.t("switch_text_named") % g.meta.name_of(old)
@@ -318,7 +318,11 @@ func _draw_migrated(H: float, k: float) -> void:
 		# каждый друг — в своей супер-награде (шляпа, корона, маска, тиара)
 		var hk: String = Meta.HEROES[i]
 		hero.draw_avatar(node, hk, c, 56, g.meta.look(hk).merged({"aura": Meta.super_recipe(hk).id}), g.t_total + i * 0.9, [Color("#B46CFF"), Color("#FF8FD8"), Color("#FFB547"), Color("#7FE3FF")][i])
-	var mt := I18n.t("migrate_sets_text") if g.meta.notice_sets else I18n.t("migrate_text")
+	# 0.14: названия новых наборов — по полу героя («Кот-детектив» / «Кошка-детектив»)
+	var mt := I18n.t("migrate_text")
+	if g.meta.notice_sets:
+		mt = I18n.t("migrate_sets_text") % [Meta.set_title(Meta.set_index("kit_detective"), g.meta.gender_of("kitten")),
+			Meta.set_title(Meta.set_index("pup_picnic"), g.meta.gender_of("puppy"))]
 	node.draw_multiline_string(g.font, Vector2(r.position.x + 30, r.position.y + 282), mt, HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 60, 28, 3, g.TEXT)
 	_refund_line(r.position.y + 420, "migrate_refund")
 	_button("ok", Rect2(g.W / 2.0 - 170, r.end.y - 100, 340, 76), I18n.t("forge_great"), true)

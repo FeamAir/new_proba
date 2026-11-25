@@ -157,7 +157,7 @@ func _test_catalogs() -> void:
 				tr_ok = false
 	check(tr_ok, "названия вещей, наборов и окон 0.12b — на обоих языках")
 	I18n.set_lang("ru")
-	check(Meta.item_name("ow_stargazer") == "Мантия звездочёта" and Meta.item_name("ax_abyssal") == "Сияние глубин" and Meta.item_name("pu_hero") == "Пёс-герой" and Meta.item_name("ki_starry", "kitten", "boy") == "Звёздный кот" and Meta.item_name("ki_starry", "kitten", "girl") == "Звёздная кошка", "супер-награды: Мантия звездочёта, Сияние глубин, Пёс-герой, Звёздный кот / Звёздная кошка (0.13: по полу)")
+	check(Meta.item_name("ow_stargazer") == "Мантия звездочёта" and Meta.item_name("ax_abyssal") == "Сияние глубин" and Meta.item_name("pu_hero") == "Пёс-герой" and Meta.item_name("ki_starry", "kitten", "boy") == "Звёздный котик" and Meta.item_name("ki_starry", "kitten", "girl") == "Звёздная кошечка", "супер-награды: Мантия звездочёта, Сияние глубин, Пёс-герой, Звёздный котик / Звёздная кошечка (0.14: по полу)")
 	# чужую вещь нельзя купить и надеть
 	var m = Meta.new()
 	m.set_hero("puppy")
@@ -329,9 +329,9 @@ func _test_switch(g) -> void:
 	g.screens.request_switch("kitten")
 	check(not g.notice_ui.active() and w.hero == "kitten" and w.shards == 500, "нечего снимать — смена сразу, без окна")
 	I18n.set_lang("ru")
-	check(I18n.t("switch_text") % I18n.t("hero_gen_owl") == "Вещи и украшения Совёнка будут сняты" and I18n.t("switch_refund") % [435, I18n.forms("shards_forms", 435)] == "Вернётся 435 осколков", "текст окна по-русски")
+	check(I18n.t("switch_text") % I18n.t("hero_gen_owl") == "Вещи и украшения Совёнка вернутся осколками" and I18n.t("switch_refund") % [435, I18n.forms("shards_forms", 435)] == "Вернётся 435 осколков", "текст окна по-русски")
 	I18n.set_lang("en")
-	check(I18n.t("switch_text") % I18n.t("hero_gen_puppy") == "Puppy's items and decorations will be taken off", "текст окна по-английски")
+	check(I18n.t("switch_text") % I18n.t("hero_gen_puppy") == "Puppy's items and decorations will be traded back for shards", "текст окна по-английски")
 	I18n.set_lang("ru")
 
 

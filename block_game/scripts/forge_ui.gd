@@ -3,7 +3,8 @@ extends RefCounted
 ## 0.12b: всё — для ТЕКУЩЕГО героя. Вверху — главная цель: его супер-эксклюзив и три гнезда для
 ## легендарных вещей. Ниже — 3 карточки его наборов:
 ## тёмный силуэт награды с «?», ячейки вещей рецепта (силуэт → цвет, когда вещь куплена),
-## кнопки «Примерить» (5 секунд) и «Сковать за N». Вещи при ковке не тратятся (правила — meta.gd).
+## кнопки «Примерить» (5 секунд) и «Выковать за N». Вещи при ковке не тратятся (правила — meta.gd).
+## 0.14: нажатие на ячейку вещи — примерка и покупка прямо здесь (scripts/forge_buy.gd).
 ## Ковка — анимация ~3 с (касание пропускает): вещи слетаются на наковальню, кружатся, сливаются
 ## в кристалл, он трескается, вспышка цветом редкости, награда выплывает, герой её сразу надевает.
 ##
@@ -13,6 +14,7 @@ extends RefCounted
 const Meta := preload("res://scripts/meta.gd")
 const I18n := preload("res://scripts/i18n.gd")
 const Rarity := preload("res://scripts/rarity.gd")
+const ForgeBuy := preload("res://scripts/forge_buy.gd")
 
 const DARK_TEXT := Color("#2A1A0A")
 const OK_COL := Color("#3DDC97")
@@ -41,10 +43,12 @@ var confetti: Array = []
 var react := 99.0
 var result_t := 0.0
 var _result_id := ""   # что сковано (показ на герое после анимации)
+var buy                # 0.14: покупка вещи набора из ячейки (scripts/forge_buy.gd)
 
 
 func _init(game) -> void:
 	g = game
+	buy = ForgeBuy.new(game, self)
 	sil = Node2D.new()
 	sil.modulate = SIL_COL
 	sil.draw.connect(_draw_sil)
@@ -69,6 +73,7 @@ func open() -> void:
 	anim_id = ""
 	result = false
 	try_id = ""
+	buy.close()
 	confetti.clear()
 	g._set_state(g.State.FORGE)
 
@@ -80,6 +85,9 @@ func back() -> void:
 	if try_id != "":
 		try_id = ""
 		return
+	if buy.active():
+		buy.cancel()
+		return
 	g.play("click")
 	g.go_home()
 
@@ -88,6 +96,7 @@ func update(delta: float) -> void:
 	var on: bool = g.state == g.State.FORGE
 	react += delta
 	result_t += delta
+	buy.update(delta)
 	if anim_id != "":
 		anim_t += delta
 		if anim_t >= ANIM_TIME:
@@ -102,7 +111,7 @@ func update(delta: float) -> void:
 		c.rot += c.spin * delta
 		c.life -= delta
 	confetti = confetti.filter(func(c): return c.life > 0.0)
-	var show_sil := on and anim_id == "" and not result and try_id == ""
+	var show_sil: bool = on and anim_id == "" and not result and try_id == "" and not buy.active()
 	sil.visible = show_sil
 	top.visible = show_sil
 	if show_sil:
@@ -135,6 +144,10 @@ func draw() -> void:
 	var sets := Meta.hero_sets(kind())
 	for i in sets.size():
 		_draw_set_card(sets[i], Rect2(20, CARD_TOP + i * card_step(), 680, card_step() - 12))
+	buy.draw_lit(rects)
+	if buy.active():
+		buy.draw()
+		return
 	if try_id != "":
 		_draw_try()
 	if anim_id != "":
@@ -162,10 +175,11 @@ func _draw_goal() -> void:
 	rects["master"] = Rect2(30, 260, 150, 170)
 	# реплика
 	var line := _master_line()
-	var br := Rect2(36, 136, 290, 96)
+	# 0.14: облачко на три строки (реплики после вычитки длиннее)
+	var br := Rect2(36, 130, 290, 116)
 	g._rbox(br, Color("#F4EEFF"), 22)
-	g.draw_colored_polygon(PackedVector2Array([Vector2(96, 230), Vector2(124, 230), Vector2(100, 252)]), Color("#F4EEFF"))
-	g.draw_multiline_string(g.font, br.position + Vector2(14, 36), line, HORIZONTAL_ALIGNMENT_CENTER, br.size.x - 28, 22, 3, Color("#2A1A4F"))
+	g.draw_colored_polygon(PackedVector2Array([Vector2(96, 244), Vector2(124, 244), Vector2(100, 266)]), Color("#F4EEFF"))
+	g.draw_multiline_string(g.font, br.position + Vector2(14, 33), line, HORIZONTAL_ALIGNMENT_CENTER, br.size.x - 28, 22, 3, Color("#2A1A4F"))
 	# супер-эксклюзив героя
 	var rc: Dictionary = Meta.super_recipe(kind())
 	var wid: String = rc.id
@@ -224,7 +238,7 @@ func _gem(c: Vector2, r: float, col: Color) -> void:
 
 
 ## Карточка набора n (номер в Meta.SETS): награда (силуэт / цвет) слева, справа — название,
-## пять ячеек рецепта, строка состояния и кнопки «Примерить» / «Сковать за N»
+## пять ячеек рецепта, строка состояния и кнопки «Примерить» / «Выковать за N»
 func _draw_set_card(n: int, r: Rect2) -> void:
 	var sc = _sc()
 	var t: float = g.t_total
@@ -323,7 +337,7 @@ func _draw_set_card(n: int, r: Rect2) -> void:
 		sc._badge(Vector2(r.position.x + 96, r.position.y - 6), I18n.t("forge_can"), 16)
 
 
-## Кнопка «Сковать за N»: активна, когда всё собрано и хватает осколков
+## Кнопка «Выковать за N»: активна, когда всё собрано и хватает осколков
 func _forge_button(name: String, br: Rect2, rid: String, st: String) -> void:
 	var sc = _sc()
 	rects[name] = br
@@ -383,6 +397,9 @@ func tap(pos: Vector2) -> void:
 		try_id = ""
 		g.play("click", 0.9)
 		return
+	if buy.active():
+		buy.tap(pos)
+		return
 	if rects.get("back", Rect2()).has_point(pos):
 		back()
 		return
@@ -406,6 +423,12 @@ func tap(pos: Vector2) -> void:
 				g.play("crystal")
 				_sc().say(I18n.t("card_worn") + ": " + Meta.item_name(rid, kind(), _gen()))
 			return
+	# 0.14: ячейка вещи набора — примерка и покупка / надеть-снять / «Откроется после зала N»
+	for n in sets:
+		for i in Meta.recipe_for_set(n).get("needs", []).size():
+			if rects.get("need_%d_%d" % [n, i], Rect2()).has_point(pos):
+				buy.tap_cell(n, i)
+				return
 	var sup: String = Meta.super_recipe(kind()).id
 	if rects.get("super_try", Rect2()).has_point(pos):
 		if g.meta.forged.has(sup):
@@ -658,7 +681,7 @@ func anvil_icon(c: Vector2, s: float) -> void:
 	Rarity.star4(g, c + Vector2(12, -18) * k, 6 * k * (0.7 + 0.3 * sin(g.t_total * 4.0)), Color("#FFE27A"))
 
 
-## Кнопка «Кузница» на главном экране (справа под счётчиками). Метка «Можно сковать!» — когда готово.
+## Кнопка «Кузница» на главном экране (справа под счётчиками). Метка «Можно выковать!» — когда готово.
 func draw_home_button() -> void:
 	var sc = _sc()
 	var r := Rect2(g.W - 128, 118, 108, 108)

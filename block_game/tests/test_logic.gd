@@ -595,7 +595,7 @@ func _test_i18n(g) -> void:
 	check(names_ok, "названия всех вещей, украшений, залов, героев и мест переведены")
 	# Переключение языка
 	check(I18n.set_lang("en") and I18n.t("cascade") % 3 == "CASCADE ×3" and Meta.hall_name(10) == "Endless Depths", "английский: CASCADE ×3, Endless Depths")
-	check(Meta.lock_reason("ow_quill", 999, 1) == "Clear Fire Hall first" and Meta.item_name("ow_stargazer") == "Stargazer's Mantle", "английский: причина замка и название вещи")
+	check(Meta.lock_reason("ow_quill", 999, 1) == "Clear hall: Fire Hall" and Meta.item_name("ow_stargazer") == "Stargazer's Mantle", "английский: причина замка и название вещи")
 	check(Screens.shards_word(1) == "shard" and Screens.shards_word(5) == "shards", "английский: shard / shards")
 	check(I18n.set_lang("ru") and I18n.t("cascade") % 3 == "КАСКАД ×3" and Meta.hall_name(0) == "Аметистовый зал", "русский: КАСКАД ×3, Аметистовый зал")
 	check(Screens.shards_word(1) == "осколок" and Screens.shards_word(3) == "осколка" and Screens.shards_word(11) == "осколков" and Screens.shards_word(21) == "осколок", "русский: осколок / осколка / осколков")

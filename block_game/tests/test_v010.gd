@@ -220,7 +220,7 @@ func _test_halls() -> void:
 			seen[nm] = true
 	check(names_ok, "у всех 11 залов свои названия (en/ru)")
 	I18n.set_lang("ru")
-	check(Meta.hall_name(5) == "Сапфировый грот" and Meta.hall_name(9) == "Корона кристаллов" and Meta.hall_name(10) == "Бесконечные глубины", "русские названия новых залов")
+	check(Meta.hall_name(5) == "Сапфировый грот" and Meta.hall_name(9) == "Кристальная корона" and Meta.hall_name(10) == "Бесконечные глубины", "русские названия новых залов")
 	var col_ok := true
 	for a in Meta.HALLS.size():
 		for b in range(a + 1, Meta.HALLS.size()):

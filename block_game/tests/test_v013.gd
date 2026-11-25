@@ -303,8 +303,8 @@ func _test_texts() -> void:
 			ok = false
 			printerr("    ", k, ": ", Meta.hero_name(k, "boy"), " ", Meta.hero_name(k, "girl"), " ", Meta.hero_gen(k, "boy"), " ", Meta.hero_gen(k, "girl"))
 	check(ok, "ru: названия и родительный падеж по полу")
-	check(I18n.t("switch_text") % Meta.hero_gen("kitten", "girl") == "Вещи и украшения Кошечки будут сняты", "окно смены: «Вещи и украшения Кошечки…»")
-	check(Meta.item_name("ki_starry", "kitten", "girl") == "Звёздная кошка" and Meta.item_name("ki_starry", "kitten", "boy") == "Звёздный кот", "супер-награда котика по полу")
+	check(I18n.t("switch_text") % Meta.hero_gen("kitten", "girl") == "Вещи и украшения Кошечки вернутся осколками", "окно смены: «Вещи и украшения Кошечки…»")
+	check(Meta.item_name("ki_starry", "kitten", "girl") == "Звёздная кошечка" and Meta.item_name("ki_starry", "kitten", "boy") == "Звёздный котик", "супер-награда котика по полу")
 	check(Meta.item_name("pu_hero", "puppy", "girl") == "Собачка-героиня" and Meta.item_name("ki_skin_siamese", "kitten", "boy") == "Сиамский", "Собачка-героиня, Сиамский")
 	check(Meta.set_title(Meta.set_index("kit_detective"), "girl") == "Кошка-детектив" and Meta.set_title(Meta.set_index("kit_detective"), "boy") == "Кот-детектив", "набор: Кот-детектив / Кошка-детектив")
 	check(not I18n.t("pick_sub").begins_with("Он "), "подзаголовок выбора друга — без «он»")
