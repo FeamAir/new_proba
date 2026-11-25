@@ -157,7 +157,7 @@ func _test_catalogs() -> void:
 				tr_ok = false
 	check(tr_ok, "названия вещей, наборов и окон 0.12b — на обоих языках")
 	I18n.set_lang("ru")
-	check(Meta.item_name("ow_stargazer") == "Мантия звездочёта" and Meta.item_name("ax_abyssal") == "Сияние глубин" and Meta.item_name("pu_hero") == "Пёс-герой" and Meta.item_name("ki_starry") == "Звёздная кошка", "супер-награды: Мантия звездочёта, Сияние глубин, Пёс-герой, Звёздная кошка")
+	check(Meta.item_name("ow_stargazer") == "Мантия звездочёта" and Meta.item_name("ax_abyssal") == "Сияние глубин" and Meta.item_name("pu_hero") == "Пёс-герой" and Meta.item_name("ki_starry", "kitten", "boy") == "Звёздный кот" and Meta.item_name("ki_starry", "kitten", "girl") == "Звёздная кошка", "супер-награды: Мантия звездочёта, Сияние глубин, Пёс-герой, Звёздный кот / Звёздная кошка (0.13: по полу)")
 	# чужую вещь нельзя купить и надеть
 	var m = Meta.new()
 	m.set_hero("puppy")
@@ -456,8 +456,8 @@ func _test_forge_screen(g) -> void:
 	check(f.try_id == "pu_hero", "примерка супер-награды")
 	f.update(5.2)
 	check(f.try_id == "", "примерка заканчивается сама через 5 секунд")
-	f._try_forge("pu_kite", Meta.hero_sets("puppy")[1])
-	check(f.anim_id == "" and not g.meta.forged.has("pu_kite"), "без зала 3 и вещей — не куётся")
+	f._try_forge("pu_petal_rainbow", Meta.hero_sets("puppy")[1])
+	check(f.anim_id == "" and not g.meta.forged.has("pu_petal_rainbow"), "без зала 3 и вещей — не куётся")
 	f._try_forge("ow_page_whirl", 1)
 	check(f.anim_id == "" and not g.meta.forged.has("ow_page_whirl"), "рецепт другого друга не куётся")
 	f.back()

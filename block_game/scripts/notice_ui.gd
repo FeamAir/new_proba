@@ -5,6 +5,9 @@ extends RefCounted
 ##    (сумма — meta.gd, refund_value). «Отмена» ничего не меняет.
 ##  • «Гардероб обновлён!» — один раз после загрузки старого сохранения (0.6–0.12): общие вещи
 ##    убраны, их цена и плата за ковку вернулись осколками (meta.gd, notice_refund).
+##    0.13: то же окно — о новых наборах «Кот-детектив» и «Цветочный пикник» (meta.gd, notice_sets).
+##  • 0.13: «Как зовут друга?» — имя героя: поле ввода (LineEdit — на телефоне сама открывается
+##    экранная клавиатура), до 12 знаков, кнопки «Готово» / «Отмена» (и «Без имени», если имя было).
 
 const Meta := preload("res://scripts/meta.gd")
 const I18n := preload("res://scripts/i18n.gd")
@@ -15,12 +18,14 @@ const PANEL := Color("#2E1D58")
 var g
 var layer: CanvasLayer
 var node: Node2D
-var mode := ""        # "" — окна нет; "switch" — смена друга; "migrated" — гардероб обновлён
+var mode := ""        # "" — окна нет; "switch" — смена друга; "migrated" — гардероб обновлён; "name" — имя
 var to := ""          # на кого меняем
 var refund := 0       # сколько осколков вернётся / вернулось
 var t := 0.0
 var rects := {}
 var sb := StyleBoxFlat.new()
+var edit: LineEdit    # 0.13: поле ввода имени (видно только в окне имени)
+var name_for := ""    # чьё имя вводим
 
 
 func _init(game) -> void:
@@ -32,6 +37,31 @@ func _init(game) -> void:
 	layer.add_child(node)
 	g.add_child(layer)
 	node.visible = false
+	edit = LineEdit.new()
+	edit.max_length = 12
+	edit.visible = false
+	edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	edit.virtual_keyboard_enabled = true
+	edit.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_DEFAULT
+	edit.select_all_on_focus = true
+	edit.context_menu_enabled = false
+	edit.add_theme_font_size_override("font_size", 40)
+	if g.font:
+		edit.add_theme_font_override("font", g.font)
+	edit.add_theme_color_override("font_color", Color("#FFF4E0"))
+	edit.add_theme_color_override("caret_color", Color("#FFB547"))
+	var es := StyleBoxFlat.new()
+	es.bg_color = Color("#160C2E")
+	es.set_corner_radius_all(22)
+	es.set_border_width_all(3)
+	es.border_color = Color("#FFB547")
+	es.content_margin_left = 18
+	es.content_margin_right = 18
+	edit.add_theme_stylebox_override("normal", es)
+	edit.add_theme_stylebox_override("focus", es)
+	edit.text_changed.connect(_on_name_changed)
+	edit.text_submitted.connect(func(_s): name_done())
+	layer.add_child(edit)
 
 
 func active() -> bool:
@@ -46,6 +76,60 @@ func ask_switch(h: String) -> void:
 	t = 0.0
 
 
+## 0.13: окно имени для героя kind (поле — с текущим именем; клавиатура открывается сама).
+func ask_name(kind: String) -> void:
+	mode = "name"
+	name_for = kind
+	t = 0.0
+	edit.text = g.meta.name_of(kind)
+	edit.visible = true
+	edit.caret_column = edit.text.length()
+	edit.call_deferred("grab_focus")
+	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+		DisplayServer.virtual_keyboard_show(edit.text, Rect2(), DisplayServer.KEYBOARD_TYPE_DEFAULT, 12)
+
+
+## Запрещённые знаки убираются сразу при вводе (буквы любого алфавита, цифры, пробел, дефис).
+func _on_name_changed(txt: String) -> void:
+	var re := RegEx.new()
+	re.compile("[^\\p{L}\\p{N} \\-]")
+	var c := re.sub(txt, "", true).replace("  ", " ").lstrip(" ")
+	if c != txt:
+		var col := edit.caret_column
+		edit.text = c
+		edit.caret_column = mini(col, c.length())
+
+
+func _close_name() -> void:
+	edit.visible = false
+	edit.release_focus()
+	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+		DisplayServer.virtual_keyboard_hide()
+	mode = ""
+
+
+## «Готово»: пустое имя не принимается (кнопка неактивна).
+func name_done() -> void:
+	if mode != "name":
+		return
+	if not g.meta.set_hero_name(name_for, edit.text):
+		g.play("click", 0.7)
+		return
+	_close_name()
+	g._save()
+	g.play("crystal", 1.2)
+	g.screens.poke_hero()
+	g.screens.say(I18n.t("name_hello") % g.meta.name_of(name_for))
+
+
+## «Без имени»: снова Совёнок / Совушка...
+func name_clear() -> void:
+	g.meta.clear_hero_name(name_for)
+	_close_name()
+	g._save()
+	g.play("click")
+
+
 ## Сообщение о вернувшихся за старые вещи осколках показывается на спокойных экранах.
 func _calm() -> bool:
 	return g.state in [g.State.HOME, g.State.WARDROBE, g.State.MAP, g.State.FORGE]
@@ -58,6 +142,8 @@ func update(delta: float) -> void:
 		t = 0.0
 	t += delta
 	node.visible = mode != ""
+	if edit.visible != (mode == "name"):
+		edit.visible = mode == "name"
 	if node.visible:
 		node.queue_redraw()
 
@@ -74,6 +160,17 @@ func tap(pos: Vector2) -> void:
 		"migrated":
 			if rects.get("ok", Rect2()).has_point(pos):
 				back()
+		"name":
+			if rects.get("name_ok", Rect2()).has_point(pos):
+				name_done()
+			elif rects.get("name_clear", Rect2()).has_point(pos):
+				name_clear()
+			elif rects.get("no", Rect2()).has_point(pos):
+				back()
+			elif rects.get("field", Rect2()).has_point(pos):
+				edit.grab_focus()
+				if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+					DisplayServer.virtual_keyboard_show(edit.text, Rect2(), DisplayServer.KEYBOARD_TYPE_DEFAULT, 12)
 
 
 ## «Сменить»: прежнему герою — возврат, новый — с нуля.
@@ -92,8 +189,13 @@ func confirm() -> void:
 func back() -> void:
 	if mode == "migrated":
 		g.meta.notice_refund = 0
+		g.meta.notice_sets = false
 		g._save()
 		g.play("crystal")
+	elif mode == "name":
+		_close_name()
+		g.play("click", 0.9)
+		return
 	else:
 		g.play("click", 0.9)
 	mode = ""
@@ -155,6 +257,8 @@ func _draw() -> void:
 	node.draw_rect(Rect2(0, 0, g.W, H), Color(0.02, 0.01, 0.06, 0.72 * k))
 	if mode == "switch":
 		_draw_switch(H, k)
+	elif mode == "name":
+		_draw_name(H, k)
 	else:
 		_draw_migrated(H, k)
 
@@ -171,14 +275,19 @@ func _draw_switch(H: float, k: float) -> void:
 	var y := r.position.y + 190
 	var hero = g.screens.hero
 	hero.draw_avatar(node, old, Vector2(g.W / 2.0 - 150, y), 74, g.meta.outfit(), g.t_total, g.DIM)
-	hero.draw_avatar(node, to, Vector2(g.W / 2.0 + 150, y), 74, {}, g.t_total + 1.3, g.ACCENT, 0.4 + fposmod(t, 3.0))
+	hero.draw_avatar(node, to, Vector2(g.W / 2.0 + 150, y), 74, g.meta.look(to), g.t_total + 1.3, g.ACCENT, 0.4 + fposmod(t, 3.0))
 	var ax: float = g.W / 2.0
 	var bob := sin(t * 4.0) * 6.0
 	node.draw_colored_polygon(PackedVector2Array([Vector2(ax - 26 + bob, y - 18), Vector2(ax + 8 + bob, y - 18), Vector2(ax + 8 + bob, y - 34),
 		Vector2(ax + 40 + bob, y), Vector2(ax + 8 + bob, y + 34), Vector2(ax + 8 + bob, y + 18), Vector2(ax - 26 + bob, y + 18)]), g.ACCENT)
-	_text(g.W / 2.0 - 150, y + 116, Meta.hero_name(old), 28, g.DIM, 260)
-	_text(g.W / 2.0 + 150, y + 116, Meta.hero_name(to), 28, g.ACCENT, 260)
-	var body := I18n.t("switch_text") % I18n.t("hero_gen_" + old)
+	_text(g.W / 2.0 - 150, y + 116, g.meta.display_name(old), 28, g.DIM, 260)
+	_text(g.W / 2.0 + 150, y + 116, g.meta.display_name(to), 28, g.ACCENT, 260)
+	# 0.13: склонение по полу (вещи Совёнка / Совушки); с именем — «Имя: вещи и украшения будут сняты»
+	var body: String
+	if g.meta.name_of(old) != "":
+		body = I18n.t("switch_text_named") % g.meta.name_of(old)
+	else:
+		body = I18n.t("switch_text") % Meta.hero_gen(old, g.meta.gender_of(old))
 	node.draw_multiline_string(g.font, Vector2(r.position.x + 30, r.position.y + 368), body, HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 60, 28, 2, g.TEXT)
 	_refund_line(r.position.y + 470, "switch_refund")
 	_text(r.get_center().x, r.position.y + 520, I18n.t("switch_keep"), 22, g.DIM, r.size.x - 40)
@@ -198,8 +307,10 @@ func _draw_migrated(H: float, k: float) -> void:
 	for i in Meta.HEROES.size():
 		var c := Vector2(r.position.x + 92 + i * ((r.size.x - 184) / 3.0), r.position.y + 175 + sin(t * 3.0 + i) * 5.0)
 		# каждый друг — в своей супер-награде (шляпа, корона, маска, тиара)
-		hero.draw_avatar(node, Meta.HEROES[i], c, 56, {"aura": Meta.super_recipe(Meta.HEROES[i]).id}, g.t_total + i * 0.9, [Color("#B46CFF"), Color("#FF8FD8"), Color("#FFB547"), Color("#7FE3FF")][i])
-	node.draw_multiline_string(g.font, Vector2(r.position.x + 30, r.position.y + 290), I18n.t("migrate_text"), HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 60, 28, 3, g.TEXT)
+		var hk: String = Meta.HEROES[i]
+		hero.draw_avatar(node, hk, c, 56, g.meta.look(hk).merged({"aura": Meta.super_recipe(hk).id}), g.t_total + i * 0.9, [Color("#B46CFF"), Color("#FF8FD8"), Color("#FFB547"), Color("#7FE3FF")][i])
+	var mt := I18n.t("migrate_sets_text") if g.meta.notice_sets else I18n.t("migrate_text")
+	node.draw_multiline_string(g.font, Vector2(r.position.x + 30, r.position.y + 282), mt, HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 60, 28, 3, g.TEXT)
 	_refund_line(r.position.y + 420, "migrate_refund")
 	_button("ok", Rect2(g.W / 2.0 - 170, r.end.y - 100, 340, 76), I18n.t("forge_great"), true)
 	# искры
@@ -222,3 +333,37 @@ func _outline(r: Rect2, rad: float) -> PackedVector2Array:
 			pts.append(cs[q] + Vector2(cos(ang), sin(ang)) * rad)
 	pts.append(pts[0])
 	return pts
+
+
+## 0.13: «Как зовут друга?» — окно в верхней половине экрана (нижнюю закрывает клавиатура телефона)
+func _draw_name(H: float, k: float) -> void:
+	var r := Rect2(28, 110 + (1.0 - k) * 30.0, g.W - 56, 560)
+	rects["panel"] = r
+	_box(r.grow(6), Color(0.02, 0.01, 0.06, 0.6), 40)
+	_box(r, PANEL, 36)
+	node.draw_polyline(_outline(r.grow(-2), 34), Color(g.ACCENT, 0.85), 3.0, true)
+	var hero = g.screens.hero
+	var kind := name_for
+	hero.draw_avatar(node, kind, Vector2(r.position.x + 96, r.position.y + 96), 56, g.meta.outfit() if kind == g.meta.hero else g.meta.look(kind), g.t_total, g.ACCENT, 0.4 + fposmod(t, 3.0))
+	_text(r.position.x + 96 + (r.size.x - 150) / 2.0 + 20, r.position.y + 82, I18n.t("name_title"), 40, g.TEXT, r.size.x - 190)
+	_text(r.position.x + 96 + (r.size.x - 150) / 2.0 + 20, r.position.y + 124, Meta.hero_name(kind, g.meta.gender_of(kind)), 26, g.DIM, r.size.x - 190)
+	# поле ввода (LineEdit) — поверх окна
+	var fr := Rect2(r.position.x + 36, r.position.y + 180, r.size.x - 72, 84)
+	rects["field"] = fr
+	edit.position = fr.position
+	edit.size = fr.size
+	edit.modulate.a = k
+	var clean: String = Meta.clean_name(edit.text)
+	_text(r.get_center().x, fr.end.y + 40, I18n.t("name_hint") + "  ·  %d / %d" % [edit.text.length(), Meta.NAME_MAX], 22, g.DIM, r.size.x - 60)
+	var has_name: bool = g.meta.name_of(kind) != ""
+	var by := r.end.y - (150 if has_name else 110)
+	_button("no", Rect2(r.position.x + 24, by, 250, 76), I18n.t("cancel"), false)
+	_button("name_ok", Rect2(r.position.x + 290, by, r.size.x - 314, 76), I18n.t("name_done"), clean != "")
+	if clean == "":
+		_box(rects["name_ok"], Color(0.1, 0.06, 0.2, 0.45), 28)
+	if has_name:
+		var cr := Rect2(r.get_center().x - 130, r.end.y - 62, 260, 40)
+		rects["name_clear"] = Rect2(cr.position - Vector2(0, 8), cr.size + Vector2(0, 16))
+		_text(cr.get_center().x, cr.position.y + 26, I18n.t("name_clear"), 24, Color(g.TEXT, 0.75), cr.size.x)
+		var tw: float = minf(cr.size.x, g.font.get_string_size(I18n.t("name_clear"), HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x)
+		node.draw_line(Vector2(cr.get_center().x - tw / 2.0, cr.position.y + 32), Vector2(cr.get_center().x + tw / 2.0, cr.position.y + 32), Color(g.TEXT, 0.45), 1.5)

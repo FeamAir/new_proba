@@ -793,6 +793,8 @@ func _input(event: InputEvent) -> void:
 
 
 func _key(e: InputEventKey) -> void:
+	if notice_ui and notice_ui.active():
+		return  # 0.13: открыто окно (например, ввод имени) — клавиши не управляют игрой
 	match e.keycode:
 		KEY_LEFT: _press("left")
 		KEY_RIGHT: _press("right")

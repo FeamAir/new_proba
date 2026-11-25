@@ -200,12 +200,12 @@ func draw_pick() -> void:
 	rects.clear()
 	var H: float = g.H
 	var oy := (H - 1280.0) * 0.4
-	_shadow_text(g.W / 2.0, 150 + oy, I18n.t("pick_title"), 64, g.TEXT)
-	_ctext(g.W / 2.0, 205 + oy, I18n.t("pick_sub"), 28, g.DIM)
-	# четыре друга — сетка 2×2
+	_shadow_text(g.W / 2.0, 136 + oy, I18n.t("pick_title"), 60, g.TEXT)
+	_ctext(g.W / 2.0, 188 + oy, I18n.t("pick_sub"), 28, g.DIM)
+	# четыре друга — сетка 2×2 (0.13: каждый — в выбранном виде: мальчик или девочка)
 	for i in Meta.HEROES.size():
 		var kind: String = Meta.HEROES[i]
-		var r := Rect2(24 + (i % 2) * 344, 236 + oy + (i / 2) * 318, 328, 304)
+		var r := Rect2(24 + (i % 2) * 344, 216 + oy + (i / 2) * 304, 328, 290)
 		rects["hero_" + kind] = r
 		var sel := pick_choice == kind
 		if sel:
@@ -213,21 +213,26 @@ func draw_pick() -> void:
 		g._rbox(r, Color("#2A1A4F") if not sel else Color("#3A2468"), 34)
 		var glow: Color = PICK_GLOW.get(kind, Color("#B46CFF"))
 		for k in 4:
-			g.draw_circle(r.position + Vector2(r.size.x / 2.0, 120), 112 - k * 22, Color(glow, 0.05 + k * 0.02), true, -1.0, true)
-		var sc: float = PICK_SCALE.get(kind, 0.64)
-		hero.draw(g, kind, r.position + Vector2(r.size.x / 2.0, 140), sc, {}, g.t_total + i * 1.7, react if sel else 99.0)
-		var nm := Meta.hero_name(kind)
-		_ctext(r.get_center().x, r.end.y - 50, nm, fit_size(nm, r.size.x - 20, 36), g.ACCENT if sel else g.TEXT, r.size.x)
+			g.draw_circle(r.position + Vector2(r.size.x / 2.0, 114), 108 - k * 21, Color(glow, 0.05 + k * 0.02), true, -1.0, true)
+		var sc: float = PICK_SCALE.get(kind, 0.64) * 0.96
+		hero.draw(g, kind, r.position + Vector2(r.size.x / 2.0, 132), sc, g.meta.look(kind), g.t_total + i * 1.7, react if sel else 99.0)
+		var nm: String = g.meta.display_name(kind)
+		_ctext(r.get_center().x, r.end.y - 46, nm, fit_size(nm, r.size.x - 20, 36), g.ACCENT if sel else g.TEXT, r.size.x)
 		var lv := I18n.t("pick_lives_" + kind)
-		_ctext(r.get_center().x, r.end.y - 16, lv, fit_size(lv, r.size.x - 16, 22), g.DIM, r.size.x)
-	_button("ok", Rect2(160, 900 + oy, 400, 120), I18n.t("pick_ok"), true, 50, pick_choice != "")
-	_ctext(g.W / 2.0, 1076 + oy, I18n.t("pick_hint"), 26, g.DIM)
+		_ctext(r.get_center().x, r.end.y - 14, lv, fit_size(lv, r.size.x - 16, 22), g.DIM, r.size.x)
+	# 0.13: мальчик или девочка — для выбранного друга (по умолчанию мальчик, можно сменить в любой момент)
+	if pick_choice != "":
+		gender_toggle(Rect2(60, 836 + oy, 600, 88), pick_choice, true)
+	_button("ok", Rect2(160, 946 + oy, 400, 112), I18n.t("pick_ok"), true, 50, pick_choice != "")
+	_ctext(g.W / 2.0, 1096 + oy, I18n.t("pick_hint"), 26, g.DIM)
 	_lang_button(Rect2(g.W - 136, 24 + oy * 0.5, 116, 58))
 	_toast(1120 + oy)
 
 
 func tap_pick(pos: Vector2) -> void:
 	if _tap_lang(pos):
+		return
+	if pick_choice != "" and tap_gender(pos, pick_choice):
 		return
 	for kind in Meta.HEROES:
 		if rects.get("hero_" + kind, Rect2()).has_point(pos):
@@ -244,6 +249,102 @@ func tap_pick(pos: Vector2) -> void:
 		g.play("levelup")
 		fade = 1.0
 		g.go_home()
+
+
+# ---------- 0.13: мальчик / девочка и имя ----------
+
+const BOY_COL := Color("#5FC8FF")
+const GIRL_COL := Color("#FF8FCB")
+
+
+## Значок пола: "boy" — кружок со стрелкой (♂), "girl" — кружок с крестиком (♀). Рисуется линиями
+## (в шрифте может не быть этих знаков).
+func gender_icon(c: Vector2, s: float, gender: String, col: Color) -> void:
+	var w := maxf(2.5, s * 0.12)
+	if gender == "boy":
+		var o := c + Vector2(-s * 0.12, s * 0.12)
+		g.draw_arc(o, s * 0.32, 0, TAU, 24, col, w, true)
+		var tip := c + Vector2(s * 0.42, -s * 0.42)
+		g.draw_line(o + Vector2(s * 0.23, -s * 0.23), tip, col, w, true)
+		g.draw_line(tip, tip + Vector2(-s * 0.26, 0), col, w, true)
+		g.draw_line(tip, tip + Vector2(0, s * 0.26), col, w, true)
+	else:
+		var o := c + Vector2(0, -s * 0.16)
+		g.draw_arc(o, s * 0.3, 0, TAU, 24, col, w, true)
+		g.draw_line(o + Vector2(0, s * 0.3), c + Vector2(0, s * 0.56), col, w, true)
+		g.draw_line(c + Vector2(-s * 0.18, s * 0.38), c + Vector2(s * 0.18, s * 0.38), col, w, true)
+
+
+## Переключатель «мальчик / девочка» для героя kind: две кнопки (labels — с подписями,
+## иначе круглые значки). Кнопки — rects "g_boy" / "g_girl".
+func gender_toggle(r: Rect2, kind: String, labels: bool) -> void:
+	var cur: String = g.meta.gender_of(kind)
+	var gap := 12.0 if labels else 8.0
+	var bw := (r.size.x - gap) / 2.0
+	for i in 2:
+		var gd: String = ["boy", "girl"][i]
+		var col: Color = BOY_COL if gd == "boy" else GIRL_COL
+		var br := Rect2(r.position.x + i * (bw + gap), r.position.y, bw, r.size.y)
+		rects["g_" + gd] = br
+		var on := gd == cur
+		if on:
+			g._rbox(br.grow(4), Color(col, 0.3 + 0.08 * sin(g.t_total * 4.0)), int(br.size.y / 2.0) + 4)
+		g._rbox(br, col if on else Color(0.1, 0.06, 0.2, 0.88), int(br.size.y / 2.0))
+		if not on:
+			g.draw_polyline(_rr_outline(br.grow(-1), br.size.y / 2.0 - 1), Color(col, 0.75), 2.5, true)
+		var ic_col: Color = DARK_TEXT if on else col
+		if labels:
+			var lbl := I18n.t("gender_" + gd)
+			var fs := fit_size(lbl, bw - 96, 32)
+			var lw: float = g.font.get_string_size(lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			var x0: float = br.get_center().x - (lw + 52) / 2.0
+			gender_icon(Vector2(x0 + 20, br.get_center().y), 40, gd, ic_col)
+			_text(Vector2(x0 + 52, br.get_center().y + fs * 0.36), lbl, fs, ic_col)
+		else:
+			gender_icon(br.get_center(), br.size.y * 0.62, gd, ic_col)
+
+
+## Касание переключателя пола (для героя kind). true — касание обработано.
+func tap_gender(pos: Vector2, kind: String) -> bool:
+	for gd in ["boy", "girl"]:
+		if rects.get("g_" + gd, Rect2()).has_point(pos):
+			if g.meta.gender_of(kind) != gd:
+				g.meta.set_gender(kind, gd)  # вещи не снимаются, осколки не возвращаются — тот же герой
+				g._save()
+				g.play("crystal", 1.15 if gd == "girl" else 0.95)
+				say(I18n.t("gender_now_" + gd))
+			else:
+				g.play("click", 0.9)
+			poke_hero()
+			return true
+	return false
+
+
+## Кнопка имени: карандашик и имя героя (или «Имя», если не задано). Rect — "name".
+func name_button(r: Rect2, kind: String) -> Rect2:
+	var nm: String = g.meta.name_of(kind)
+	var lbl: String = nm if nm != "" else I18n.t("name_give")
+	var fs := fit_size(lbl, r.size.x - 62, 26)
+	var lw: float = g.font.get_string_size(lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var w := minf(r.size.x, lw + 70.0)
+	var br := Rect2(r.position, Vector2(w, r.size.y))
+	rects["name"] = br
+	_pill(br, Color(0.1, 0.06, 0.2, 0.88))
+	g.draw_polyline(_rr_outline(br.grow(-1), br.size.y / 2.0 - 1), Color(g.ACCENT, 0.7), 2.0, true)
+	pencil_icon(br.position + Vector2(26, br.size.y / 2.0), 26, g.ACCENT)
+	_text(Vector2(br.position.x + 48, br.get_center().y + fs * 0.36), lbl, fs, g.TEXT if nm != "" else g.ACCENT)
+	return br
+
+
+## Карандашик (в шрифте может не быть знака ✎)
+func pencil_icon(c: Vector2, s: float, col: Color) -> void:
+	var d := Vector2(1, -1).normalized()
+	var a := c - d * s * 0.42
+	var b := c + d * s * 0.3
+	var n := d.orthogonal() * s * 0.14
+	g.draw_colored_polygon(PackedVector2Array([b + n, b - n, a - n, a + n]), col)
+	g.draw_colored_polygon(PackedVector2Array([a + n, a - n, a - d * s * 0.2]), Color(col, 0.6))
+	g.draw_colored_polygon(PackedVector2Array([b + n, b + d * s * 0.16 + n, b + d * s * 0.16 - n, b - n]), Color("#FF8FB8"))
 
 
 ## 0.12b: сменить друга. Если у прежнего есть вещи или украшения — сначала окно с возвратом
@@ -296,6 +397,15 @@ func draw_home() -> void:
 		PackedColorArray([Color(0.04, 0.02, 0.1, 0.75), Color(0.04, 0.02, 0.1, 0.75), Color(0.04, 0.02, 0.1, 0), Color(0.04, 0.02, 0.1, 0)]))
 	avatar(Vector2(72, 72), 48)
 	rects["avatar"] = Rect2(20, 20, 104, 104)
+	# 0.13: имя друга (или Совёнок / Совушка...) под аватаркой
+	var dn: String = g.meta.display_name(kind)
+	var dfs := fit_size(dn, 136, 22)
+	var dw: float = minf(150.0, g.font.get_string_size(dn, HORIZONTAL_ALIGNMENT_LEFT, -1, dfs).x + 26.0)
+	var dr := Rect2(72 - dw / 2.0, 124, dw, 34)
+	if dr.position.x < 8:
+		dr.position.x = 8
+	_pill(dr, Color(0.1, 0.06, 0.2, 0.85))
+	_text(Vector2(dr.position.x, dr.position.y + 25), dn, dfs, g.TEXT, dr.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 	_counters(g.W - 20, 44)
 	_lang_button(Rect2(140, 44, 116, 58))
 	g.forge_ui.draw_home_button()  # 0.12: вход в Кристальную кузницу
@@ -487,6 +597,10 @@ func draw_wardrobe() -> void:
 		_pill(cpr, Color(0.1, 0.06, 0.2, 0.85))
 		_text(Vector2(cpr.position.x, cpr.position.y + 25), col_lbl, 20, Color("#FFD9F4"), cpr.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 		_text(Vector2(st.position.x + 18, st.position.y + 38), Meta.slot_name(tab), 28, Color(g.TEXT, 0.85))
+		# 0.13: имя друга (кнопка «Имя») и мальчик / девочка — слева на сцене
+		if not tryon.active():
+			name_button(Rect2(st.position.x + 14, st.position.y + 56, 196, 48), kind)
+			gender_toggle(Rect2(st.position.x + 14, st.position.y + 114, 124, 58), kind, false)
 	# строка под сценой: герои или места для украшений
 	if tab == "home":
 		var n := Meta.SPOTS.size()
@@ -512,9 +626,9 @@ func draw_wardrobe() -> void:
 			g._rbox(r, Color("#46307A") if sel else g.BTN, 22)
 			if sel:
 				g.draw_polyline(_rr_outline(r.grow(-1), 20), g.ACCENT, 3.0, true)
-			# 0.12b: вещи — только свои, другие друзья в чипах без нарядов
-			hero.draw_avatar(g, h, r.position + Vector2(29, 31), 20, tryon.outfit(g.meta) if sel else {}, g.t_total, g.ACCENT if sel else g.DIM)
-			var nm := Meta.hero_name(h)
+			# 0.12b: вещи — только свои, другие друзья в чипах без нарядов (0.13: но в своём виде — мальчик/девочка)
+			hero.draw_avatar(g, h, r.position + Vector2(29, 31), 20, tryon.outfit(g.meta) if sel else g.meta.look(h), g.t_total, g.ACCENT if sel else g.DIM)
+			var nm: String = g.meta.display_name(h)
 			_text(Vector2(r.position.x + 59, r.position.y + 40), nm, fit_size(nm, r.size.x - 66, 24), g.ACCENT if sel else g.TEXT)
 	# вкладки (0.12: значками — их восемь; название вкладки — на сцене)
 	var tabs := wr_tabs()
@@ -701,7 +815,7 @@ func _card(it: Dictionary, r: Rect2, kind: String) -> void:
 	if is_decor:
 		home.draw_decor_icon(g, it.id, ic, 118, g.t_total)
 	else:
-		hero.draw_item_icon(g, it.id, it.slot, kind, ic, 120, g.t_total)
+		hero.draw_item_icon(g, it.id, it.slot, kind, ic, 120, g.t_total, g.meta.gender_of(kind))
 	g.draw_set_transform(Vector2.ZERO)
 	if rar != "":
 		if lock == "" or own:
@@ -719,7 +833,7 @@ func _card(it: Dictionary, r: Rect2, kind: String) -> void:
 		var pulse := 0.8 + 0.2 * sin(g.t_total * 5.0)
 		g.draw_polyline(_rr_outline(r.grow(-2), 20), Color(g.ACCENT, pulse), 5.0, true)
 		_badge(Vector2(r.get_center().x, r.position.y + 4), I18n.t("try_on"), 18)
-	var nm := Meta.item_name(it.id, kind)
+	var nm := Meta.item_name(it.id, kind, g.meta.gender_of(kind))
 	_text(Vector2(r.position.x, r.position.y + 154), nm, fit_size(nm, r.size.x - 10, 21), g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 	var sy := r.position.y + 186
 	var cx := r.get_center().x
@@ -788,7 +902,7 @@ func _try_panel(L: Dictionary, kind: String) -> void:
 	if it.has("home"):
 		home.draw_decor_icon(g, tryon.id, ic, 62, g.t_total)
 	else:
-		hero.draw_item_icon(g, tryon.id, it.slot, kind, ic, 66, g.t_total)
+		hero.draw_item_icon(g, tryon.id, it.slot, kind, ic, 66, g.t_total, g.meta.gender_of(kind))
 	g.draw_set_transform(Vector2.ZERO)
 	# цена справа
 	var price := str(tryon.price())
@@ -801,7 +915,7 @@ func _try_panel(L: Dictionary, kind: String) -> void:
 	# название и состояние
 	var tx: float = r.position.x + 106
 	var tw: float = pr.position.x - tx - 10
-	var tnm := Meta.item_name(tryon.id, kind)
+	var tnm := Meta.item_name(tryon.id, kind, g.meta.gender_of(kind))
 	_text(Vector2(tx, r.position.y + 42), tnm, fit_size(tnm, tw, 30), g.TEXT, tw)
 	var line := I18n.t("try_hint")
 	var col: Color = g.DIM
@@ -810,7 +924,7 @@ func _try_panel(L: Dictionary, kind: String) -> void:
 		var rar := Meta.rarity(tryon.id)
 		var rl := Meta.rarity_name(rar)
 		if Meta.set_of(tryon.id) > 0:
-			rl += " · " + Meta.set_title(Meta.set_of(tryon.id))
+			rl += " · " + Meta.set_title(Meta.set_of(tryon.id), g.meta.gender_of(kind))
 		_text(Vector2(r.position.x + 16, r.position.y + 112), rl, fit_size(rl, r.size.x - 32, 20), Rarity.frame_col(rar, g.t_total), r.size.x - 32)
 	if Meta.is_forge(tryon.id) and Meta.hall_done(int(it.hall), g.max_level):
 		line = Meta.lock_reason(tryon.id, g.total_stars(), g.max_level)
@@ -874,7 +988,7 @@ func _confirm_try() -> void:
 	match tryon.confirm(g.meta, g.total_stars(), g.max_level):
 		"bought", "owned":
 			g.play("crystal")
-			say(I18n.t("bought") % Meta.item_name(id, g.meta.hero))
+			say(I18n.t("bought") % Meta.item_name(id, g.meta.hero, g.meta.gender_of(g.meta.hero)))
 			poke_hero()
 			fx_t = 0.0
 			fx_at = focus
@@ -909,6 +1023,14 @@ func tap_wardrobe(pos: Vector2) -> void:
 		g.play("click")
 		g.forge_ui.open()
 		return
+	if tab != "home":
+		# 0.13: имя и мальчик / девочка
+		if rects.get("name", Rect2()).has_point(pos):
+			g.play("click")
+			g.notice_ui.ask_name(_kind())
+			return
+		if tap_gender(pos, _kind()):
+			return
 	for tname in wr_tabs():
 		if rects.get("tab_" + tname, Rect2()).has_point(pos):
 			g.play("click")
