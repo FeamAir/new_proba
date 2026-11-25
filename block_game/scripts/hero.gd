@@ -49,11 +49,13 @@ const PALETTES := {
 		"skin_midnight": {"body": Color("#3B4BA8"), "dark": Color("#283478"), "belly": Color("#7C8BE0"), "gill": Color("#FFD95A"), "tip": Color("#FFF2B0")},
 	},
 	## Щенок: ""  — золотистый ретривер; skin_moon — рыжий корги с белой проточиной (pu_skin_corgi);
-	##   skin_gold — далматинец: пятна, тёмные ушки (pu_skin_dalmatian).
+	##   skin_gold — далматинец: пятна, тёмные ушки (pu_skin_dalmatian); pu_skin_cotton — «Сахарная вата» (0.13).
 	"puppy": {
 		"": {"body": Color("#F5CB8C"), "dark": Color("#DE9F57"), "belly": Color("#FFF2DE"), "nose": Color("#3F2622"), "eye": Color("#6B3E26")},
 		"skin_moon": {"body": Color("#F59A4A"), "dark": Color("#DC7430"), "belly": Color("#FFF7EE"), "nose": Color("#33201C"), "eye": Color("#6B3A22"), "blaze": true},
 		"skin_gold": {"body": Color("#F8F6FB"), "dark": Color("#463E52"), "belly": Color("#FFFFFF"), "nose": Color("#2C2433"), "eye": Color("#4A3A5E"), "spots": Color("#3A3346")},
+		# 0.13: «Сахарная вата» (набор «Цветочный пикник»): нежно-розовая, ушки лиловые; искорки сахара — hero_magic.gd
+		"pu_skin_cotton": {"body": Color("#FFD2E6"), "dark": Color("#BFA2F2"), "belly": Color("#FFF7FC"), "nose": Color("#6A3A5E"), "eye": Color("#5A2E62")},
 	},
 	## Котик: ""  — рыжий/персиковый; skin_mint — серый полосатый (ki_skin_tabby);
 	##   skin_moon — сиамский: тёмные ушки, мордочка, лапки и хвост (ki_skin_siamese).
@@ -1576,7 +1578,6 @@ func _front_items(outfit: Dictionary, a: Dictionary, t: float) -> void:
 	_T = Transform2D.IDENTITY
 	var ey: String = outfit.get("eyes", "")
 	match Meta.draw_key(ey):
-		"sunglasses": _sunglasses(a)
 		"_master": Magic.master_eyes(self, a, t)
 		_:
 			if not Sets.dispatch_eyes(self, Meta.draw_key(ey), a, t):
@@ -1608,27 +1609,6 @@ func _head_T(a: Dictionary) -> Transform2D:
 
 func _hv(a: Dictionary, v: Vector2) -> Vector2:
 	return a.top + v.rotated(a.tilt) * (a.top_w / 100.0)
-
-
-## Очки-сердечки (0.12b: «Парижские очки» котика)
-func _sunglasses(a: Dictionary) -> void:
-	var r: float = a.eye_rad * 1.12
-	var bridge := PackedVector2Array()
-	for i in 7:
-		var s := i / 6.0
-		bridge.append(a.eye_l.lerp(a.eye_r, 0.5 + (s - 0.5) * 0.42) + Vector2(0, -r * 0.42 - sin(s * PI) * r * 0.12))
-	ci.draw_polyline(bridge, Color("#C81E6A"), r * 0.18, true)
-	for e in [a.eye_l, a.eye_r]:
-		_T = Transform2D(a.tilt, e)
-		var h := _heart(Vector2.ZERO, r * 1.1)
-		_vgrad(h, Color("#3A1670"), Color("#FF4FA3"))
-		var hc := h.duplicate()
-		hc.append(h[0])
-		_line(hc, Color("#E0247A"), r * 0.17)
-		_line(hc, Color("#FF8CC6"), r * 0.06)
-		_line(PackedVector2Array([Vector2(-r * 0.62, -r * 0.2), Vector2(-r * 0.3, -r * 0.55)]), Color(1, 1, 1, 0.7), r * 0.12)
-		_line(PackedVector2Array([Vector2(-r * 0.3, r * 0.08), Vector2(-r * 0.05, -r * 0.2)]), Color(1, 1, 1, 0.4), r * 0.08)
-	_T = Transform2D.IDENTITY
 
 
 ## Вязаный полосатый шарф с хвостиком, бахромой и бубенчиком (0.12b: цвета — у вещи героя)
@@ -1707,14 +1687,17 @@ func _rrect(r: Rect2, rad: float) -> PackedVector2Array:
 ## Рисует вещь отдельно, в квадрате размером size вокруг c. Окраска — мини-аватаркой героя,
 ## сияние — маленьким героем в этом сиянии (супер-эксклюзив — герой в его шляпе/маске),
 ## спутник — крупно сам по себе. Вещи «по анатомии» рисуют свой значок (модуль героя, icon).
-func draw_item_icon(target: CanvasItem, id: String, slot: String, kind: String, c: Vector2, size: float, t: float) -> void:
+## gender (0.13) — "girl": герой на значках окрасок и сияний — девочка.
+func draw_item_icon(target: CanvasItem, id: String, slot: String, kind: String, c: Vector2, size: float, t: float, gender := "") -> void:
+	var lk := {"gender": "girl"} if gender == "girl" else {}
+	_girl = gender == "girl"
 	ci = target
 	_rid = target.get_canvas_item()
 	_T = Transform2D.IDENTITY
 	_react = 99.0
 	var d := Meta.draw_key(id)
 	if slot == "skin":
-		draw_avatar(target, kind, c, size * 0.36, {"skin": id}, t, palette(kind, {"skin": id}).body)
+		draw_avatar(target, kind, c, size * 0.36, lk.merged({"skin": id}), t, palette(kind, {"skin": id}).body)
 		return
 	if slot == "aura":
 		# сияние вокруг аватарки героя (дешевле, чем целый герой на каждой карточке)
@@ -1726,7 +1709,8 @@ func draw_item_icon(target: CanvasItem, id: String, slot: String, kind: String, 
 		ci.draw_set_transform(Vector2.ZERO)
 		var ring: Color = palette(kind, {}).body
 		var sup: bool = Meta.item(id).has("covers")
-		draw_avatar(target, kind, c + Vector2(0, size * (0.1 if sup else 0.02)), size * (0.3 if sup else 0.23), {"aura": id} if sup else {}, t, ring)
+		draw_avatar(target, kind, c + Vector2(0, size * (0.1 if sup else 0.02)), size * (0.3 if sup else 0.23), lk.merged({"aura": id}) if sup else lk, t, ring)
+		_girl = gender == "girl"
 		ci = target
 		_rid = target.get_canvas_item()
 		_T = Transform2D.IDENTITY

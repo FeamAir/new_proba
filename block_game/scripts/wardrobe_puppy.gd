@@ -1,8 +1,9 @@
 extends RefCounted
 ## Cascado 0.12b: гардероб ЩЕНКА — весёлый спортсмен и приключенец. Рисуется только на щенке
 ## (точки крепления — hero.gd, _anchors "puppy").
-## Наборы: «Спортплощадка», «Поход», «Супергерой»; награды кузницы — Золотая фрисби, Воздушный змей,
-## Молнии-скорость; супер-эксклюзив — Пёс-герой (развевающаяся накидка с лапкой, маска, золотая медаль;
+## Наборы (0.13): «Спортплощадка» (обычный), «Цветочный пикник» (милый, вместо «Похода»),
+## «Супергерой» (крутой); награды кузницы — Золотая фрисби, Радуга лепестков, Молнии-скорость;
+## супер-эксклюзив — Пёс-герой / Собачка-героиня (развевающаяся накидка с лапкой, маска, золотая медаль;
 ## при победе — геройский прыжок, hero.gd).
 
 const Sets := preload("res://scripts/hero_sets.gd")
@@ -27,27 +28,21 @@ static func item(h, id: String, stage: String, a: Dictionary, t: float) -> void:
 		"pu_visor":
 			if stage == "eyes":
 				visor(h, a, t)
-		"pu_explorer_hat":
+		"pu_daisy_wreath":
 			if stage == "head":
-				explorer_hat(h, a, t)
-		"pu_bone_collar":
+				daisy_wreath(h, a, t)
+		"pu_flower_scarf":
 			if stage == "neck":
-				bone_collar(h, a, t)
-		"pu_aviators":
+				flower_scarf(h, a, t)
+		"pu_daisy_specs":
 			if stage == "eyes":
-				aviators(h, a, t)
-		"pu_backpack":
-			if stage == "back_b" or stage == "back_f":
-				backpack(h, a, t, stage == "back_b")
+				daisy_specs(h, a, t)
 		"pu_bolt_band":
 			if stage == "head":
 				bolt_band(h, a, t)
 		"pu_hero_bandana":
 			if stage == "neck":
 				bandana(h, a, t)
-		"pu_kite":
-			if stage == "back_b" and a.kind != "icon":
-				kite_on_string(h, a, t)
 		"pu_hero":
 			if stage == "worn":
 				hero_mask(h, a, t)
@@ -64,12 +59,17 @@ static func companion(h, id: String, a: Dictionary, t: float, react: float, fron
 				robo(h, a.comp + Vector2(sin(t * 0.9) * 10.0, sin(t * 1.8) * 8.0), t, react)
 		"pu_frisbee":
 			frisbee(h, a, t, front)
+		"pu_basket":
+			if front:
+				basket(h, a.comp + Vector2(-6 + sin(t * 0.8) * 8.0, 8 + sin(t * 1.6) * 6.0), t, react)
 
 
 static func aura(h, id: String, a: Dictionary, t: float, react: float, front: bool) -> void:
 	match id:
 		"pu_aura_bolts":
 			bolts(h, a, t, front)
+		"pu_petal_rainbow":
+			petal_rainbow(h, a, t, front)
 		"pu_hero":
 			if not front and a.kind != "icon" and a.has("back"):
 				hero_cape(h, a, t, react)
@@ -79,13 +79,10 @@ static func aura(h, id: String, a: Dictionary, t: float, react: float, front: bo
 
 static func icon(h, id: String, slot: String, a: Dictionary, t: float) -> bool:
 	match id:
-		"pu_kite":
-			kite(h, Vector2(0, -10), 2.0, t)
-			return true
-		"pu_backpack":
-			a.back = Vector2(-84, 56)
-			a.back_w = 190.0
-			backpack(h, a, t, true)
+		"pu_daisy_wreath":
+			a.top = Vector2(0, 26)
+			a.top_w = 150.0
+			daisy_wreath(h, a, t)
 			return true
 		"pu_ball":
 			_ball_at(h, Vector2(0, 0), 4.2, t, 0.0)
@@ -130,34 +127,6 @@ static func cap(h, a: Dictionary, t: float) -> void:
 	h._arc(Vector2(0, -2), 40, 6, 1.1 * PI, 1.9 * PI, Color(1, 1, 1, 0.35), 2.0, 10)
 	h._T = h._head_T(a)
 	h._ball(Vector2(0, -26), 5, 3.5, Color("#FFF8F0"), 0.0, 1.0, 0.7, 1.0)
-	h._T = Transform2D.IDENTITY
-
-
-## Панама путешественника: песочная, с зелёной лентой и значком-компасом
-static func explorer_hat(h, a: Dictionary, t: float) -> void:
-	h._T = h._head_T(a)
-	var khaki := Color("#D9B26A")
-	h._ball(Vector2(0, 10), 76, 16, khaki.darkened(0.12), 0.0, 1.5, 0.5)
-	h._arc(Vector2(0, 8), 70, 12, 1.05 * PI, 1.95 * PI, Color(1, 1, 1, 0.3), 2.4, 14)
-	var crown := PackedVector2Array()
-	for i in 15:
-		var s := i / 14.0
-		crown.append(Vector2(lerpf(-44, 44, s), 8 - sin(s * PI) * 34 - (4.0 if absf(s - 0.5) < 0.12 else 0.0)))
-	crown.append(Vector2(40, 12))
-	crown.append(Vector2(-40, 12))
-	h._shape(["pu_ex_crown"], crown, Vector2(0, -8), khaki, 1.3, 0.45)
-	h._line(PackedVector2Array([Vector2(0, -30), Vector2(0, -20)]), Color("#A8823E", 0.6), 2.0)
-	var band := PackedVector2Array([Vector2(-43, -4), Vector2(43, -4), Vector2(42, 8), Vector2(-42, 8)])
-	h._vgrad(band, Color("#4E9A4A"), Color("#2E6E36"))
-	# значок-компас
-	h._ball(Vector2(-22, 2), 8, 8, GOLD, 0.0, 1.0, 0.9, 1.0)
-	h._dot(Vector2(-22, 2), 5.5, Color("#FFF8E6"))
-	var ang := sin(t * 1.3) * 0.6
-	h._fill(Sets.star_pts(Vector2(-22, 2), 5.0, 1.2, 2, ang), Color("#FF4F7A"))
-	# пёрышко за лентой
-	h._T = h._head_T(a) * Transform2D(0.6 + sin(t * 1.8) * 0.05, Vector2(28, 0))
-	h._ball(Vector2(0, -16), 5, 16, Color("#5AB8E8"), 0.0, 1.3, 0.5, 1.0)
-	h._line(PackedVector2Array([Vector2(0, 2), Vector2(0, -30)]), Color(1, 1, 1, 0.6), 1.4)
 	h._T = Transform2D.IDENTITY
 
 
@@ -229,35 +198,6 @@ static func visor(h, a: Dictionary, t: float) -> void:
 	h._T = Transform2D.IDENTITY
 
 
-## Очки-авиаторы: стёкла-капли в тонкой золотой оправе, двойная перемычка
-static func aviators(h, a: Dictionary, t: float) -> void:
-	var r: float = a.eye_rad * 1.12
-	for i in 2:
-		var e: Vector2 = [a.eye_l, a.eye_r][i]
-		var sx := -1.0 if i == 0 else 1.0
-		h._T = Transform2D(a.tilt, e)
-		var drop := PackedVector2Array()
-		for k in 24:
-			var ang := TAU * k / 24.0
-			var d := Vector2(cos(ang), sin(ang))
-			var rr := r * (1.0 + 0.22 * maxf(0.0, d.y) * (1.0 - d.x * sx * 0.8))
-			drop.append(Vector2(d.x * rr * 1.08, d.y * rr * 0.92 + r * 0.08))
-		h._vgrad(drop, Color("#4A3A2A", 0.78), Color("#C98A4A", 0.72), false)
-		var cl := drop.duplicate()
-		cl.append(drop[0])
-		h._line(cl, GOLD_D, r * 0.12)
-		h._line(cl, GOLD, r * 0.06)
-		h._line(PackedVector2Array([Vector2(-r * 0.55, -r * 0.1), Vector2(-r * 0.15, -r * 0.55)]), Color(1, 1, 1, 0.6), r * 0.12)
-		h._line(PackedVector2Array([Vector2(r * 0.2, r * 0.5), Vector2(r * 0.45, r * 0.2)]), Color(1, 1, 1, 0.3), r * 0.08)
-	h._T = Transform2D.IDENTITY
-	var l: Vector2 = a.eye_l + Vector2(r * 1.05, -r * 0.55).rotated(a.tilt)
-	var rr2: Vector2 = a.eye_r - Vector2(r * 1.05, r * 0.55).rotated(a.tilt)
-	h._line(PackedVector2Array([l, rr2]), GOLD, r * 0.08)
-	var l2: Vector2 = a.eye_l + Vector2(r * 1.0, -r * 0.05).rotated(a.tilt)
-	var r2: Vector2 = a.eye_r - Vector2(r * 1.0, r * 0.05).rotated(a.tilt)
-	h._line(PackedVector2Array([l2, (l2 + r2) / 2.0 + Vector2(0, -r * 0.2).rotated(a.tilt), r2]), GOLD, r * 0.08)
-
-
 ## ПЁС-ГЕРОЙ — маска: синяя, с прорезями для глаз (глаза видны) и острыми кончиками
 static func hero_mask(h, a: Dictionary, t: float) -> void:
 	var r: float = a.eye_rad
@@ -308,35 +248,6 @@ static func whistle(h, a: Dictionary, t: float) -> void:
 	h._sparkle(pc + Vector2(16, 8), 2.5 + 2.0 * sin(t * 4.0), Color.WHITE)
 
 
-## Ошейник с медальоном-косточкой: красная кожа, золотые клёпки, косточка покачивается
-static func bone_collar(h, a: Dictionary, t: float) -> void:
-	var w: float = a.neck_w
-	var hh := w * 0.1
-	var top := Sets._neck_curve(a, 13, -hh * 0.5, 0.96, 0.4)
-	var bot := Sets._neck_curve(a, 13, hh * 0.5, 0.92, 0.4)
-	for i in 12:
-		h.ci.draw_colored_polygon(PackedVector2Array([top[i], top[i + 1], bot[i + 1], bot[i]]), Color("#E23A48"))
-	Sets._tube_shade(h, top, bot)
-	for i in range(1, 12, 2):
-		h._ball(top[i].lerp(bot[i], 0.5), 2.8, 2.8, GOLD, 0.0, 1.0, 0.9, 0.6)
-	var ring: Vector2 = bot[6] + Vector2(0, 3)
-	h._arc(ring, 5, 5, 0, TAU, GOLD_D, 2.6, 12)
-	var sw := sin(t * 2.0) * 0.15
-	h._T = Transform2D(sw, Vector2(1.35, 1.35), 0.0, ring + Vector2(0, 5))
-	# косточка: перемычка и четыре шарика
-	h._ball(Vector2(0, 12), 13, 5.5, GOLD, 0.0, 1.2, 0.9, 1.2)
-	for sx in [-1.0, 1.0]:
-		for sy in [-1.0, 1.0]:
-			h._ball(Vector2(sx * 12, 12 + sy * 4.5), 5, 5, GOLD, 0.0, 1.0, 0.9, 1.0)
-	h._ball(Vector2(0, 12), 11, 4, Color("#FFDC6A"), 0.0, 1.4, 0.95, 0.0)
-	# гравировка-лапка
-	h._dot(Vector2(0, 13), 1.8, GOLD_D)
-	for k in 3:
-		h._dot(Vector2((k - 1) * 2.6, 10), 0.9, GOLD_D)
-	h._T = Transform2D.IDENTITY
-	h._sparkle(ring + Vector2(-10, 10), 3.0 + 2.0 * sin(t * 4.0), Color.WHITE)
-
-
 ## Геройская бандана: красный платок-треугольник со звёздочками, узелок сбоку
 static func bandana(h, a: Dictionary, t: float) -> void:
 	var w: float = a.neck_w
@@ -380,100 +291,6 @@ static func medal(h, a: Dictionary, t: float) -> void:
 
 
 # ==================== Спина ====================
-
-## Походный рюкзак: зелёный, с карманом, скатанным ковриком сверху и флажком; лямки спереди
-static func backpack(h, a: Dictionary, t: float, behind: bool) -> void:
-	var w: float = a.back_w
-	var b: Vector2 = a.back
-	var green := Color("#4EA85A")
-	if behind:
-		var c := b + Vector2(w * 0.5, -w * 0.1)
-		var s := Vector2(w * 0.5, w * 0.62)
-		var r := Rect2(c - s / 2.0, s)
-		# флажок на палочке
-		var fp := r.position + Vector2(s.x * 0.2, -s.y * 0.05)
-		h._line(PackedVector2Array([fp, fp + Vector2(-4, -s.y * 0.75)]), Color("#8A5A2E"), 3.0)
-		var ft := fp + Vector2(-4, -s.y * 0.75)
-		var wv := sin(t * 5.0) * 4.0
-		h._fill(PackedVector2Array([ft, ft + Vector2(s.x * 0.5, s.y * 0.06 + wv), ft + Vector2(0, s.y * 0.2)]), Color("#FFB547"))
-		h._shape(["pu_bp", w], h._rrect(r, s.x * 0.26), c, green, 1.4, 0.4)
-		var pk := Rect2(r.position + Vector2(s.x * 0.12, s.y * 0.5), Vector2(s.x * 0.76, s.y * 0.38))
-		h._shape(["pu_bp_pk", w], h._rrect(pk, s.x * 0.14), pk.get_center(), Color("#A8783E"), 1.6, 0.4)
-		h._T = Transform2D(0.0, pk.get_center())
-		h._ball(Vector2(0, 2), s.x * 0.09, s.x * 0.08, Color("#FFE6B0"), 0.0, 1.0, 0.5, 0.0)
-		for k in 3:
-			h._ball(Vector2((k - 1) * s.x * 0.08, -s.x * 0.08), s.x * 0.035, s.x * 0.04, Color("#FFE6B0"), 0.0, 1.0, 0.5, 0.0)
-		h._T = Transform2D.IDENTITY
-		# коврик-рулон сверху
-		var mc := r.position + Vector2(s.x * 0.5, 0)
-		h._ball(mc, s.x * 0.62, s.y * 0.13, Color("#FF7A3D"), 0.0, 1.2, 0.5)
-		for k in 2:
-			h._line(PackedVector2Array([mc + Vector2((k * 2 - 1) * s.x * 0.3, -s.y * 0.12), mc + Vector2((k * 2 - 1) * s.x * 0.3, s.y * 0.12)]), Color("#7A4A12"), 3.0)
-		h._ball(mc + Vector2(s.x * 0.62, 0), s.x * 0.08, s.y * 0.12, Color("#FFB08A"), 0.0, 1.0, 0.4)
-		# кружка на карабине
-		var cup := r.position + Vector2(s.x * 0.96, s.y * 0.4 + sin(t * 2.4) * 2.0)
-		h._shape(["pu_bp_cup"], h._rrect(Rect2(-6, -7, 12, 13), 3), Vector2.ZERO, Color("#C8D0E8"), 1.0, 0.9)
-		h._ball(cup, 6, 7, Color("#C8D0E8"), 0.0, 1.0, 0.9, 1.0)
-		return
-	if a.kind == "icon":
-		return
-	var k := w / 136.0
-	for sx in [-1.0, 1.0]:
-		var top: Vector2 = b + Vector2(sx * 46, -30) * k
-		var bot: Vector2 = b + Vector2(sx * 58, 26) * k
-		var strap := PackedVector2Array([top, top.lerp(bot, 0.5) + Vector2(sx * 4, 0), bot])
-		h.ci.draw_polyline(strap, Color("#2E6E36"), 14.0 * k + 2.0, true)
-		h.ci.draw_polyline(strap, green, 9.0 * k, true)
-		h._ball(top.lerp(bot, 0.55), 4.5 * k + 1.0, 4.0 * k + 1.0, Color("#FFB547"), 0.0, 1.0, 0.9, 1.0)
-
-
-## ВОЗДУШНЫЙ ЗМЕЙ (легендарный): леска от спины, змей с лапкой парит над героем, хвост из бантиков
-static func kite_on_string(h, a: Dictionary, t: float) -> void:
-	var b: Vector2 = a.back
-	var kp := Vector2(124 + sin(t * 0.9) * 10.0, -176 + sin(t * 1.3) * 10.0)
-	var st := b + Vector2(40, -10)
-	var line := PackedVector2Array()
-	for i in 13:
-		var s := i / 12.0
-		line.append(st.lerp(kp + Vector2(0, 22), s) + Vector2(0, sin(s * PI) * 26.0))
-	h.ci.draw_polyline(line, Color(1, 1, 1, 0.7), 1.6, true)
-	kite(h, kp, 1.0, t)
-
-
-static func kite(h, p: Vector2, k: float, t: float) -> void:
-	var rot := sin(t * 1.6) * 0.12
-	# хвост с бантиками
-	var tail := PackedVector2Array()
-	for i in 9:
-		var s := i / 8.0
-		tail.append(p + (Vector2(sin(t * 3.0 - s * 4.0) * 12.0 * s, 26 + s * 70.0) * k).rotated(rot * 0.5))
-	h.ci.draw_polyline(tail, Color("#FFF0C0"), 1.6 * k, true)
-	for i in [3, 5, 7]:
-		var q: Vector2 = tail[i]
-		var c: Color = [Color("#FF4B55"), Color("#FFC83A"), Color("#3E7CFF")][(i / 2) % 3]
-		h._ball(q + Vector2(-5, 0) * k, 5 * k, 3.4 * k, c, 0.4, 1.0, 0.6, 0.8)
-		h._ball(q + Vector2(5, 0) * k, 5 * k, 3.4 * k, c, -0.4, 1.0, 0.6, 0.8)
-	h._T = Transform2D(rot, Vector2(k, k), 0.0, p)
-	var T := Vector2(0, -34)
-	var R := Vector2(26, -4)
-	var B := Vector2(0, 30)
-	var L := Vector2(-26, -4)
-	var C := Vector2(0, -4)
-	h._fill(PackedVector2Array([T, R, C]), Color("#FF4B55"))
-	h._fill(PackedVector2Array([R, B, C]), Color("#3E7CFF"))
-	h._fill(PackedVector2Array([B, L, C]), Color("#FFC83A"))
-	h._fill(PackedVector2Array([L, T, C]), Color("#3DDC97"))
-	h._vgrad(PackedVector2Array([T, R, B, L]), Color(1, 1, 1, 0.3), Color(0.1, 0.0, 0.3, 0.25), false)
-	h._line(PackedVector2Array([T, R, B, L, T]), Color("#FFF6E0"), 2.4)
-	h._line(PackedVector2Array([T, B]), Color("#8A5A2E", 0.8), 1.8)
-	h._line(PackedVector2Array([L, R]), Color("#8A5A2E", 0.8), 1.8)
-	# лапка в серединке
-	h._ball(Vector2(0, 2), 5, 4.2, Color("#FFFFFF"), 0.0, 1.0, 0.5, 0.0)
-	for m in 3:
-		h._ball(Vector2((m - 1) * 4.5, -5 + absf(m - 1) * 1.2), 2.0, 2.2, Color("#FFFFFF"), 0.0, 1.0, 0.5, 0.0)
-	h._T = Transform2D.IDENTITY
-	h._sparkle(p + Vector2(18, -26) * k, (3.0 + 2.0 * sin(t * 4.0)) * k, Color.WHITE)
-
 
 ## ПЁС-ГЕРОЙ — накидка: длинная красная, развевается на ветру вправо, на ней жёлтая эмблема-лапка;
 ## в прыжке (касание, победа) взлетает выше
@@ -658,3 +475,166 @@ static func bolts(h, a: Dictionary, t: float, front: bool) -> void:
 			var ph := fposmod(t * 0.7 + i * 0.33, 1.0)
 			var p := c + Vector2(cos(i * 2.1 + t * 0.6) * R * 1.2, sin(i * 2.1 + t * 0.6) * R * 0.9)
 			h._sparkle(p, 5.0 * sin(ph * PI) + 0.5, Color(1.0, 0.95, 0.5, sin(ph * PI)))
+
+
+# ==================== 0.13: «Цветочный пикник» ====================
+
+const DAISY := Color("#FFFDF6")
+const DAISY_C := Color("#FFC83A")
+const LEAF := Color("#5CC46A")
+
+
+## Ромашка: белые лепестки вокруг жёлтой серединки (центр p, радиус r, поворот rot)
+static func daisy(h, p: Vector2, r: float, rot: float) -> void:
+	var T0: Transform2D = h._T
+	h._T = T0 * Transform2D(rot, p)
+	for i in 8:
+		var ang := i * TAU / 8.0
+		h._ball(Vector2(cos(ang), sin(ang)) * r * 0.62, r * 0.48, r * 0.24, DAISY, ang, 1.2, 0.3, 0.8)
+	h._ball(Vector2.ZERO, r * 0.36, r * 0.36, DAISY_C, 0.0, 1.0, 0.7, 1.0)
+	h._dot(Vector2(-r * 0.12, -r * 0.12), r * 0.1, Color(1, 1, 1, 0.8))
+	h._T = T0
+
+
+## Веночек из ромашек: зелёная лоза вокруг макушки, ромашки и листики
+static func daisy_wreath(h, a: Dictionary, t: float) -> void:
+	h._T = h._head_T(a)
+	var ring := PackedVector2Array()
+	for i in 17:
+		var ang := PI + PI * i / 16.0
+		ring.append(Vector2(cos(ang) * 52, 12 + sin(ang) * 14))
+	h._line(ring, Color("#3E9A4E"), 6.0)
+	h._line(ring, Color("#7EDC86"), 2.4)
+	for i in range(1, 16, 2):
+		var p: Vector2 = ring[i]
+		var sx := -1.0 if i < 8 else 1.0
+		h._ball(p + Vector2(sx * 5, -5), 7, 3.4, LEAF, -sx * 0.7, 1.2, 0.4, 0.8)
+	var sw := sin(t * 1.5) * 0.08
+	for i in [0, 3, 6, 8, 10, 13, 16]:
+		var p: Vector2 = ring[i]
+		daisy(h, p + Vector2(0, -2), 11.0 if i == 8 else 9.0, sw + i * 0.4)
+	h._T = Transform2D.IDENTITY
+	h._sparkle(h._hv(a, Vector2(30, -14)), 2.5 + 2.0 * sin(t * 3.0), Color(1, 1, 1, 0.8))
+
+
+## Платочек в цветочек: голубой платок-треугольник с ромашками, узелок сбоку
+static func flower_scarf(h, a: Dictionary, t: float) -> void:
+	var w: float = a.neck_w
+	var n: Vector2 = a.neck
+	var sw := sin(t * 2.0) * 2.0
+	var tri := PackedVector2Array([n + Vector2(-w * 0.44, -6), n + Vector2(w * 0.44, -6), n + Vector2(w * 0.06 + sw, w * 0.4), n + Vector2(-w * 0.04 + sw, w * 0.42)])
+	h._T = Transform2D.IDENTITY
+	h._shape(null, h._chaikin(tri, 1), n + Vector2(0, w * 0.12), Color("#78C8F0"), 1.8, 0.4)
+	for i in 7:
+		var p := n + Vector2((hs(i, 1) - 0.5) * w * 0.62 * (1.0 - hs(i, 2) * 0.6), w * (0.0 + hs(i, 2) * 0.3))
+		for k in 5:
+			var ang := k * TAU / 5.0 + i
+			h._dot(p + Vector2(cos(ang), sin(ang)) * 3.2, 2.4, Color(1, 1, 1, 0.95))
+		h._dot(p, 1.8, DAISY_C)
+	var band := Sets._neck_curve(a, 11, -4.0, 0.98, 0.35)
+	h.ci.draw_polyline(band, Color("#3E8CC0"), 8.0, true)
+	h.ci.draw_polyline(band, Color("#A8E0FF"), 3.0, true)
+	var knot := n + Vector2(w * 0.4, -2)
+	h._ball(knot, 7, 6, Color("#4E9ED0"), 0.0, 1.0, 0.6, 1.0)
+	for k in 2:
+		var e := knot + Vector2(10 + k * 4, 10 + k * 6).rotated(sin(t * 3.5 + k) * 0.15)
+		h._line(PackedVector2Array([knot, e]), Color("#78C8F0"), 6.0 - k)
+
+
+## Очки-ромашки: круглые стёкла, вокруг каждого — белые лепестки, жёлтая перемычка
+static func daisy_specs(h, a: Dictionary, t: float) -> void:
+	var r: float = a.eye_rad * 1.08
+	for i in 2:
+		var e: Vector2 = [a.eye_l, a.eye_r][i]
+		h._T = Transform2D(a.tilt + sin(t * 1.2 + i) * 0.03, e)
+		for k in 12:
+			var ang := k * TAU / 12.0 + (0.13 if i == 0 else -0.13)
+			h._ball(Vector2(cos(ang), sin(ang)) * r * 1.3, r * 0.36, r * 0.2, DAISY, ang, 1.2, 0.3, 0.8)
+		h._vgrad(h._ell(Vector2.ZERO, r * 0.98, r * 0.98, 0.0, 26), Color(1.0, 0.95, 0.6, 0.28), Color(1.0, 0.8, 0.4, 0.18), false)
+		h._arc(Vector2.ZERO, r, r, 0, TAU, Color("#E0A020"), r * 0.16, 28)
+		h._arc(Vector2.ZERO, r, r, 0, TAU, DAISY_C, r * 0.08, 28)
+		h._line(PackedVector2Array([Vector2(-r * 0.5, -r * 0.1), Vector2(-r * 0.1, -r * 0.5)]), Color(1, 1, 1, 0.65), r * 0.1)
+	h._T = Transform2D.IDENTITY
+	var l: Vector2 = a.eye_l + Vector2(r, -r * 0.1).rotated(a.tilt)
+	var rr: Vector2 = a.eye_r - Vector2(r, r * 0.1).rotated(a.tilt)
+	h._line(PackedVector2Array([l, (l + rr) / 2.0 + Vector2(0, -r * 0.25).rotated(a.tilt), rr]), Color("#E0A020"), r * 0.13)
+
+
+## Корзинка с булочкой (спутник): плетёная корзинка, клетчатая салфетка, румяная булочка;
+## при касании булочка подпрыгивает
+static func basket(h, p: Vector2, t: float, react: float) -> void:
+	var hop := 0.0
+	if react >= 0.0 and react < 1.3:
+		hop = absf(sin(react / 1.3 * TAU)) * 14.0
+	h._T = Transform2D(sin(t * 1.3) * 0.05, p)
+	# ручка
+	h._arc(Vector2(0, -2), 24, 26, 1.0 * PI, 2.0 * PI, Color("#8A5A2E"), 5.0, 16)
+	h._arc(Vector2(0, -2), 24, 26, 1.05 * PI, 1.5 * PI, Color("#D8A868"), 2.0, 10)
+	# салфетка
+	h._fill(PackedVector2Array([Vector2(-26, 0), Vector2(-14, -12), Vector2(0, -6), Vector2(14, -12), Vector2(26, 0)]), Color("#FFFFFF"))
+	for k in 4:
+		h._fill(PackedVector2Array([Vector2(-20 + k * 11, -5), Vector2(-15 + k * 11, -9), Vector2(-11 + k * 11, -4), Vector2(-16 + k * 11, 0)]), Color("#FF5F6D", 0.85))
+	# булочка
+	var bp := Vector2(2, -12 - hop)
+	h._ball(bp, 13, 10, Color("#E8A050"), 0.0, 1.1, 0.6, 1.2)
+	h._ball(bp + Vector2(0, -3), 9, 5, Color("#F4C07A"), 0.0, 1.6, 0.6, 0.0)
+	for k in 4:
+		h._dot(bp + Vector2(-6 + k * 4, -5 + (k % 2) * 2), 1.1, Color("#FFF6E0"))
+	# корзинка
+	var bk := PackedVector2Array([Vector2(-27, -2), Vector2(27, -2), Vector2(22, 20), Vector2(-22, 20)])
+	h._shape(["pu_basket"], h._chaikin(bk, 1), Vector2(0, 8), Color("#D29A56"), 1.3, 0.35, 1.2)
+	for k in 3:
+		var y := 3.0 + k * 6.0
+		h._line(PackedVector2Array([Vector2(-25 + k * 1.5, y), Vector2(25 - k * 1.5, y)]), Color("#9A6A30", 0.6), 1.6)
+	for k in 6:
+		var x := -20.0 + k * 8.0
+		h._line(PackedVector2Array([Vector2(x, 0), Vector2(x * 0.85, 19)]), Color("#F0C88A", 0.55), 1.4)
+	h._ball(Vector2(0, -1), 28, 3.5, Color("#B8803E"), 0.0, 1.4, 0.4, 1.0)
+	h._T = Transform2D.IDENTITY
+
+
+## РАДУГА ЛЕПЕСТКОВ (легендарное): за щенком — пастельная радуга, вокруг кружат лепестки,
+## то тут, то там распускаются ромашки
+static func petal_rainbow(h, a: Dictionary, t: float, front: bool) -> void:
+	var c: Vector2 = a.center
+	var R: float = a.size
+	var cols := [Color("#FF9FB8"), Color("#FFD08A"), Color("#FFF29A"), Color("#A8EEB0"), Color("#9FD8FF"), Color("#C8B0FF")]
+	if not front:
+		var rc := c + Vector2(0, R * 0.45)
+		var pulse := 0.85 + 0.15 * sin(t * 1.6)
+		for i in cols.size():
+			var rr := R * (1.55 - i * 0.1)
+			var arc := PackedVector2Array()
+			for k in 25:
+				var ang := PI + PI * k / 24.0
+				arc.append(rc + Vector2(cos(ang) * rr, sin(ang) * rr * 0.95))
+			h.ci.draw_polyline(arc, Color(cols[i], 0.55 * pulse), R * 0.1, true)
+		h._glow(rc + Vector2(0, -R * 0.9), R * 1.2, R * 0.7, Color(1.0, 0.95, 0.8, 0.12))
+		# облачка на концах радуги
+		for sx in [-1.0, 1.0]:
+			for k in 3:
+				h._ball(rc + Vector2(sx * R * (1.38 + k * 0.1) - sx * k * R * 0.12, -R * 0.02 - absf(k - 1) * R * 0.08), R * 0.13, R * 0.1, Color("#FFFFFF"), 0.0, 1.3, 0.3, 0.0)
+	for i in 10:
+		if (i % 2 == 1) != front:
+			continue
+		var per := 4.5 + hs(i, 1) * 2.5
+		var ph := fposmod(t / per + hs(i, 2), 1.0)
+		var p := c + Vector2((hs(i, 3) - 0.5) * R * 2.6 + sin(t * 1.3 + i) * 12.0, -R * 1.2 + ph * R * 2.4)
+		var al := sin(ph * PI)
+		var fl := absf(cos(t * 2.2 + i))
+		h._T = Transform2D(t * 1.1 + i, Vector2(0.4 + 0.6 * fl, 1.0), 0.0, p)
+		var col: Color = cols[i % cols.size()].lerp(Color.WHITE, 0.25)
+		h._fill(PackedVector2Array([Vector2(0, -7), Vector2(4.5, -2), Vector2(3.5, 4.5), Vector2(0, 7), Vector2(-3.5, 4.5), Vector2(-4.5, -2)]), Color(col, al))
+		h._T = Transform2D.IDENTITY
+	if front:
+		# ромашки распускаются вокруг (по очереди)
+		for k in 3:
+			var ph := fposmod(t * 0.35 + k / 3.0, 1.0)
+			var cyc := floorf(t * 0.35 + k / 3.0)
+			var p := c + Vector2((hs(cyc + k * 5, 1) - 0.5) * R * 2.4, R * 0.75 + hs(cyc + k * 5, 2) * R * 0.25)
+			var s := sin(ph * PI)
+			if s > 0.05:
+				h._T = Transform2D.IDENTITY
+				daisy(h, p, R * 0.1 * s + 1.0, t * 0.5 + k)
+				if ph < 0.5:
+					h._sparkle(p + Vector2(R * 0.1, -R * 0.1), R * 0.06 * s, Color(1, 1, 1, s))

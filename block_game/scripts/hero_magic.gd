@@ -124,6 +124,15 @@ static func skin_fx(h, outfit: Dictionary, a: Dictionary, t: float, head_only: b
 				h._dot(pts[i], 1.2, Color(1, 1, 1, 0.9))
 		"skin_constellation":
 			_constellation(h, pts, t, kind, not head_only)
+		"pu_skin_cotton":
+			# 0.13: «Сахарная вата» — пастельные пятнышки-облачка и сахарные искорки
+			for i in pts.size():
+				var p: Vector2 = pts[i]
+				if i % 2 == 0:
+					h._glow(p, 14, 11, Color(0.75, 0.85, 1.0, 0.3) if i % 4 == 0 else Color(0.85, 0.7, 1.0, 0.28))
+				var ph := fposmod(t * 0.5 + hs(i, 7) * 2.0, 2.0)
+				if ph < 0.6:
+					h._sparkle(p + Vector2(3, -4), 5.0 * sin(ph / 0.6 * PI), Color(1, 1, 1, 0.9))
 		"ow_skin_snowy":
 			# 0.12b: полярная сова — тёмные крапинки-«галочки» и редкие снежинки-искры
 			for i in pts.size():
