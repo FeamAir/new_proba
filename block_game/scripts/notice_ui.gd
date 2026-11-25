@@ -84,7 +84,8 @@ func ask_name(kind: String) -> void:
 	edit.text = g.meta.name_of(kind)
 	edit.visible = true
 	edit.caret_column = edit.text.length()
-	edit.call_deferred("grab_focus")
+	if edit.is_inside_tree():
+		edit.call_deferred("grab_focus")
 	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
 		DisplayServer.virtual_keyboard_show(edit.text, Rect2(), DisplayServer.KEYBOARD_TYPE_DEFAULT, 12)
 
@@ -102,7 +103,8 @@ func _on_name_changed(txt: String) -> void:
 
 func _close_name() -> void:
 	edit.visible = false
-	edit.release_focus()
+	if edit.is_inside_tree():
+		edit.release_focus()
 	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
 		DisplayServer.virtual_keyboard_hide()
 	mode = ""
@@ -167,7 +169,7 @@ func tap(pos: Vector2) -> void:
 				name_clear()
 			elif rects.get("no", Rect2()).has_point(pos):
 				back()
-			elif rects.get("field", Rect2()).has_point(pos):
+			elif rects.get("field", Rect2()).has_point(pos) and edit.is_inside_tree():
 				edit.grab_focus()
 				if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
 					DisplayServer.virtual_keyboard_show(edit.text, Rect2(), DisplayServer.KEYBOARD_TYPE_DEFAULT, 12)
@@ -304,7 +306,14 @@ func _draw_migrated(H: float, k: float) -> void:
 	node.draw_polyline(_outline(r.grow(-2), 34), Color(g.ACCENT, 0.85), 3.0, true)
 	_text(r.get_center().x, r.position.y + 72, I18n.t("migrate_title"), 46, g.TEXT, r.size.x - 40)
 	var hero = g.screens.hero
-	for i in Meta.HEROES.size():
+	if g.meta.notice_sets:
+		# 0.13: новые наборы — котик-детектив и щенок на цветочном пикнике
+		var looks := [["kitten", {"head": "ki_sleuth_hat", "eyes": "ki_moustache"}, Color("#D9A86A")], ["puppy", {"head": "pu_daisy_wreath", "eyes": "pu_daisy_specs"}, Color("#8FE3A0")]]
+		for i in 2:
+			var hk: String = looks[i][0]
+			var c := Vector2(g.W / 2.0 + (i * 2 - 1) * 120.0, r.position.y + 168 + sin(t * 3.0 + i) * 4.0)
+			hero.draw_avatar(node, hk, c, 60, g.meta.look(hk).merged(looks[i][1]), g.t_total + i * 0.9, looks[i][2])
+	for i in (0 if g.meta.notice_sets else Meta.HEROES.size()):
 		var c := Vector2(r.position.x + 92 + i * ((r.size.x - 184) / 3.0), r.position.y + 175 + sin(t * 3.0 + i) * 5.0)
 		# каждый друг — в своей супер-награде (шляпа, корона, маска, тиара)
 		var hk: String = Meta.HEROES[i]
@@ -337,7 +346,8 @@ func _outline(r: Rect2, rad: float) -> PackedVector2Array:
 
 ## 0.13: «Как зовут друга?» — окно в верхней половине экрана (нижнюю закрывает клавиатура телефона)
 func _draw_name(H: float, k: float) -> void:
-	var r := Rect2(28, 110 + (1.0 - k) * 30.0, g.W - 56, 560)
+	var has_name: bool = g.meta.name_of(name_for) != ""
+	var r := Rect2(28, 110 + (1.0 - k) * 30.0, g.W - 56, 520 if has_name else 470)
 	rects["panel"] = r
 	_box(r.grow(6), Color(0.02, 0.01, 0.06, 0.6), 40)
 	_box(r, PANEL, 36)
@@ -355,8 +365,7 @@ func _draw_name(H: float, k: float) -> void:
 	edit.modulate.a = k
 	var clean: String = Meta.clean_name(edit.text)
 	_text(r.get_center().x, fr.end.y + 40, I18n.t("name_hint") + "  ·  %d / %d" % [edit.text.length(), Meta.NAME_MAX], 22, g.DIM, r.size.x - 60)
-	var has_name: bool = g.meta.name_of(kind) != ""
-	var by := r.end.y - (150 if has_name else 110)
+	var by := r.end.y - (150 if has_name else 108)
 	_button("no", Rect2(r.position.x + 24, by, 250, 76), I18n.t("cancel"), false)
 	_button("name_ok", Rect2(r.position.x + 290, by, r.size.x - 314, 76), I18n.t("name_done"), clean != "")
 	if clean == "":

@@ -277,8 +277,10 @@ func gender_icon(c: Vector2, s: float, gender: String, col: Color) -> void:
 
 ## Переключатель «мальчик / девочка» для героя kind: две кнопки (labels — с подписями,
 ## иначе круглые значки). Кнопки — rects "g_boy" / "g_girl".
+## На экране выбора (labels) без предвыбора: пока игрок не выбрал, обе кнопки не подсвечены
+## (герой нарисован мальчиком — так по умолчанию); в гардеробе подсвечен текущий вид.
 func gender_toggle(r: Rect2, kind: String, labels: bool) -> void:
-	var cur: String = g.meta.gender_of(kind)
+	var cur: String = g.meta.gender_of(kind) if (not labels or g.meta.genders.has(kind)) else ""
 	var gap := 12.0 if labels else 8.0
 	var bw := (r.size.x - gap) / 2.0
 	for i in 2:
@@ -308,7 +310,7 @@ func gender_toggle(r: Rect2, kind: String, labels: bool) -> void:
 func tap_gender(pos: Vector2, kind: String) -> bool:
 	for gd in ["boy", "girl"]:
 		if rects.get("g_" + gd, Rect2()).has_point(pos):
-			if g.meta.gender_of(kind) != gd:
+			if g.meta.gender_of(kind) != gd or not g.meta.genders.has(kind):
 				g.meta.set_gender(kind, gd)  # вещи не снимаются, осколки не возвращаются — тот же герой
 				g._save()
 				g.play("crystal", 1.15 if gd == "girl" else 0.95)
@@ -781,6 +783,16 @@ func set_badge(n: int, c: Vector2, r: float) -> void:
 				var tt := TAU * i / 20.0
 				hp.append(c + Vector2(16.0 * pow(sin(tt), 3), -(13.0 * cos(tt) - 5.0 * cos(2 * tt) - 2.0 * cos(3 * tt) - cos(4 * tt)) - 2.0) * k * 0.035)
 			g.draw_colored_polygon(hp, col)
+		"glass":
+			# 0.13: «Кот-детектив» — лупа
+			g.draw_arc(c + Vector2(-k * 0.12, -k * 0.12), k * 0.34, 0, TAU, 18, col, k * 0.14, true)
+			g.draw_line(c + Vector2(k * 0.13, k * 0.13), c + Vector2(k * 0.5, k * 0.5), col, k * 0.18, true)
+		"daisy":
+			# 0.13: «Цветочный пикник» — ромашка
+			for m in 6:
+				var ang := m * TAU / 6.0
+				g.draw_circle(c + Vector2(cos(ang), sin(ang)) * k * 0.34, k * 0.19, col, true, -1.0, true)
+			g.draw_circle(c, k * 0.2, Color("#FFD23C"), true, -1.0, true)
 		"mask":
 			for sx in [-1.0, 1.0]:
 				g.draw_circle(c + Vector2(sx * k * 0.3, 0), k * 0.3, col, true, -1.0, true)

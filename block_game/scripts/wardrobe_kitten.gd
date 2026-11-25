@@ -89,12 +89,17 @@ static func icon(h, id: String, slot: String, a: Dictionary, t: float) -> bool:
 			sweater(h, Vector2(0, -6), 1.35, t)
 			return true
 		"ki_trench":
-			a.back = Vector2(0, -40)
+			a.back = Vector2(0, -30)
 			a.back_w = 150.0
+			a.neck = Vector2(0, -78)
+			a.neck_w = 150.0
 			trench(h, a, t, true)
 			trench(h, a, t, false)
 			return true
 		"ki_moustache":
+			a.eye_l = Vector2(-44, -64)
+			a.eye_r = Vector2(44, -64)
+			a.eye_rad = 56.0
 			moustache(h, a, t)
 			return true
 		"ki_sleuth_hat":
@@ -625,8 +630,6 @@ static func trench(h, a: Dictionary, t: float, behind: bool) -> void:
 	var w: float = a.back_w
 	var b: Vector2 = a.back
 	if not behind:
-		if a.kind == "icon":
-			return
 		var n: Vector2 = a.neck
 		for sx in [-1.0, 1.0]:
 			var lap := PackedVector2Array([n + Vector2(sx * w * 0.06, -6), n + Vector2(sx * w * 0.44, -10), n + Vector2(sx * w * 0.4, w * 0.1), n + Vector2(sx * w * 0.2, w * 0.1), n + Vector2(sx * w * 0.04, w * 0.24)])
@@ -634,9 +637,9 @@ static func trench(h, a: Dictionary, t: float, behind: bool) -> void:
 			h.ci.draw_polyline(PackedVector2Array([lap[2], lap[3], lap[4]]), COAT_D, 2.0, true)
 			h._ball(n + Vector2(sx * w * 0.3, w * 0.16), 3.6, 3.6, Color("#3E2A18"), 0.0, 1.0, 0.6, 0.8)
 		return
-	# поднятый воротник-стойка за головой (два уголка)
+	# поднятый воротник-стойка за головой (два уголка; на значке — без него)
 	var cl := PackedVector2Array()
-	for sx in [-1.0, 1.0]:
+	for sx in ([] if a.kind == "icon" else [-1.0, 1.0]):
 		cl.clear()
 		cl.append(b + Vector2(sx * w * 0.12, -w * 0.2))
 		cl.append(b + Vector2(sx * w * 0.5, -w * 0.5))
@@ -720,7 +723,7 @@ static func clue_trail(h, a: Dictionary, t: float, front: bool) -> void:
 		var dir := Vector2(-sin(ang), cos(ang) * 0.3).normalized()
 		pos += dir.orthogonal() * side * R * 0.06
 		var al := (1.0 - age) * (0.65 + 0.35 * z if front else 0.5)
-		_paw_print(h, pos, R * (0.12 if not icon else 0.16) * (0.85 + 0.2 * z), dir.angle() + PI / 2.0, Color(1.0, 0.82, 0.38, al))
+		_paw_print(h, pos, R * (0.16 if not icon else 0.2) * (0.85 + 0.2 * z), dir.angle() + PI / 2.0, Color(1.0, 0.84, 0.4, minf(1.0, al * 1.3)))
 	if front:
 		# знаки вопроса
 		for k in 2:

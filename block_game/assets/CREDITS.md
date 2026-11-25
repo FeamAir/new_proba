@@ -14,3 +14,9 @@
 «Сменить друга?» и «Гардероб обновлён» нарисованы кодом (`scripts/wardrobe_owl.gd`,
 `scripts/wardrobe_axolotl.gd`, `scripts/wardrobe_puppy.gd`, `scripts/wardrobe_kitten.gd`,
 `scripts/notice_ui.gd`) — собственная работа проекта.
+
+## Версия 0.13 (мальчик / девочка, имя, наборы «Кот-детектив» и «Цветочный пикник»)
+Сторонних ассетов не добавлено. Реснички, бровки, хохолки и заколки героев, значки ♂ / ♀ и
+карандаш, окно имени и 12 новых вещей нарисованы кодом (`scripts/hero.gd`,
+`scripts/wardrobe_kitten.gd`, `scripts/wardrobe_puppy.gd`, `scripts/screens.gd`,
+`scripts/notice_ui.gd`) — собственная работа проекта. Шрифт поля имени — тот же, что в игре.

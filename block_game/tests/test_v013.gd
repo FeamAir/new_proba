@@ -31,6 +31,13 @@ func _initialize() -> void:
 	g.tut.enabled = false
 	g.assist.track = false
 	I18n.set_lang("ru")
+	# в тесте _ready() ещё не вызывался — экраны и окна создаём сами
+	if g.screens == null:
+		g.screens = load("res://scripts/screens.gd").new(g)
+	if g.notice_ui == null:
+		g.notice_ui = load("res://scripts/notice_ui.gd").new(g)
+	if g.forge_ui == null:
+		g.forge_ui = load("res://scripts/forge_ui.gd").new(g)
 
 	_test_gender_rules()
 	_test_gender_ui(g)
@@ -233,7 +240,7 @@ func _test_new_sets() -> void:
 	for it in Meta.set_items(Meta.set_index("kit_detective")):
 		m.buy_item(it.id, 0, 99)
 	check(m.forge("ki_clue_trail", 99) == "forged" and m.equipped.get("aura", "") == "ki_clue_trail", "«Кот-детектив» собран — «Тайна следов» скована и надета")
-	check(m.is_equipped("ki_magnifier") == false and m.equipped.get("companion", "") == "ki_magnifier", "лупа — спутник, сияние не мешает спутнику")
+	check(m.is_equipped("ki_magnifier") and m.equipped.get("companion", "") == "ki_magnifier", "лупа — спутник, сияние не мешает спутнику")
 
 
 func _test_migration(g) -> void:

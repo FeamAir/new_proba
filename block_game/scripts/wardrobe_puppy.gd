@@ -80,8 +80,8 @@ static func aura(h, id: String, a: Dictionary, t: float, react: float, front: bo
 static func icon(h, id: String, slot: String, a: Dictionary, t: float) -> bool:
 	match id:
 		"pu_daisy_wreath":
-			a.top = Vector2(0, 26)
-			a.top_w = 150.0
+			a.top = Vector2(0, 30)
+			a.top_w = 185.0
 			daisy_wreath(h, a, t)
 			return true
 		"pu_ball":
@@ -608,7 +608,7 @@ static func petal_rainbow(h, a: Dictionary, t: float, front: bool) -> void:
 			for k in 25:
 				var ang := PI + PI * k / 24.0
 				arc.append(rc + Vector2(cos(ang) * rr, sin(ang) * rr * 0.95))
-			h.ci.draw_polyline(arc, Color(cols[i], 0.55 * pulse), R * 0.1, true)
+			h.ci.draw_polyline(arc, Color(cols[i], 0.85 * pulse), R * 0.1, true)
 		h._glow(rc + Vector2(0, -R * 0.9), R * 1.2, R * 0.7, Color(1.0, 0.95, 0.8, 0.12))
 		# облачка на концах радуги
 		for sx in [-1.0, 1.0]:
