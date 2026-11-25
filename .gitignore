@@ -23,3 +23,6 @@ Thumbs.db
 
 # Рабочие копии помощников Claude
 .claude/worktrees/
+
+# Списки тестировщиков (личные данные)
+block_game/store/testing/testers_list.csv
