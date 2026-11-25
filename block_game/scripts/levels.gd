@@ -19,73 +19,73 @@ extends RefCounted
 
 const LEVELS := [
 	# 1–5: обучение (висячий блок даёт каскад с первого уровня)
-	{"rows": 2, "h2": 0.0, "c": 2, "deep": 0, "speed": 1, "hang": 1, "par": 2, "seed": 112661},
-	{"rows": 3, "h2": 0.0, "c": 2, "deep": 0, "speed": 1, "hang": 1, "par": 3, "seed": 15851},
-	{"rows": 3, "h2": 0.35, "c": 3, "deep": 0, "speed": 2, "hang": 1, "par": 4, "seed": 233228},
-	{"rows": 4, "h2": 0.35, "c": 3, "deep": 0, "speed": 2, "hang": 1, "par": 4, "seed": 1393166},
-	{"rows": 4, "h2": 0.4, "c": 4, "deep": 1, "speed": 3, "hang": 2, "par": 4, "seed": 144337},
+	{"rows": 2, "h2": 0.0, "c": 2, "deep": 0, "speed": 1, "hang": 1, "par": 2, "seed": 426848},
+	{"rows": 4, "h2": 0.0, "c": 2, "deep": 0, "speed": 1, "hang": 1, "par": 3, "seed": 3262450},
+	{"rows": 4, "h2": 0.35, "c": 3, "deep": 0, "speed": 2, "hang": 1, "par": 4, "seed": 2746724},
+	{"rows": 4, "h2": 0.35, "c": 3, "deep": 0, "speed": 2, "hang": 1, "par": 4, "seed": 3801933},
+	{"rows": 4, "h2": 0.4, "c": 4, "deep": 1, "speed": 3, "hang": 1, "h3": 1.0, "par": 4, "seed": 1296356},
 	# 6: отдых
-	{"rows": 3, "h2": 0.2, "c": 3, "deep": 0, "speed": 2, "hang": 1, "par": 3, "seed": 47527, "rest": true},
+	{"rows": 4, "h2": 0.2, "c": 3, "deep": 0, "speed": 2, "hang": 1, "par": 3, "seed": 1618462, "rest": true},
 	# 7–11: рост
-	{"rows": 5, "h2": 0.4, "c": 4, "deep": 0, "speed": 4, "hang": 2, "par": 6, "seed": 474362},
-	{"rows": 5, "h2": 0.45, "c": 5, "deep": 1, "speed": 5, "hang": 2, "par": 8, "seed": 1739029},
-	{"rows": 5, "h2": 0.5, "c": 5, "deep": 1, "speed": 5, "hang": 2, "par": 8, "seed": 1118574},
-	{"rows": 6, "h2": 0.45, "c": 5, "deep": 1, "speed": 6, "hang": 2, "par": 13, "seed": 3849447},
-	{"rows": 6, "h2": 0.5, "c": 6, "deep": 1, "speed": 7, "hang": 3, "par": 12, "seed": 1867515},
+	{"rows": 5, "h2": 0.4, "c": 4, "deep": 0, "speed": 4, "hang": 2, "par": 6, "seed": 998007},
+	{"rows": 5, "h2": 0.45, "c": 5, "deep": 1, "speed": 5, "hang": 2, "par": 8, "seed": 901197},
+	{"rows": 5, "h2": 0.5, "c": 5, "deep": 1, "speed": 5, "hang": 2, "par": 8, "seed": 1642219},
+	{"rows": 6, "h2": 0.45, "c": 5, "deep": 1, "speed": 6, "hang": 1, "par": 13, "seed": 3744718},
+	{"rows": 6, "h2": 0.5, "c": 6, "deep": 1, "speed": 7, "hang": 0, "h3": 0.5, "par": 12, "seed": 2705347},
 	# 12: отдых
-	{"rows": 4, "h2": 0.3, "c": 4, "deep": 0, "speed": 5, "hang": 2, "par": 8, "seed": 304499, "rest": true},
+	{"rows": 4, "h2": 0.3, "c": 4, "deep": 0, "speed": 5, "hang": 1, "par": 8, "seed": 932873, "rest": true},
 	# 13–16
-	{"rows": 6, "h2": 0.55, "c": 6, "deep": 1, "speed": 8, "hang": 2, "par": 17, "seed": 2930643},
-	{"rows": 6, "h2": 0.6, "c": 6, "deep": 2, "speed": 8, "hang": 3, "par": 11, "seed": 948711},
-	{"rows": 7, "h2": 0.5, "c": 6, "deep": 1, "speed": 9, "hang": 2, "par": 20, "seed": 956630},
-	{"rows": 7, "h2": 0.55, "c": 7, "deep": 1, "speed": 10, "hang": 3, "par": 16, "seed": 755091},
+	{"rows": 6, "h2": 0.55, "c": 6, "deep": 1, "speed": 8, "hang": 0, "par": 17, "seed": 417147},
+	{"rows": 6, "h2": 0.6, "c": 6, "deep": 2, "speed": 8, "hang": 1, "h3": 1.0, "par": 11, "seed": 3881123},
+	{"rows": 7, "h2": 0.5, "c": 6, "deep": 1, "speed": 9, "hang": 2, "h3": 1.0, "par": 20, "seed": 2737023},
+	{"rows": 7, "h2": 0.55, "c": 7, "deep": 1, "speed": 10, "hang": 0, "h3": 0.5, "par": 16, "seed": 2954400},
 	# 17: отдых
-	{"rows": 5, "h2": 0.4, "c": 5, "deep": 0, "speed": 7, "hang": 2, "par": 6, "seed": 1077197, "rest": true},
+	{"rows": 5, "h2": 0.4, "c": 5, "deep": 0, "speed": 7, "hang": 1, "par": 6, "seed": 2543403, "rest": true},
 	# 18–22
-	{"rows": 7, "h2": 0.6, "c": 7, "deep": 1, "speed": 11, "hang": 3, "par": 13, "seed": 980387},
-	{"rows": 7, "h2": 0.6, "c": 7, "deep": 2, "speed": 11, "hang": 2, "par": 15, "seed": 464661},
-	{"rows": 7, "h2": 0.65, "c": 7, "deep": 2, "speed": 12, "hang": 3, "par": 18, "seed": 891496},
-	{"rows": 7, "h2": 0.7, "c": 8, "deep": 2, "speed": 12, "hang": 2, "par": 21, "seed": 689957},
-	{"rows": 7, "h2": 0.75, "c": 8, "deep": 2, "speed": 13, "hang": 3, "par": 18, "seed": 3630288},
+	{"rows": 7, "h2": 0.6, "c": 7, "deep": 1, "speed": 11, "hang": 2, "h3": 1.0, "par": 13, "seed": 3179696},
+	{"rows": 7, "h2": 0.6, "c": 7, "deep": 2, "speed": 11, "hang": 1, "h3": 1.0, "par": 15, "seed": 4444363},
+	{"rows": 7, "h2": 0.65, "c": 7, "deep": 2, "speed": 12, "hang": 2, "h3": 1.0, "par": 18, "seed": 1729328},
+	{"rows": 7, "h2": 0.7, "c": 8, "deep": 2, "speed": 12, "hang": 0, "h3": 0.5, "par": 21, "seed": 1108873},
+	{"rows": 7, "h2": 0.75, "c": 8, "deep": 2, "speed": 13, "hang": 1, "h3": 1.0, "par": 18, "seed": 488418},
 	# 23: отдых
-	{"rows": 5, "h2": 0.5, "c": 6, "deep": 1, "speed": 10, "hang": 2, "par": 12, "seed": 705795, "rest": true},
+	{"rows": 5, "h2": 0.5, "c": 6, "deep": 1, "speed": 10, "hang": 1, "h3": 1.0, "par": 12, "seed": 182150, "rest": true},
 	# 24–28
-	{"rows": 7, "h2": 0.75, "c": 8, "deep": 2, "speed": 14, "hang": 2, "par": 18, "seed": 2179920},
-	{"rows": 7, "h2": 0.8, "c": 8, "deep": 2, "speed": 14, "hang": 3, "par": 22, "seed": 1559465},
-	{"rows": 7, "h2": 0.85, "c": 8, "deep": 3, "speed": 15, "hang": 2, "par": 21, "seed": 3976151},
-	{"rows": 7, "h2": 0.9, "c": 8, "deep": 3, "speed": 15, "hang": 3, "par": 22, "seed": 737471},
-	{"rows": 7, "h2": 0.9, "c": 8, "deep": 3, "speed": 16, "hang": 2, "par": 21, "seed": 954848},
+	{"rows": 7, "h2": 0.75, "c": 8, "deep": 2, "speed": 14, "hang": 1, "par": 18, "seed": 1237359},
+	{"rows": 7, "h2": 0.8, "c": 8, "deep": 2, "speed": 14, "hang": 1, "par": 22, "seed": 2292568},
+	{"rows": 7, "h2": 0.85, "c": 8, "deep": 3, "speed": 15, "hang": 1, "h3": 0.5, "par": 21, "seed": 1776842},
+	{"rows": 7, "h2": 0.9, "c": 8, "deep": 3, "speed": 15, "hang": 1, "h3": 1.0, "par": 22, "seed": 423284},
+	{"rows": 7, "h2": 0.9, "c": 8, "deep": 3, "speed": 16, "hang": 1, "par": 21, "seed": 2944699},
 	# 29: отдых
-	{"rows": 6, "h2": 0.5, "c": 6, "deep": 1, "speed": 12, "hang": 3, "par": 14, "seed": 1067496, "rest": true},
+	{"rows": 6, "h2": 0.5, "c": 6, "deep": 1, "speed": 12, "hang": 2, "h3": 1.0, "par": 14, "seed": 1172225, "rest": true},
 	# 30: рубеж
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 3, "speed": 17, "hang": 2, "par": 18, "seed": 1075415},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 3, "speed": 17, "hang": 0, "h3": 0.5, "par": 18, "seed": 237583},
 	# 31–35: всё поле в камне, глубже кристаллы
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 3, "speed": 17, "hang": 3, "par": 21, "seed": 1292792},
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 3, "speed": 17, "hang": 2, "par": 25, "seed": 1614898},
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 4, "speed": 18, "hang": 3, "par": 21, "seed": 4345771},
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 4, "speed": 18, "hang": 2, "par": 25, "seed": 3411129},
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 4, "speed": 18, "hang": 2, "par": 25, "seed": 591365},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 3, "speed": 17, "hang": 0, "h3": 0.5, "par": 21, "seed": 1188063},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 3, "speed": 17, "hang": 1, "h3": 1.0, "par": 25, "seed": 1300711},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 4, "speed": 18, "hang": 1, "h3": 0.5, "par": 21, "seed": 889714},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 4, "speed": 18, "hang": 0, "par": 25, "seed": 1002362},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 4, "speed": 18, "hang": 1, "h3": 1.0, "par": 25, "seed": 5094712},
 	# 36: отдых
-	{"rows": 6, "h2": 0.6, "c": 6, "deep": 1, "speed": 14, "hang": 3, "par": 16, "seed": 1856032, "rest": true},
+	{"rows": 6, "h2": 0.6, "c": 6, "deep": 1, "speed": 14, "hang": 0, "par": 16, "seed": 494555, "rest": true},
 	# 37–41
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 4, "speed": 18, "hang": 3, "par": 21, "seed": 921390},
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 4, "speed": 19, "hang": 2, "par": 23, "seed": 4280637},
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 5, "speed": 19, "hang": 3, "par": 25, "seed": 1460873},
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 5, "speed": 19, "hang": 2, "par": 23, "seed": 1573521},
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 5, "speed": 19, "hang": 2, "par": 26, "seed": 638879},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 4, "speed": 18, "hang": 0, "h3": 1.0, "par": 21, "seed": 3958531},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 4, "speed": 19, "hang": 1, "h3": 1.0, "par": 23, "seed": 1348225},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 5, "speed": 19, "hang": 0, "par": 25, "seed": 1460873},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 5, "speed": 19, "hang": 1, "h3": 1.0, "par": 23, "seed": 316773},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 5, "speed": 19, "hang": 1, "h3": 1.0, "par": 26, "seed": 3257104},
 	# 42: отдых
-	{"rows": 6, "h2": 0.7, "c": 7, "deep": 2, "speed": 15, "hang": 3, "par": 13, "seed": 2322462, "rest": true},
+	{"rows": 6, "h2": 0.7, "c": 7, "deep": 2, "speed": 15, "hang": 1, "h3": 0.5, "par": 13, "seed": 1798817, "rest": true},
 	# 43–47
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 5, "speed": 20, "hang": 3, "par": 28, "seed": 2120923},
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 5, "speed": 20, "hang": 2, "par": 28, "seed": 662636},
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 6, "speed": 20, "hang": 3, "par": 22, "seed": 2450948},
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 6, "speed": 20, "hang": 2, "par": 28, "seed": 992661},
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 6, "speed": 21, "hang": 2, "par": 27, "seed": 581664},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 5, "speed": 20, "hang": 1, "par": 28, "seed": 340530},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 5, "speed": 20, "hang": 1, "h3": 1.0, "par": 28, "seed": 3071403},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 6, "speed": 20, "hang": 1, "h3": 1.0, "par": 22, "seed": 1822574},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 6, "speed": 20, "hang": 1, "h3": 1.0, "par": 28, "seed": 1621035},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 6, "speed": 21, "hang": 1, "h3": 1.0, "par": 27, "seed": 4247179},
 	# 48: отдых
-	{"rows": 6, "h2": 0.8, "c": 7, "deep": 2, "speed": 16, "hang": 3, "par": 12, "seed": 2055789, "rest": true},
+	{"rows": 6, "h2": 0.8, "c": 7, "deep": 2, "speed": 16, "hang": 1, "h3": 1.0, "par": 12, "seed": 1113228, "rest": true},
 	# 49–50: финал (скорость 21 — 0,26 с на клетку, быстрее не бывает)
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 6, "speed": 21, "hang": 2, "par": 27, "seed": 2273166},
-	{"rows": 7, "h2": 1.0, "c": 8, "deep": 7, "speed": 21, "hang": 2, "par": 32, "seed": 919608},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 6, "speed": 21, "hang": 1, "h3": 1.0, "par": 27, "seed": 2377895},
+	{"rows": 7, "h2": 1.0, "c": 8, "deep": 7, "speed": 21, "hang": 1, "h3": 1.0, "par": 32, "seed": 4270936},
 ]
 
 
@@ -125,6 +125,7 @@ static func add_hang(board: Array, p: Dictionary, lr: RandomNumberGenerator, col
 	var k: int = p.get("hang", 0)
 	var stone_rows: int = clampi(p.rows, 1, 7)
 	k = mini(k, stone_rows / 2)
+	_add_holes(board, p, lr, cols, rows_total, stone, stone_rows - 2 * maxi(k, 0))
 	if k <= 0:
 		return
 	var y0 := rows_total - stone_rows  # верхний ряд камня
@@ -177,3 +178,25 @@ static func _set_holes(board: Array, y: int, holes: Array, lr: RandomNumberGener
 		free[j] = t
 	for i in gems.size():
 		board[y * cols + free[i]] = gems[i]
+
+
+## Лишние дыры (поле `h3` строки уровня, доля 0..1): в каждом из нижних `free_rows`
+## рядов камня (ниже пар с висячим блоком) с вероятностью h3 одна клетка простого
+## камня (не кристалл) становится дырой. Больше дыр — больше работы: при «липкой»
+## гравитации осыпавшийся камень сам заделывает дыры, и без этого поздние уровни
+## проходятся слишком быстро. Без поля h3 генератор случайных чисел не трогается —
+## раскладки остальных уровней не меняются.
+static func _add_holes(board: Array, p: Dictionary, lr: RandomNumberGenerator, cols: int, rows_total: int, stone: int, free_rows: int) -> void:
+	var h3: float = p.get("h3", 0.0)
+	if h3 <= 0.0:
+		return
+	for r in free_rows:
+		var y := rows_total - 1 - r
+		if lr.randf() >= h3:
+			continue
+		var cand: Array = []
+		for x in cols:
+			if board[y * cols + x] == stone:
+				cand.append(x)
+		if cand.size() > 0:
+			board[y * cols + cand[lr.randi_range(0, cand.size() - 1)]] = -1
