@@ -24,6 +24,9 @@ const LINE_SCORES := [0, 100, 250, 450, 700]
 const SAVE_PATH := "user://save.cfg"
 const Levels := preload("res://scripts/levels.gd")
 const Gravity := preload("res://scripts/gravity.gd")
+## Мета-слой 0.6: герой, осколки, гардероб, дома (данные — meta.gd, экраны — screens.gd)
+const Meta := preload("res://scripts/meta.gd")
+const Screens := preload("res://scripts/screens.gd")
 ## true — после очистки падают все группы поля (и камень уровня над дырами ниже линии);
 ## false — только то, что выше нижней очищенной линии (ниже неё поле не трогается).
 const FALL_ALL := false
@@ -57,7 +60,7 @@ const KICKS := [Vector2i(0, 0), Vector2i(-1, 0), Vector2i(1, 0), Vector2i(-2, 0)
 const SFX_NAMES := ["move", "rotate", "land", "drop", "line1", "line2", "line3", "line4",
 	"combo1", "combo2", "combo3", "combo4", "combo5", "crystal", "levelup", "gameover", "click", "pause"]
 
-enum State { SPLASH, MENU, PLAYING, PAUSED, CLEARING, SETTLE, WIN, LOSE }
+enum State { SPLASH, HOME, PLAYING, PAUSED, CLEARING, SETTLE, WIN, LOSE, PICK_HERO, WARDROBE, MAP }
 
 var state := State.SPLASH
 var state_time := 0.0
@@ -86,6 +89,10 @@ var last_stars := 0
 var score := 0
 var shown_score := 0.0
 var chain := 0
+var big_chains := 0        # цепочек ×3 и выше в этой партии (за них — осколки)
+var last_reward := {}      # начисление осколков за последнюю победу (Meta.win_reward)
+var meta = Meta.new()
+var screens
 
 var fall_timer := 0.0
 var lock_timer := 0.0
@@ -136,6 +143,7 @@ func _ready() -> void:
 	fall_dist.fill(0)
 	piece_ids.resize(ROWS * COLS)
 	piece_ids.fill(0)
+	screens = Screens.new(self)
 	_load()
 	_setup_audio()
 	for i in 28:
@@ -258,6 +266,8 @@ func start_level(n: int) -> void:
 	score = 0
 	shown_score = 0.0
 	chain = 0
+	big_chains = 0
+	last_reward = {}
 	clearing_rows.clear()
 	particles.clear()
 	popups.clear()
@@ -434,6 +444,8 @@ func _check_lines() -> bool:
 	if clearing_rows.is_empty():
 		return false
 	chain += 1
+	if chain == 3:
+		big_chains += 1
 	var n := clearing_rows.size()
 	var gained: int = LINE_SCORES[mini(n, 4)] * chain
 	var freed := 0
@@ -494,10 +506,14 @@ func _after_chain() -> void:
 func _win() -> void:
 	has_piece = false
 	last_stars = 3 if pieces_used <= par else (2 if pieces_used <= int(par * 1.4) else 1)
+	last_reward = Meta.win_reward(not stars.has(level), stars.get(level, 0), last_stars, big_chains)
+	meta.shards += last_reward.total
 	stars[level] = maxi(stars.get(level, 0), last_stars)
 	max_level = maxi(max_level, level + 1)
 	_save()
 	_set_state(State.WIN)
+	if screens:
+		screens.poke_hero()
 	play("levelup")
 	for i in 60:
 		var c: Color = GEMS[i % GEMS.size()]
@@ -516,7 +532,7 @@ func step(delta: float) -> void:
 	match state:
 		State.SPLASH:
 			if state_time > 2.0:
-				_set_state(State.MENU)
+				go_home()
 		State.PLAYING:
 			if not has_piece:
 				return
@@ -544,6 +560,11 @@ func step(delta: float) -> void:
 
 # ---------- Сохранение ----------
 
+## Домой; при первом запуске (герой не выбран) — экран «Выбери друга».
+func go_home() -> void:
+	_set_state(State.HOME if meta.hero != "" else State.PICK_HERO)
+
+
 func _load() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SAVE_PATH) == OK:
@@ -551,7 +572,16 @@ func _load() -> void:
 		stars = cfg.get_value("progress", "stars", {})
 		music_on = cfg.get_value("settings", "music", true)
 		sfx_on = cfg.get_value("settings", "sfx", true)
+	meta.load_from(cfg)  # старое сохранение без [meta] — значения по умолчанию
+	# Подарок игрокам версий до 0.6: осколки за уже пройденное (один раз, пока нет раздела [meta]).
+	if not cfg.has_section("meta") and max_level > 1:
+		meta.shards += legacy_gift(total_stars())
+		_save()
 	level = max_level
+
+
+static func legacy_gift(total: int) -> int:
+	return 30 + total * 5
 
 
 func _save() -> void:
@@ -560,6 +590,7 @@ func _save() -> void:
 	cfg.set_value("progress", "stars", stars)
 	cfg.set_value("settings", "music", music_on)
 	cfg.set_value("settings", "sfx", sfx_on)
+	meta.save_to(cfg)
 	cfg.save(SAVE_PATH)
 
 
@@ -611,6 +642,7 @@ func _update_effects(delta: float) -> void:
 func _process(delta: float) -> void:
 	step(delta)
 	_update_effects(delta)
+	screens.update(delta)
 	for idx in held.keys():
 		var n: String = held[idx]
 		if n in ["left", "right", "soft"]:
@@ -629,8 +661,13 @@ func _notification(what: int) -> void:
 		match state:
 			State.PLAYING, State.CLEARING, State.SETTLE:
 				_set_state(State.PAUSED)
-			State.PAUSED, State.WIN, State.LOSE:
-				_set_state(State.MENU)
+			State.PAUSED, State.WIN, State.LOSE, State.MAP, State.WARDROBE:
+				go_home()
+			State.PICK_HERO:
+				if meta.hero != "":
+					go_home()
+				else:
+					get_tree().quit()
 			_:
 				get_tree().quit()
 
@@ -661,7 +698,9 @@ func _key(e: InputEventKey) -> void:
 				_set_state(State.PAUSED)
 			elif state == State.PAUSED:
 				_set_state(State.PLAYING)
-		KEY_ENTER: _touch_down(99, Vector2(W / 2, H / 2))
+		KEY_ENTER:
+			if state == State.HOME:
+				start_level(max_level)
 
 
 func _press(n: String) -> void:
@@ -676,21 +715,22 @@ func _press(n: String) -> void:
 func _touch_down(idx: int, pos: Vector2) -> void:
 	match state:
 		State.SPLASH:
-			_set_state(State.MENU)
+			go_home()
 			return
-		State.MENU:
-			play("click")
-			start_level(max_level)
+		State.HOME:
+			screens.tap_home(pos)
 			return
-		State.WIN:
-			if state_time > 0.8:
-				play("click")
-				start_level(level + 1)
+		State.PICK_HERO:
+			screens.tap_pick(pos)
 			return
-		State.LOSE:
-			if state_time > 0.8:
-				play("click")
-				start_level(level)
+		State.WARDROBE:
+			screens.tap_wardrobe(pos)
+			return
+		State.MAP:
+			screens.map_down(idx, pos)
+			return
+		State.WIN, State.LOSE:
+			screens.tap_end(pos)
 			return
 		State.PAUSED:
 			_pause_menu_tap(pos)
@@ -724,11 +764,14 @@ func _pause_menu_tap(pos: Vector2) -> void:
 					sfx_on = not sfx_on
 					_save()
 				"restart": start_level(level)
-				"menu": _set_state(State.MENU)
+				"menu": go_home()
 			return
 
 
 func _touch_drag(idx: int, pos: Vector2) -> void:
+	if state == State.MAP:
+		screens.map_drag(idx, pos)
+		return
 	if not board_touch.has(idx):
 		return
 	var t: Dictionary = board_touch[idx]
@@ -750,6 +793,9 @@ func _touch_drag(idx: int, pos: Vector2) -> void:
 func _touch_up(idx: int, pos: Vector2) -> void:
 	held.erase(idx)
 	repeat_left.erase(idx)
+	if state == State.MAP:
+		screens.map_up(idx, pos)
+		return
 	if not board_touch.has(idx):
 		return
 	var t: Dictionary = board_touch[idx]
@@ -782,6 +828,19 @@ func _draw() -> void:
 	if state == State.SPLASH:
 		_draw_splash()
 		return
+	match state:
+		State.HOME:
+			screens.draw_home()
+			return
+		State.PICK_HERO, State.WARDROBE, State.MAP:
+			_draw_background()
+			if state == State.PICK_HERO:
+				screens.draw_pick()
+			elif state == State.WARDROBE:
+				screens.draw_wardrobe()
+			else:
+				screens.draw_map()
+			return
 	_draw_background()
 	var off := Vector2(randf_range(-shake, shake), randf_range(-shake, shake)) if shake > 0.0 else Vector2.ZERO
 	draw_set_transform(off)
@@ -919,7 +978,7 @@ func _draw_panel() -> void:
 	draw_string(font, Vector2(panel_x, y + 20), "ДАЛЕЕ", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, DIM)
 	var box := Rect2(panel_x, y + 34, pw, 130)
 	_rbox(box, BTN, 18)
-	if state != State.MENU:
+	if true:
 		var s: Dictionary = SHAPES[next_type]
 		var mn := Vector2(99, 99)
 		var mx := Vector2(-99, -99)
@@ -1014,45 +1073,19 @@ func _center_text(text: String, y: float, size: int, col: Color) -> void:
 
 func _draw_overlay() -> void:
 	match state:
-		State.MENU:
-			draw_rect(Rect2(0, 0, W, H), Color(0.05, 0.03, 0.1, 0.82))
-			_draw_title(Vector2(W / 2.0, H * 0.33), 96, 10.0)
-			_center_text("Освободи кристаллы", H * 0.33 + 70, 30, DIM)
-			var b := Rect2(W / 2.0 - 200, H * 0.5 - 60, 400, 120)
-			var pulse := 1.0 + 0.04 * sin(t_total * 4.0)
-			var bb := Rect2(b.get_center() - b.size * pulse / 2.0, b.size * pulse)
-			_rbox(bb.grow(6), Color(ACCENT, 0.25), 36)
-			_rbox(bb, ACCENT, 32)
-			_center_text("ИГРАТЬ", b.get_center().y + 18, 52, Color("#2A1A0A"))
-			_center_text("Уровень %d" % max_level, H * 0.5 + 120, 38, TEXT)
-			_draw_star(Vector2(W / 2.0 - 40, H * 0.5 + 180), 20, true)
-			draw_string(font, Vector2(W / 2.0 - 10, H * 0.5 + 194), str(total_stars()), HORIZONTAL_ALIGNMENT_LEFT, -1, 36, ACCENT)
-			_center_text("Тап — поворот · свайп — движение · свайп вниз — сброс", H - 60, 22, DIM)
 		State.PAUSED:
 			draw_rect(Rect2(0, 0, W, H), Color(0.05, 0.03, 0.1, 0.85))
 			_center_text("ПАУЗА", menu_buttons["resume"].position.y - 50, 60, TEXT)
 			var labels := {"resume": "Продолжить", "music": "Музыка: " + ("вкл" if music_on else "выкл"),
-				"sound": "Звуки: " + ("вкл" if sfx_on else "выкл"), "restart": "Начать уровень заново", "menu": "В меню"}
+				"sound": "Звуки: " + ("вкл" if sfx_on else "выкл"), "restart": "Начать уровень заново", "menu": "Домой"}
 			for n in menu_buttons:
 				var r: Rect2 = menu_buttons[n]
 				_rbox(r, ACCENT if n == "resume" else BTN, 24)
 				draw_string(font, Vector2(r.position.x, r.get_center().y + 13), labels[n], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 34, Color("#2A1A0A") if n == "resume" else TEXT)
 		State.WIN:
-			draw_rect(Rect2(0, 0, W, H), Color(0.05, 0.03, 0.1, 0.7))
-			_center_text("УРОВЕНЬ ПРОЙДЕН!", H * 0.36, 54, TEXT)
-			for i in 3:
-				var appear := clampf((state_time - 0.2 - i * 0.25) / 0.2, 0.0, 1.0)
-				var r := 44.0 * (0.5 + 0.5 * appear) if i < last_stars else 44.0
-				_draw_star(Vector2(W / 2.0 + (i - 1) * 120, H * 0.46), r, i < last_stars and appear > 0.0)
-			_center_text("Очки: %d   Фигуры: %d" % [score, pieces_used], H * 0.56, 34, DIM)
-			if state_time > 0.8:
-				_center_text("Нажмите — следующий уровень", H * 0.64, 32, ACCENT)
+			screens.draw_win()
 		State.LOSE:
-			draw_rect(Rect2(0, 0, W, H), Color(0.05, 0.03, 0.1, 0.75))
-			_center_text("ПОЛЕ ЗАПОЛНЕНО", H * 0.4, 54, TEXT)
-			_center_text("Кристаллы: %d из %d" % [crystals_total - crystals_left, crystals_total], H * 0.48, 34, CRYSTAL_COL)
-			if state_time > 0.8:
-				_center_text("Нажмите — попробовать ещё", H * 0.56, 32, ACCENT)
+			screens.draw_lose()
 
 
 func _draw_splash() -> void:

@@ -291,6 +291,8 @@ func _initialize() -> void:
 	g._spawn()
 	check(g.state == g.State.LOSE, "переполнение — поражение")
 
+	_test_meta(g, max_chain)
+
 	if had_save:
 		var f := FileAccess.open(save_path, FileAccess.WRITE)
 		f.store_buffer(save_bytes)
@@ -298,5 +300,156 @@ func _initialize() -> void:
 	elif FileAccess.file_exists(save_path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
 
+	# Подарок старым игрокам: 30 + 5 за звезду
+	var GameScript = load("res://scripts/game.gd")
+	check(GameScript.legacy_gift(0) == 30 and GameScript.legacy_gift(10) == 80, "подарок за старый прогресс")
+
 	print("Итог: ", "ВСЁ ОК" if failed == 0 else "%d ошибок" % failed)
 	quit(1 if failed else 0)
+
+
+# ---------- Мета-слой 0.6: осколки, гардероб, герои, дома ----------
+
+func _test_meta(g, _chain3: int) -> void:
+	var Meta: Script = load("res://scripts/meta.gd")
+
+	# Начисление осколков
+	var r: Dictionary = Meta.win_reward(true, 0, 1, 0)
+	check(r.total == 15 and r.win == 10 and r.stars == 5, "первая победа на 1 звезду: +10 и +5 (=15)")
+	r = Meta.win_reward(false, 1, 3, 0)
+	check(r.total == 3 + 10, "повторная победа, 1→3 звезды: +3 и +10")
+	r = Meta.win_reward(false, 3, 2, 0)
+	check(r.total == 3 and r.stars == 0, "повторная без новых звёзд: только +3")
+	r = Meta.win_reward(false, 3, 3, 2)
+	check(r.chains == 6 and r.total == 9, "две цепочки ×3+: +6")
+	r = Meta.win_reward(true, 0, 3, 9)
+	check(r.chains == 12 and r.total == 10 + 15 + 12, "за цепочки не больше +12")
+
+	# Победа в игре начисляет осколки; цепочка ×3 считается
+	g.meta = Meta.new()
+	g.stars = {}
+	g.start_level(3)
+	g.big_chains = 2
+	g.pieces_used = 1
+	g._win()
+	check(g.meta.shards == 10 + 15 + 6, "победа в игре: первая, 3 звезды, 2 цепочки = 31 осколок (вышло %d)" % g.meta.shards)
+	g.start_level(3)
+	g.pieces_used = 1
+	g._win()
+	check(g.meta.shards == 31 + 3, "повторная победа на тот же рекорд: +3")
+	check(g.last_reward.total == 3, "last_reward для экрана победы")
+	# цепочка ×3 в настоящей партии (та же позиция, что в тесте выше)
+	g.start_level(1)
+	g.board.fill(-1)
+	g.piece_ids.fill(0)
+	var b: int = g.ROWS - 1
+	for x in range(1, 8):
+		g.board[b * g.COLS + x] = g.STONE
+	for x in [1, 2, 3, 4, 6, 7]:
+		g.board[(b - 1) * g.COLS + x] = g.STONE
+	for x in [2, 3, 4, 7]:
+		g.board[(b - 2) * g.COLS + x] = g.STONE
+	for x in [5, 6]:
+		g.board[(b - 2) * g.COLS + x] = 2
+		g.piece_ids[(b - 2) * g.COLS + x] = 600
+	g.board[(b - 3) * g.COLS + 1] = g.STONE
+	g.board[(b - 3) * g.COLS + 5] = g.STONE
+	g.crystals_total = 1
+	g.crystals_left = 1
+	g.board[0 * g.COLS + 7] = g.CRYSTAL
+	g.next_type = 1
+	g._spawn()
+	g.rotate_piece()
+	for i in 10:
+		g.move(-1)
+	g.hard_drop()
+	run(g, 2.0)
+	check(g.big_chains == 1, "цепочка ×3 засчитана для осколков (big_chains = %d)" % g.big_chains)
+
+	# Покупка
+	var m = Meta.new()
+	m.shards = 25
+	check(m.buy("bow", 0, 1) == Meta.Buy.OK and m.shards == 5 and m.is_owned("bow"), "покупка: хватает осколков")
+	check(m.buy("cap", 0, 1) == Meta.Buy.POOR and m.shards == 5 and not m.is_owned("cap"), "покупка: не хватает — ничего не списано")
+	check(m.buy("bow", 0, 1) == Meta.Buy.OWNED, "второй раз не покупается")
+	m.shards = 500
+	check(m.buy("crown", 59, 99) == Meta.Buy.LOCKED and m.shards == 500, "корона закрыта до 60 звёзд")
+	check(m.buy("crown", 60, 1) == Meta.Buy.OK, "корона открыта с 60 звёздами")
+	check(m.buy("wreath", 999, 20) == Meta.Buy.LOCKED and m.buy("wreath", 0, 21) == Meta.Buy.OK, "венок — после Изумрудного зала (2-го)")
+	check(m.buy("nope", 0, 1) == Meta.Buy.UNKNOWN, "неизвестная вещь не покупается")
+
+	# Надеть / снять
+	check(not m.equip("cap"), "некупленное не надевается")
+	check(m.equip("bow") and m.is_equipped("bow"), "надеть бантик")
+	check(m.equip("crown") and m.is_equipped("crown") and not m.is_equipped("bow"), "корона заменяет бантик в слоте головы")
+	m.unequip("head")
+	check(not m.is_equipped("crown") and m.outfit().is_empty(), "снять")
+	m.shards = 40
+	check(m.tap_item("sunglasses", 0, 1) == "bought" and m.is_equipped("sunglasses") and m.shards == 0, "нажатие: купить и сразу надеть")
+	check(m.tap_item("sunglasses", 0, 1) == "off" and not m.is_equipped("sunglasses"), "нажатие на надетое — снять")
+	check(m.tap_item("sunglasses", 0, 1) == "on", "нажатие на купленное — надеть")
+	check(m.tap_item("monocle", 0, 1) == "locked" and m.tap_item("scarf", 0, 1) == "poor", "нажатие: закрыто / не хватает")
+
+	# Смена героя (вещи общие)
+	check(m.hero == "" and m.set_hero("axolotl") and m.hero == "axolotl", "выбор аксолотля")
+	check(not m.set_hero("dragon") and m.hero == "axolotl", "неизвестный герой не выбирается")
+	check(m.set_hero("owl") and m.is_equipped("sunglasses"), "смена героя: наряд остаётся")
+
+	# Украшения дома
+	m.shards = 100
+	check(m.tap_decor("owl", "hang", "owl_lantern", 0, 1) == "bought" and m.placed_at("owl", "hang") == "owl_lantern" and m.shards == 85, "украшение: купить и повесить")
+	check(m.tap_decor("owl", "wall_l", "owl_lantern", 0, 1) == "on" and m.placed_at("owl", "wall_l") == "owl_lantern" and m.placed_at("owl", "hang") == "", "украшение переезжает на другое место")
+	check(m.tap_decor("owl", "wall_l", "owl_lantern", 0, 1) == "off" and m.placed_at("owl", "wall_l") == "", "украшение: убрать")
+	check(m.tap_decor("owl", "floor_l", "owl_swing", 0, 1) == "locked" and not m.is_owned("owl_swing"), "качели не ставятся на пол")
+	check(m.tap_decor("axolotl", "floor_l", "owl_mushrooms", 0, 1) == "locked", "украшение совёнка не ставится в грот")
+	check(not m.place("axolotl", "hang", "owl_lantern"), "купленное для дупла нельзя поставить в грот")
+	check(m.tap_decor("axolotl", "floor_r", "axo_castle", 99, 1) == "locked", "замок закрыт до 2-го зала")
+	check(m.tap_decor("axolotl", "floor_r", "axo_anchor", 0, 1) == "bought" and m.placed_at("axolotl", "floor_r") == "axo_anchor", "украшение в гроте")
+	m.place("owl", "near", "owl_lantern")
+	check(m.placed_at("owl", "near") == "owl_lantern" and m.placed_at("axolotl", "near") == "", "у каждого дома свои места")
+	check(m.decor_for("owl", "hang").size() == 4 and m.decor_for("axolotl", "floor_l").size() <= 6, "наборы украшений по местам помещаются в сетку")
+	check(Meta.home_stage(1) == 0 and Meta.home_stage(11) == 1 and Meta.home_stage(31) == 2 and Meta.home_stage(51) == 3, "ступени богатства дома")
+	check(Meta.hall_index(10) == 0 and Meta.hall_index(11) == 1 and Meta.hall_index(50) == 4 and Meta.hall_index(77) == 5 and Meta.depth(10) == 120, "залы и глубина")
+
+	# Сохранение и загрузка мета-данных
+	var cfg := ConfigFile.new()
+	m.save_to(cfg)
+	var m2 = Meta.new()
+	m2.load_from(cfg)
+	check(m2.hero == "owl" and m2.shards == m.shards and m2.owned == m.owned and m2.equipped == m.equipped, "мета: сохранение и загрузка (герой, осколки, вещи)")
+	check(m2.decor_owned == m.decor_owned and m2.placed_at("owl", "near") == "owl_lantern" and m2.placed_at("axolotl", "floor_r") == "axo_anchor", "мета: украшения по домам сохраняются")
+	# Через игру и настоящий файл
+	g.meta = m
+	g.max_level = 7
+	g.stars = {1: 3, 2: 2}
+	g._save()
+	g.meta = Meta.new()
+	g._load()
+	check(g.meta.hero == "owl" and g.meta.shards == m.shards and g.meta.is_equipped("sunglasses") and g.max_level == 7, "игра: сохранение в save.cfg и загрузка")
+	# Старое сохранение без раздела [meta]
+	var old := ConfigFile.new()
+	old.set_value("progress", "max_level", 12)
+	old.set_value("progress", "stars", {1: 3})
+	old.set_value("settings", "music", false)
+	old.set_value("settings", "sfx", true)
+	old.save("user://save.cfg")
+	g.meta = Meta.new()
+	g.meta.shards = 77
+	g._load()
+	check(g.max_level == 12 and g.meta.hero == "" and g.meta.shards == 30 + 3 * 5 and g.meta.owned.is_empty() and g.meta.equipped.is_empty(), "старое сохранение: прогресс есть, мета по умолчанию + подарок")
+	check(g.meta.decor_owned.is_empty() and g.meta.decor_placed.owl.is_empty() and g.meta.decor_placed.axolotl.is_empty(), "старое сохранение: дома пустые")
+	g.go_home()
+	check(g.state == g.State.PICK_HERO, "без героя — экран «Выбери друга»")
+	g.meta.set_hero("axolotl")
+	g.go_home()
+	check(g.state == g.State.HOME, "с героем — домой")
+	# Испорченные значения не роняют загрузку
+	var bad := ConfigFile.new()
+	bad.set_value("meta", "hero", 5)
+	bad.set_value("meta", "shards", "много")
+	bad.set_value("meta", "owned", ["bow", "bow", "nope", 3])
+	bad.set_value("meta", "equipped", {"head": "crown", "eyes": "bow"})
+	bad.set_value("meta", "decor_placed", {"owl": {"hang": "axo_lily"}})
+	var m3 = Meta.new()
+	m3.load_from(bad)
+	check(m3.hero == "" and m3.shards == 0 and m3.owned == ["bow"] and m3.equipped.is_empty() and m3.decor_placed.owl.is_empty(), "испорченные мета-данные отбрасываются")

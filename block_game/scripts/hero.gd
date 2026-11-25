@@ -150,8 +150,11 @@ func _owl(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only: 
 	# Крылышки (за туловищем), при касании взмахивают
 	var flap := 0.35 * env * sin(react * 18.0)
 	for sx in [-1.0, 1.0]:
-		_oval(Vector2(sx * 82, 34), 30, 56, p.dark, -sx * (0.32 + flap), OUT, 5.0)
-		_oval(Vector2(sx * 84, 44), 16, 34, p.body.darkened(0.08), -sx * (0.32 + flap))
+		var wc := Vector2(sx * 78, 36)
+		_oval(wc, 26, 50, p.dark, -sx * (0.3 + flap), OUT, 5.0)
+		for f in 3:
+			var fp := wc + Vector2(sx * 6, 14 + f * 12).rotated(-sx * (0.3 + flap))
+			ci.draw_arc(fp, 9, 0.2 * PI, 0.8 * PI, 8, Color(p.body, 0.6), 3.0, true)
 
 	# Ушки-треугольники
 	for sx in [-1.0, 1.0]:
@@ -214,24 +217,35 @@ func _axolotl(p: Dictionary, outfit: Dictionary, t: float, react: float, head_on
 		_back_items(outfit, a, t, true)
 		# Хвост с плавником, покачивается
 		var sway := sin(t * 1.6) * 0.18 + env * 0.3 * sin(react * 10.0)
+		var p0 := Vector2(20, 96)
 		var top := PackedVector2Array()
 		var bot := PackedVector2Array()
-		for i in 13:
-			var s := i / 12.0
-			var base := Vector2(30 + s * 110, 92 - s * 40 - s * s * 20)
-			base = Vector2(30, 92) + (base - Vector2(30, 92)).rotated(-sway * s)
-			var w := 24.0 * (1.0 - s) + 3.0
-			top.append(base + Vector2(0, -w - 10.0 * sin(s * PI)))
-			bot.append(base + Vector2(0, w * 0.7))
-		var fin := top.duplicate()
+		var mid := PackedVector2Array()
+		for i in 15:
+			var s := i / 14.0
+			var c := p0.bezier_interpolate(Vector2(90, 122), Vector2(150, 96), Vector2(158, 34), s)
+			c = p0 + (c - p0).rotated(-sway * s)
+			var nx := p0.bezier_interpolate(Vector2(90, 122), Vector2(150, 96), Vector2(158, 34), minf(1.0, s + 0.02))
+			nx = p0 + (nx - p0).rotated(-sway * minf(1.0, s + 0.02))
+			var tang := (nx - c).normalized() if i < 14 else (c - mid[i - 1]).normalized()
+			var nrm := tang.orthogonal()
+			var w := 20.0 * (1.0 - s) + 3.0
+			var fin := 13.0 * sin(minf(s * 1.15, 1.0) * PI) + 2.0
+			mid.append(c)
+			top.append(c + nrm * (w + fin))
+			bot.append(c - nrm * (w + fin * 0.6))
+		var fin_poly := top.duplicate()
 		var rev := bot.duplicate()
 		rev.reverse()
-		fin.append_array(rev)
-		_fill(fin, p.dark, OUT, 5.0)
+		fin_poly.append_array(rev)
+		_fill(fin_poly, Color(p.dark, 0.85), OUT, 5.0)
 		var core := PackedVector2Array()
-		for i in 13:
-			core.append(top[i].lerp(bot[i], 0.45))
-		var core_b := bot.duplicate()
+		var core_b := PackedVector2Array()
+		for i in 15:
+			var w := 20.0 * (1.0 - i / 14.0) + 2.0
+			var nrm := (top[i] - mid[i]).normalized()
+			core.append(mid[i] + nrm * w)
+			core_b.append(mid[i] - nrm * w)
 		core_b.reverse()
 		core.append_array(core_b)
 		_fill(core, p.body)
@@ -253,34 +267,39 @@ func _axolotl(p: Dictionary, outfit: Dictionary, t: float, react: float, head_on
 	var amp := 0.06 + 0.32 * env
 	var freq := 2.0 + 9.0 * env
 	var angles := [-2.45, -2.95, 2.75]
-	var lens := [62.0, 66.0, 54.0]
+	var lens := [58.0, 62.0, 50.0]
 	var bases := [Vector2(-66, -66), Vector2(-86, -40), Vector2(-90, -10)]
+	var gills: Array = []
 	for sx in [-1.0, 1.0]:
 		for i in 3:
 			var ang: float = angles[i] + amp * sin(t * freq + i * 1.3 + (0.0 if sx < 0 else 1.7))
 			var dir := Vector2(cos(ang), sin(ang))
 			if sx > 0:
 				dir.x = -dir.x
-			var b0: Vector2 = bases[i] * Vector2(-sx * -1.0 if sx < 0 else -1.0, 1.0)
-			b0 = Vector2(absf(bases[i].x) * sx, bases[i].y)
-			var bend := amp * 0.8 * sin(t * freq * 1.3 + i)
+			var b0 := Vector2(absf(bases[i].x) * sx, bases[i].y)
+			var bend := amp * 0.8 * sin(t * freq * 1.3 + i) + 0.25
 			var pts := PackedVector2Array()
 			for k in 7:
 				var s := k / 6.0
-				var d := dir.rotated(bend * s * sx)
+				var d := dir.rotated(bend * s * -sx * (1.0 if i < 2 else -1.0))
 				pts.append(b0 + d * lens[i] * s)
-			var tip := pts[6]
-			# Пушистые веточки вдоль стебля
-			for k in range(2, 7):
-				var s := k / 6.0
-				var q := pts[k]
-				var nrm := (pts[k] - pts[k - 1]).normalized().orthogonal()
-				var r := 9.0 - s * 3.0
-				_oval(q + nrm * 7.0, r, r * 0.65, p.gill2, nrm.angle())
-				_oval(q - nrm * 7.0, r, r * 0.65, p.gill2, nrm.angle())
-			_line(pts, OUT, 15.0)
-			_line(pts, p.gill, 10.0)
-			_dot(tip, 8.0, p.gill)
+			gills.append(pts)
+	# Сначала контур всех жабр, потом пушистые веточки, потом стебли
+	for pts in gills:
+		_line(pts, OUT, 14.0)
+	for pts in gills:
+		for k in range(1, 7):
+			var s := k / 6.0
+			var q: Vector2 = pts[k]
+			var tang: Vector2 = (pts[k] - pts[k - 1]).normalized()
+			var nrm := tang.orthogonal()
+			var r := 11.0 - s * 3.5
+			for side in [-1.0, 1.0]:
+				var fd: Vector2 = (tang * -0.55 + nrm * side).normalized()
+				_oval(q + fd * (r + 2.0), r, r * 0.48, p.gill2, fd.angle(), p.gill.darkened(0.25), 2.5)
+	for pts in gills:
+		_line(pts, p.gill, 9.0)
+		_dot(pts[6], 7.5, p.gill)
 
 	# Голова — широкая, приплюснутая
 	_oval(Vector2(0, -22), 102, 72, p.body, 0.0, OUT, 6.0)
@@ -577,26 +596,31 @@ func _cape(a: Dictionary, t: float, behind: bool) -> void:
 	var w: float = a.back_w
 	var b: Vector2 = a.back
 	if not behind:
-		# застёжка-звёздочка
-		_sparkle(a.neck + Vector2(-a.neck_w * 0.34, -4), 11.0, Color("#FFCB45"))
+		# застёжка: шнурок и звёздочка под подбородком
+		var n: Vector2 = a.neck + Vector2(0, 6)
+		_sparkle(n, 13.0, Color("#FFCB45"))
+		_dot(n, 3.5, Color("#FFF3C4"))
 		return
-	var pts := PackedVector2Array([b + Vector2(-w * 0.38, -w * 0.25), b + Vector2(w * 0.38, -w * 0.25)])
-	var bottom_y := b.y + w * 0.62
-	for i in 9:
-		var s := 1.0 - i / 8.0
-		var x := (s - 0.5) * w * 1.36
-		pts.append(Vector2(b.x + x, bottom_y + sin(s * TAU * 2.0 + t * 2.0) * 7.0))
+	# высокий воротник за головой и широкий плащ до земли
+	var pts := PackedVector2Array([b + Vector2(-w * 0.34, -w * 0.36), b + Vector2(-w * 0.50, -w * 0.2)])
+	var bottom_y := b.y + w * 0.58
+	for i in 11:
+		var s := i / 10.0
+		var x := lerpf(-w * 0.66, w * 0.66, s)
+		pts.append(Vector2(b.x + x, bottom_y + sin(s * TAU * 2.0 + t * 2.0) * 6.0 + (absf(s - 0.5) * -14.0)))
+	pts.append(b + Vector2(w * 0.50, -w * 0.2))
+	pts.append(b + Vector2(w * 0.34, -w * 0.36))
 	var cols := PackedColorArray()
 	for v in pts:
-		cols.append(Color("#2C3584").lerp(Color("#17154A"), clampf((v.y - b.y + w * 0.25) / w, 0.0, 1.0)))
+		cols.append(Color("#3A47A8").lerp(Color("#1A1652"), clampf((v.y - b.y + w * 0.5) / (w * 1.1), 0.0, 1.0)))
 	var outline := pts.duplicate()
 	outline.append(pts[0])
 	ci.draw_polyline(outline, OUT, 10.0, true)
 	ci.draw_polygon(pts, cols)
-	var stars := [Vector2(-0.5, 0.35), Vector2(0.52, 0.28), Vector2(-0.3, 0.52), Vector2(0.4, 0.5), Vector2(0.58, 0.05), Vector2(-0.58, 0.1)]
+	var stars := [Vector2(-0.55, 0.35), Vector2(0.55, 0.28), Vector2(-0.42, 0.52), Vector2(0.46, 0.5), Vector2(0.6, 0.02), Vector2(-0.6, 0.05)]
 	for i in stars.size():
 		var tw := 0.6 + 0.4 * sin(t * 3.0 + i * 1.7)
-		_sparkle(b + stars[i] * w, w * 0.035 * (0.7 + tw * 0.5), Color(1, 0.95, 0.75, tw))
+		_sparkle(b + stars[i] * w, w * 0.04 * (0.7 + tw * 0.5), Color(1, 0.95, 0.75, tw))
 
 
 func _backpack(a: Dictionary, behind: bool) -> void:
@@ -604,8 +628,8 @@ func _backpack(a: Dictionary, behind: bool) -> void:
 	var b: Vector2 = a.back
 	var brown := Color("#D9823F")
 	if behind:
-		var c := b + Vector2(w * 0.43, -w * 0.08)
-		var s := Vector2(w * 0.42, w * 0.52)
+		var c := b + Vector2(w * 0.5, -w * 0.12)
+		var s := Vector2(w * 0.5, w * 0.6)
 		var r := Rect2(c - s / 2.0, s)
 		_fill(_rrect(r, s.x * 0.25), brown, OUT, 5.0)
 		_fill(_rrect(Rect2(r.position + Vector2(s.x * 0.08, s.y * 0.48), Vector2(s.x * 0.84, s.y * 0.4)), s.x * 0.15), brown.darkened(0.15))
@@ -615,8 +639,8 @@ func _backpack(a: Dictionary, behind: bool) -> void:
 	# лямки спереди
 	var k := w / 184.0
 	for sx in [-1.0, 1.0]:
-		var top: Vector2 = b + Vector2(sx * 44, -60) * k
-		var bot: Vector2 = b + Vector2(sx * 56, 40) * k
+		var top: Vector2 = b + Vector2(sx * 62, -8) * k
+		var bot: Vector2 = b + Vector2(sx * 52, 74) * k
 		if a.kind == "axolotl":
 			top = b + Vector2(sx * 40, -22) * k
 			bot = b + Vector2(sx * 50, 30) * k
@@ -627,6 +651,7 @@ func _backpack(a: Dictionary, behind: bool) -> void:
 
 
 func _rrect(r: Rect2, rad: float) -> PackedVector2Array:
+	rad = minf(rad, minf(r.size.x, r.size.y) * 0.49)
 	var pts := PackedVector2Array()
 	var cs := [r.position + Vector2(r.size.x - rad, rad), r.position + r.size - Vector2(rad, rad),
 		r.position + Vector2(rad, r.size.y - rad), r.position + Vector2(rad, rad)]
@@ -660,8 +685,8 @@ func draw_item_icon(target: CanvasItem, id: String, slot: String, kind: String, 
 			_front_items({"head": id}, a, t)
 		"eyes":
 			if id == "monocle":
-				a.eye_r = Vector2(0, -20)
-				a.eye_rad = 50.0
+				a.eye_r = Vector2(-20, -30)
+				a.eye_rad = 42.0
 			_front_items({"eyes": id}, a, t)
 		"neck":
 			a.neck = Vector2(0, -20)
