@@ -33,6 +33,7 @@ const I18n := preload("res://scripts/i18n.gd")
 const Tutorial := preload("res://scripts/tutorial.gd")
 const Assist := preload("res://scripts/assist.gd")
 const AssistUI := preload("res://scripts/assist_ui.gd")
+const Home3D := preload("res://scripts/home3d/home3d.gd")  # 0.12: 3D-дома
 ## true — после очистки падают все группы поля (и камень уровня над дырами ниже линии);
 ## false — только то, что выше нижней очищенной линии (ниже неё поле не трогается).
 const FALL_ALL := false
@@ -102,6 +103,7 @@ var screens
 var tut = Tutorial.new()      # 0.9: обучение
 var assist = Assist.new()     # 0.9: помощь, попытки, подарок новичку
 var assist_ui
+var home3d                    # 0.12: 3D-дом на экране «Дом» (scripts/home3d/home3d.gd)
 
 var fall_timer := 0.0
 var lock_timer := 0.0
@@ -154,6 +156,10 @@ func _ready() -> void:
 	piece_ids.fill(0)
 	screens = Screens.new(self)
 	assist_ui = AssistUI.new(self)
+	home3d = Home3D.new()
+	home3d.name = "Home3D"
+	add_child(home3d)
+	home3d.setup(self)
 	_load()
 	_setup_audio()
 	for i in 28:
@@ -176,9 +182,9 @@ func _layout() -> void:
 		buttons[names[i]] = Rect2(16 + i * (w + 12), btn_y, w, btn_h)
 	var mw := 460.0
 	var y0 := H * 0.5 - 260.0
-	var items := ["resume", "music", "sound", "language", "tutorial", "restart", "menu"]
+	var items := ["resume", "music", "sound", "language", "graphics", "tutorial", "restart", "menu"]
 	for i in items.size():
-		menu_buttons[items[i]] = Rect2((W - mw) / 2.0, y0 + i * 104.0, mw, 88)
+		menu_buttons[items[i]] = Rect2((W - mw) / 2.0, y0 + i * 96.0, mw, 82)
 
 
 # ---------- Звук ----------
@@ -621,6 +627,8 @@ func _load() -> void:
 		sfx_on = cfg.get_value("settings", "sfx", true)
 	# язык: из [settings] language; в старом сохранении его нет — по языку телефона
 	I18n.load_from(cfg, OS.get_locale_language())
+	if home3d:
+		home3d.load_from(cfg)  # 0.12: качество графики [settings] graphics
 	meta.load_from(cfg)  # старое сохранение без [meta] — значения по умолчанию
 	# 0.9: [tutorial] и [stats]; в старом сохранении их нет — значения по умолчанию
 	tut.load_from(cfg, max_level)
@@ -658,6 +666,8 @@ func _save() -> void:
 	meta.save_to(cfg)
 	tut.save_to(cfg)
 	assist.save_to(cfg)
+	if home3d:
+		home3d.save_to(cfg)
 	cfg.save(SAVE_PATH)
 
 
@@ -758,7 +768,7 @@ func _input(event: InputEvent) -> void:
 		else:
 			_touch_up(event.index, event.position)
 	elif event is InputEventScreenDrag:
-		_touch_drag(event.index, event.position)
+		_touch_drag(event.index, event.position, event.relative)
 	elif event is InputEventKey and event.pressed and not event.echo:
 		_key(event)
 
@@ -795,8 +805,8 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 			go_home()
 			return
 		State.HOME:
-			if not assist_ui.tap_home(pos):
-				screens.tap_home(pos)
+			if not assist_ui.tap_home(pos) and not screens.tap_home(pos) and home3d:
+				home3d.touch(idx, pos, true)  # 0.12: мимо кнопок — камера 3D-дома
 			return
 		State.PICK_HERO:
 			screens.tap_pick(pos)
@@ -848,6 +858,9 @@ func _pause_menu_tap(pos: Vector2) -> void:
 					sfx_on = not sfx_on
 					_save()
 				"language": toggle_language()
+				"graphics":  # 0.12: качество 3D-дома: высокое -> простое -> 2D
+					home3d.cycle_quality()
+					_save()
 				"tutorial":  # 0.9: повтор обучения — уровень 1 с первыми шагами
 					tut.replay()
 					_save()
@@ -857,7 +870,11 @@ func _pause_menu_tap(pos: Vector2) -> void:
 			return
 
 
-func _touch_drag(idx: int, pos: Vector2) -> void:
+func _touch_drag(idx: int, pos: Vector2, rel := Vector2.ZERO) -> void:
+	if state == State.HOME:
+		if home3d:
+			home3d.drag(idx, pos, rel)
+		return
 	if state == State.MAP:
 		screens.map_drag(idx, pos)
 		return
@@ -882,6 +899,8 @@ func _touch_drag(idx: int, pos: Vector2) -> void:
 func _touch_up(idx: int, pos: Vector2) -> void:
 	held.erase(idx)
 	repeat_left.erase(idx)
+	if home3d:
+		home3d.touch(idx, pos, false)
 	if state == State.MAP:
 		screens.map_up(idx, pos)
 		return
@@ -1184,7 +1203,8 @@ func _draw_overlay() -> void:
 			_center_text(I18n.t("pause_title"), menu_buttons["resume"].position.y - 50, 60, TEXT)
 			var labels := {"resume": I18n.t("pause_resume"), "music": I18n.t("pause_music") % I18n.t("on" if music_on else "off"),
 				"sound": I18n.t("pause_sound") % I18n.t("on" if sfx_on else "off"), "language": I18n.t("pause_lang") % I18n.lang_name(),
-				"restart": I18n.t("pause_restart"), "menu": I18n.t("home"), "tutorial": I18n.t("pause_tutorial")}
+				"restart": I18n.t("pause_restart"), "menu": I18n.t("home"), "tutorial": I18n.t("pause_tutorial"),
+				"graphics": I18n.t("pause_graphics") % I18n.t("gfx_" + home3d.quality)}
 			for n in menu_buttons:
 				var r: Rect2 = menu_buttons[n]
 				_rbox(r, ACCENT if n == "resume" else BTN, 24)

@@ -215,6 +215,11 @@ const STR := {
 		"stats_copy": "Copy",
 		"stats_copied": "Copied!",
 		"stats_close": "Close",
+		# 0.12: 3D-дома
+		"pause_graphics": "Graphics: %s",
+		"gfx_high": "high",
+		"gfx_simple": "simple",
+		"gfx_2d": "2D",
 	},
 	"ru": {
 		"cascade": "КАСКАД ×%d",
@@ -404,6 +409,11 @@ const STR := {
 		"stats_copy": "Скопировать",
 		"stats_copied": "Скопировано!",
 		"stats_close": "Закрыть",
+		# 0.12: 3D-дома
+		"pause_graphics": "Графика: %s",
+		"gfx_high": "высокая",
+		"gfx_simple": "простая",
+		"gfx_2d": "2D",
 	},
 }
 
