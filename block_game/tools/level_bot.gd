@@ -78,9 +78,9 @@ func _initialize() -> void:
 		_seed_search(l_from, l_to, games, base_seed, max_pieces, int(args.seeds), args.csv, int(args.k0))
 		_restore(had_save, save_bytes)
 		return
-	var header := "lvl | ряды крист par | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь | медиана | par~40% | партий с каскадом% | партий с ×3+%"
+	var header := "lvl | ряды крист par | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь | медиана | par~40% | партий с каскадом% | партий с ×3+% | самая длинная"
 	print(header)
-	lines.append("level,rows,crystals,par,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain,median_pieces,suggested_par,cascade_games_pct,chain3_games_pct")
+	lines.append("level,rows,crystals,par,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain,median_pieces,suggested_par,cascade_games_pct,chain3_games_pct,top_chain")
 	var t0 := Time.get_ticks_msec()
 	var c3_total := 0
 	var c4_total := 0
@@ -98,6 +98,7 @@ func _initialize() -> void:
 		var casc_games := 0
 		var c3_games := 0
 		var maxchain_sum := 0
+		var lvl_top := 0
 		var rows_n := 0
 		var plist: Array = []
 		for gi in games:
@@ -119,6 +120,7 @@ func _initialize() -> void:
 			if r.max_chain >= 4:
 				c4_total += 1
 			top_chain = maxi(top_chain, r.max_chain)
+			lvl_top = maxi(lvl_top, r.max_chain)
 			games_total += 1
 			if r.win:
 				wins += 1
@@ -134,12 +136,12 @@ func _initialize() -> void:
 			100.0 * wins / games, float(pieces_win) / w, float(pieces_all) / games,
 			100.0 * st[1] / w, 100.0 * st[2] / w, 100.0 * st[3] / w,
 			float(chain_sum) / maxi(clears, 1), 100.0 * cascades / maxi(clears, 1), float(maxchain_sum) / games, med, sug,
-			100.0 * casc_games / games, 100.0 * c3_games / games]
-		print("%3d | %2d %2d %3d | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f | %3d | %3d | %3.0f | %3.0f" % [
-			row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15], row[16], row[17]])
+			100.0 * casc_games / games, 100.0 * c3_games / games, lvl_top]
+		print("%3d | %2d %2d %3d | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f | %3d | %3d | %3.0f | %3.0f | ×%d" % [
+			row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15], row[16], row[17], row[18]])
 		if args.get("dump", "") == "1":
 			print("PIECES %d %s" % [n, ",".join(plist.map(func(v): return str(v)))])
-		lines.append("%d,%d,%d,%d,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f,%d,%d,%.1f,%.1f" % row)
+		lines.append("%d,%d,%d,%d,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f,%d,%d,%.1f,%.1f,%d" % row)
 	print("партий с цепочкой ×3 и больше: %d из %d (%.1f%%), ×4 и больше: %d, самая длинная цепочка: ×%d" % [
 		c3_total, games_total, 100.0 * c3_total / maxi(games_total, 1), c4_total, top_chain])
 	print("время: %.1f с, несовпадений хода: %d" % [(Time.get_ticks_msec() - t0) / 1000.0, mismatches])
