@@ -1,0 +1,315 @@
+extends SceneTree
+## Робот-игрок для проверки уровней Cascado.
+## Запуск (из корня репозитория):
+##   godot --headless --path block_game -s tools/level_bot.gd -- --levels=1-30 --games=30 --seed=1
+## Параметры (все необязательные):
+##   --levels=A-B   какие уровни гонять (по умолчанию 1-30)
+##   --games=N      партий на уровень (по умолчанию 30)
+##   --seed=S       зерно случайных фигур (один и тот же seed = одинаковые партии)
+##   --max=N        предел фигур на партию (по умолчанию 200)
+##   --look=1       смотреть и на следующую фигуру (сильнее, но в ~20 раз медленнее)
+##   --csv=путь     дополнительно записать итог в CSV
+## Робот ставит фигуры мгновенно: скорость падения на него не влияет.
+## Прогресс игрока (user://save.cfg) сохраняется до прогона и возвращается после.
+
+const SAVE := "user://save.cfg"
+
+var G  # экземпляр игры
+var COLS := 8
+var ROWS := 14
+var EMPTY := -1
+var CRYSTAL := 8
+
+# Веса оценки положения
+const W_CRYSTAL := 1000.0
+const W_LINE := 40.0
+const W_HOLE := 45.0
+const W_HEIGHT := 3.0
+const W_BUMP := 4.0
+const W_TOP := 25.0      # штраф за каждую клетку выше безопасной высоты
+const SAFE_H := 8
+const W_CROW := 2.0      # бонус за заполненность рядов с кристаллами
+
+var look := false
+var mismatches := 0
+
+
+func _initialize() -> void:
+	var args := {"levels": "1-30", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": ""}
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--") and a.contains("="):
+			var kv := a.substr(2).split("=", true, 1)
+			args[kv[0]] = kv[1]
+	var lv := String(args.levels).split("-")
+	var l_from := int(lv[0])
+	var l_to := int(lv[1]) if lv.size() > 1 else l_from
+	var games := int(args.games)
+	var base_seed := int(args.seed)
+	var max_pieces := int(args.max)
+	look = args.look == "1"
+
+	# --- бережём сохранение игрока ---
+	var had_save := FileAccess.file_exists(SAVE)
+	var save_bytes := PackedByteArray()
+	if had_save:
+		save_bytes = FileAccess.get_file_as_bytes(SAVE)
+
+	G = load("res://scripts/game.gd").new()
+	root.add_child(G)
+	COLS = G.COLS
+	ROWS = G.ROWS
+	EMPTY = G.EMPTY
+	CRYSTAL = G.CRYSTAL
+
+	var lines: Array = []
+	var header := "lvl | ряды крист par | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь"
+	print(header)
+	lines.append("level,rows,crystals,par,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain")
+	var t0 := Time.get_ticks_msec()
+	for n in range(l_from, l_to + 1):
+		var wins := 0
+		var pieces_win := 0
+		var pieces_all := 0
+		var st := [0, 0, 0, 0]
+		var clears := 0
+		var chain_sum := 0
+		var cascades := 0
+		var maxchain_sum := 0
+		var rows_n := 0
+		for gi in games:
+			seed(base_seed * 100003 + n * 1009 + gi)
+			G.start_level(n)
+			if gi == 0:
+				rows_n = _stone_rows()
+			var r := _play(max_pieces)
+			pieces_all += r.pieces
+			chain_sum += r.chain_sum
+			clears += r.clears
+			cascades += r.cascades
+			maxchain_sum += r.max_chain
+			if r.win:
+				wins += 1
+				pieces_win += r.pieces
+				st[r.stars] += 1
+		var w := maxi(wins, 1)
+		var row := [n, rows_n, G.crystals_total, G.par, G.fall_interval(),
+			100.0 * wins / games, float(pieces_win) / w, float(pieces_all) / games,
+			100.0 * st[1] / w, 100.0 * st[2] / w, 100.0 * st[3] / w,
+			float(chain_sum) / maxi(clears, 1), 100.0 * cascades / maxi(clears, 1), float(maxchain_sum) / games]
+		print("%3d | %2d %2d %3d | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f" % [
+			row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[8], row[9], row[10], row[11], row[12], row[13]])
+		lines.append("%d,%d,%d,%d,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f" % row)
+	print("время: %.1f с, несовпадений хода: %d" % [(Time.get_ticks_msec() - t0) / 1000.0, mismatches])
+	if args.csv != "":
+		var f := FileAccess.open(args.csv, FileAccess.WRITE)
+		if f:
+			f.store_string("\n".join(lines) + "\n")
+			f.close()
+
+	# --- возвращаем сохранение как было ---
+	if had_save:
+		var f2 := FileAccess.open(SAVE, FileAccess.WRITE)
+		f2.store_buffer(save_bytes)
+		f2.close()
+	elif FileAccess.file_exists(SAVE):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE))
+	G.free()
+	quit(0)
+
+
+func _stone_rows() -> int:
+	var n := 0
+	for y in ROWS:
+		for x in COLS:
+			if G.board[y * COLS + x] == G.STONE or G.board[y * COLS + x] == CRYSTAL:
+				n += 1
+				break
+	return n
+
+
+# Одна партия. Возвращает итог.
+func _play(max_pieces: int) -> Dictionary:
+	var res := {"win": false, "pieces": 0, "stars": 0, "clears": 0, "chain_sum": 0, "cascades": 0, "max_chain": 0}
+	while G.state == G.State.PLAYING and G.has_piece and G.pieces_used < max_pieces:
+		var best := _choose()
+		if best.is_empty():
+			G.hard_drop()
+		else:
+			_execute(best)
+		var guard := 0
+		while (G.state == G.State.CLEARING or G.state == G.State.SETTLE) and guard < 1000:
+			G.step(0.05)
+			guard += 1
+		if G.chain > 0:
+			res.clears += 1
+			res.chain_sum += G.chain
+			if G.chain >= 2:
+				res.cascades += 1
+			res.max_chain = maxi(res.max_chain, G.chain)
+	res.pieces = G.pieces_used
+	if G.state == G.State.WIN:
+		res.win = true
+		res.stars = G.last_stars
+	return res
+
+
+func _rotations(t: int) -> Array:
+	var out: Array = []
+	var cells: Array = G.SHAPES[t].cells.duplicate()
+	var n: int = G.SHAPES[t].box
+	var count := 1 if n == 0 else 4
+	for r in count:
+		out.append(cells)
+		var rot: Array = []
+		for c in cells:
+			rot.append(Vector2i(n - 1 - c.y, c.x))
+		cells = rot
+	return out
+
+
+func _fits(b: PackedInt32Array, cells: Array, pos: Vector2i) -> bool:
+	for c in cells:
+		var x: int = c.x + pos.x
+		var y: int = c.y + pos.y
+		if x < 0 or x >= COLS or y >= ROWS:
+			return false
+		if y >= 0 and b[y * COLS + x] != EMPTY:
+			return false
+	return true
+
+
+# Все конечные положения фигуры: [{rot, x, board, crystals, lines, top_out}]
+func _placements(b: PackedInt32Array, t: int, start_y: int) -> Array:
+	var out: Array = []
+	var rots := _rotations(t)
+	for r in rots.size():
+		var cells: Array = rots[r]
+		for ox in range(-3, COLS + 1):
+			var p := Vector2i(ox, start_y)
+			if not _fits(b, cells, p):
+				continue
+			while _fits(b, cells, p + Vector2i(0, 1)):
+				p.y += 1
+			var nb := b.duplicate()
+			var top_out := false
+			for c in cells:
+				var y: int = c.y + p.y
+				if y < 0:
+					top_out = true
+				else:
+					nb[y * COLS + c.x + p.x] = t
+			var sim := _resolve(nb)
+			out.append({"rot": r, "x": ox, "board": nb, "crystals": sim.crystals, "lines": sim.lines, "top_out": top_out})
+	return out
+
+
+# Очистка линий с каскадом, как в игре. Меняет доску на месте.
+func _resolve(b: PackedInt32Array) -> Dictionary:
+	var crystals := 0
+	var lines := 0
+	while true:
+		var full: Array = []
+		for y in ROWS:
+			var ok := true
+			for x in COLS:
+				if b[y * COLS + x] == EMPTY:
+					ok = false
+					break
+			if ok:
+				full.append(y)
+		if full.is_empty():
+			break
+		lines += full.size()
+		for y in full:
+			for x in COLS:
+				if b[y * COLS + x] == CRYSTAL:
+					crystals += 1
+				b[y * COLS + x] = EMPTY
+		var lowest: int = full.max()
+		for x in COLS:
+			var write := lowest
+			for y in range(lowest, -1, -1):
+				var v: int = b[y * COLS + x]
+				if v != EMPTY:
+					if write != y:
+						b[write * COLS + x] = v
+						b[y * COLS + x] = EMPTY
+					write -= 1
+	return {"crystals": crystals, "lines": lines}
+
+
+func _features(b: PackedInt32Array) -> float:
+	var holes := 0
+	var agg := 0
+	var bump := 0
+	var top_pen := 0
+	var prev_h := -1
+	for x in COLS:
+		var h := 0
+		var seen := false
+		for y in ROWS:
+			var v: int = b[y * COLS + x]
+			if v != EMPTY:
+				if not seen:
+					seen = true
+					h = ROWS - y
+			elif seen:
+				holes += 1
+		agg += h
+		top_pen += maxi(0, h - SAFE_H)
+		if prev_h >= 0:
+			bump += absi(h - prev_h)
+		prev_h = h
+	var crow := 0
+	for y in ROWS:
+		var has_c := false
+		var filled := 0
+		for x in COLS:
+			var v: int = b[y * COLS + x]
+			if v == CRYSTAL:
+				has_c = true
+			if v != EMPTY:
+				filled += 1
+		if has_c:
+			crow += filled * filled
+	return -W_HOLE * holes - W_HEIGHT * agg - W_BUMP * bump - W_TOP * top_pen * top_pen + W_CROW * crow
+
+
+func _score(p: Dictionary) -> float:
+	if p.top_out:
+		return -1e9
+	return W_CRYSTAL * p.crystals + W_LINE * p.lines + _features(p.board)
+
+
+func _choose() -> Dictionary:
+	var b := PackedInt32Array(G.board)
+	var cands := _placements(b, G.piece_type, G.piece_pos.y)
+	var best := {}
+	var best_s := -INF
+	for p in cands:
+		var s := _score(p)
+		if look and s > -1e8 and G.crystals_left - p.crystals > 0:
+			var nexts := _placements(p.board, G.next_type, 0)
+			var bn := -1e9
+			for q in nexts:
+				bn = maxf(bn, _score(q))
+			s = W_CRYSTAL * p.crystals + W_LINE * p.lines + bn
+		elif G.crystals_left - p.crystals <= 0:
+			s += 1e6
+		if s > best_s:
+			best_s = s
+			best = p
+	return best
+
+
+func _execute(p: Dictionary) -> void:
+	for i in p.rot:
+		G.rotate_piece()
+	var guard := 0
+	while G.piece_pos.x != p.x and guard < 20:
+		if not G.move(1 if p.x > G.piece_pos.x else -1):
+			break
+		guard += 1
+	if G.piece_pos.x != p.x:
+		mismatches += 1
+	G.hard_drop()
