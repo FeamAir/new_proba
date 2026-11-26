@@ -6,6 +6,13 @@
 set -u
 GODOT="${GODOT:-godot}"
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# Тесты не должны зависеть от следов прошлых запусков (настройки графики, «предохранитель» 3D и т.п.):
+# прячем сохранение игры на время прогона и возвращаем после.
+UD="${HOME}/.local/share/godot/app_userdata/Cascado"
+BK="$(mktemp -d)"
+for f in save.cfg home3d_guard.cfg; do [ -f "$UD/$f" ] && mv "$UD/$f" "$BK/$f"; done
+restore() { for f in save.cfg home3d_guard.cfg; do rm -f "$UD/$f"; [ -f "$BK/$f" ] && mv "$BK/$f" "$UD/$f"; done; rmdir "$BK" 2>/dev/null; }
+trap restore EXIT
 TOTAL=0
 BAD=0
 for T in "$DIR"/tests/test_*.gd; do
