@@ -329,9 +329,9 @@ func _test_switch(g) -> void:
 	g.screens.request_switch("kitten")
 	check(not g.notice_ui.active() and w.hero == "kitten" and w.shards == 500, "нечего снимать — смена сразу, без окна")
 	I18n.set_lang("ru")
-	check(I18n.t("switch_text") % I18n.t("hero_gen_owl") == "Вещи и украшения Совёнка вернутся осколками" and I18n.t("switch_refund") % [435, I18n.forms("shards_forms", 435)] == "Вернётся 435 осколков", "текст окна по-русски")
+	check(I18n.t("switch_text") % I18n.t("hero_gen_owl") == "Вещи, украшения и настроения комнаты Совёнка вернутся осколками" and I18n.t("switch_refund") % [435, I18n.forms("shards_forms", 435)] == "Вернётся 435 осколков", "текст окна по-русски")
 	I18n.set_lang("en")
-	check(I18n.t("switch_text") % I18n.t("hero_gen_puppy") == "Puppy's items and decorations will be traded back for shards", "текст окна по-английски")
+	check(I18n.t("switch_text") % I18n.t("hero_gen_puppy") == "Puppy's items, decorations and room moods will be traded back for shards", "текст окна по-английски")
 	I18n.set_lang("ru")
 
 

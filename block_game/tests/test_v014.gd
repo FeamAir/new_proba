@@ -96,7 +96,7 @@ func _test_texts() -> void:
 	I18n.set_lang("ru")
 	check(I18n.t("forge_btn") % 120 == "Выковать за 120" and I18n.t("forge_can") == "Можно выковать!" and I18n.t("forge_done") == "Выковано" and I18n.t("forge_got") % "Шарф" == "Выковано: Шарф!", "ru: «Выковать за N», «Можно выковать!», «Выковано»")
 	check(I18n.t("forge_say_start_owl_girl") == "Собери набор, дружок, — выкую тебе совиное чудо!" and I18n.t("forge_say_start_owl") == I18n.t("forge_say_start_owl_girl"), "ru: реплика Уха — «выкую тебе совиное чудо»")
-	check(I18n.t("switch_text") % Meta.hero_gen("owl", "girl") == "Вещи и украшения Совушки вернутся осколками" and I18n.t("switch_text_named") % "Луна" == "Луна: вещи и украшения вернутся осколками", "ru: окно смены — «вернутся осколками»")
+	check(I18n.t("switch_text") % Meta.hero_gen("owl", "girl") == "Вещи, украшения и настроения комнаты Совушки вернутся осколками" and I18n.t("switch_text_named") % "Луна" == "Луна: вещи, украшения и настроения комнаты вернутся осколками", "ru: окно смены — «вернутся осколками»")
 	check(I18n.t("switch_done") % [1, I18n.forms("shards_forms", 1)] == "Возвращено: 1 осколок", "ru: «Возвращено: 1 осколок»")
 	check(Meta.rarity_name("super") == "Эксклюзивная" and I18n.t("boost_title") == "Помощь кристалла", "ru: «Эксклюзивная», «Помощь кристалла»")
 	check(Meta.item_name("pu_skin_dalmatian", "puppy", "girl") == "Далматинка" and Meta.item_name("pu_skin_dalmatian", "puppy", "boy") == "Далматинец", "ru: Далматинка / Далматинец")
