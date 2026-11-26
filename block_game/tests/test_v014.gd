@@ -96,8 +96,8 @@ func _test_texts() -> void:
 	I18n.set_lang("ru")
 	check(I18n.t("forge_btn") % 120 == "Выковать за 120" and I18n.t("forge_can") == "Можно выковать!" and I18n.t("forge_done") == "Выковано" and I18n.t("forge_got") % "Шарф" == "Выковано: Шарф!", "ru: «Выковать за N», «Можно выковать!», «Выковано»")
 	check(I18n.t("forge_say_start_owl_girl") == "Собери набор, дружок, — выкую тебе совиное чудо!" and I18n.t("forge_say_start_owl") == I18n.t("forge_say_start_owl_girl"), "ru: реплика Уха — «выкую тебе совиное чудо»")
-	check(I18n.t("switch_text") % Meta.hero_gen("owl", "girl") == "Вещи, украшения и настроения комнаты Совушки вернутся осколками" and I18n.t("switch_text_named") % "Луна" == "Луна: вещи, украшения и настроения комнаты вернутся осколками", "ru: окно смены — «вернутся осколками»")
-	check(I18n.t("switch_done") % [1, I18n.forms("shards_forms", 1)] == "Возвращено: 1 осколок", "ru: «Возвращено: 1 осколок»")
+	check(not I18n.has("switch_title") and not I18n.has("switch_text") and not I18n.has("switch_done"), "0.16: окна возврата при смене друга больше нет — тексты убраны")
+	check(I18n.t("migrate_refund") % [1, I18n.forms("shards_forms", 1)] == "Возвращено: 1 осколок", "ru: «Возвращено: 1 осколок»")
 	check(Meta.rarity_name("super") == "Эксклюзивная" and I18n.t("boost_title") == "Помощь кристалла", "ru: «Эксклюзивная», «Помощь кристалла»")
 	check(Meta.item_name("pu_skin_dalmatian", "puppy", "girl") == "Далматинка" and Meta.item_name("pu_skin_dalmatian", "puppy", "boy") == "Далматинец", "ru: Далматинка / Далматинец")
 	check(Meta.item_name("ki_starry", "kitten", "girl") == "Звёздная кошечка" and Meta.item_name("ki_starry", "kitten", "boy") == "Звёздный котик", "ru: Звёздная кошечка / Звёздный котик")
@@ -109,7 +109,7 @@ func _test_texts() -> void:
 	var mt: String = I18n.t("migrate_sets_text") % [Meta.set_title(Meta.set_index("kit_detective"), g.meta.gender_of("kitten")), Meta.set_title(Meta.set_index("pup_picnic"), "boy")]
 	check(mt.contains("«Кошка-детектив»") and mt.contains("«Цветочный пикник»") and nu != null, "ru: новые наборы для кошечки — «Кошка-детектив»")
 	I18n.set_lang("en")
-	check(I18n.t("forge_can") == "Ready to forge!" and Meta.rarity_name("super") == "Exclusive" and I18n.t("switch_title") == "Switch buddy?", "en: Ready to forge!, Exclusive, Switch buddy?")
+	check(I18n.t("forge_can") == "Ready to forge!" and Meta.rarity_name("super") == "Exclusive" and I18n.t("switch_hint") == "Each buddy has their own wardrobe and home — everything you buy stays with them", "en: Ready to forge!, Exclusive, подсказка о своём гардеробе")
 	check(Meta.item_name("ki_starry", "kitten", "girl") == "Starry Kitten" and Meta.item_name("ki_starry", "kitten", "boy") == "Starry Kitten", "en: Starry Kitten для обоих")
 	I18n.set_lang("ru")
 

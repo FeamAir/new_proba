@@ -1,8 +1,8 @@
 extends RefCounted
 ## Cascado 0.12b: окна поверх любого экрана (свой слой CanvasLayer — видно и над 3D-домом):
-##  • «Сменить друга?» — при выборе другого героя в гардеробе (или на экране выбора): вещи,
-##    скованное и украшения дома прежнего героя снимаются, потраченное возвращается осколками
-##    (сумма — meta.gd, refund_value). «Отмена» ничего не меняет.
+##  • 0.16: окна «Сменить друга?» больше нет — смена мгновенная, у каждого друга свои вещи и дом.
+##    При первой смене в жизни игрока — ненавязчивая плашка-подсказка на 3 с (show_hint; касания
+##    не забирает).
 ##  • «Гардероб обновлён!» — один раз после загрузки старого сохранения (0.6–0.12): общие вещи
 ##    убраны, их цена и плата за ковку вернулись осколками (meta.gd, notice_refund).
 ##    0.13: то же окно — о новых наборах «Кот-детектив» и «Цветочный пикник» (meta.gd, notice_sets).
@@ -18,9 +18,12 @@ const PANEL := Color("#2E1D58")
 var g
 var layer: CanvasLayer
 var node: Node2D
-var mode := ""        # "" — окна нет; "switch" — смена друга; "migrated" — гардероб обновлён; "name" — имя
-var to := ""          # на кого меняем
-var refund := 0       # сколько осколков вернётся / вернулось
+var mode := ""        # "" — окна нет; "migrated" — гардероб обновлён; "name" — имя
+var refund := 0       # сколько осколков вернулось (старое сохранение)
+## 0.16: плашка-подсказка при первой смене друга (не окно: касания проходят мимо)
+const HINT_TIME := 3.0
+var hint_t := 0.0     # сколько ещё показывать (0 — не видно)
+var hint_kind := ""   # новый друг — его аватарка на плашке
 var t := 0.0
 var rects := {}
 var sb := StyleBoxFlat.new()
@@ -68,12 +71,14 @@ func active() -> bool:
 	return mode != ""
 
 
-## Спросить о смене друга на h (окно с возвратом осколков).
-func ask_switch(h: String) -> void:
-	mode = "switch"
-	to = h
-	refund = g.meta.refund_value(g.meta.hero)
-	t = 0.0
+## 0.16: подсказка «У каждого друга свой гардероб и свой дом» (kind — новый друг).
+func show_hint(kind: String) -> void:
+	hint_kind = kind
+	hint_t = HINT_TIME
+
+
+func hint_showing() -> bool:
+	return hint_t > 0.0
 
 
 ## 0.13: окно имени для героя kind (поле — с текущим именем; клавиатура открывается сама).
@@ -143,7 +148,8 @@ func update(delta: float) -> void:
 		refund = g.meta.notice_refund
 		t = 0.0
 	t += delta
-	node.visible = mode != ""
+	hint_t = maxf(0.0, hint_t - minf(delta, 0.1))  # долгий кадр (строится 3D-дом) не съедает показ подсказки
+	node.visible = mode != "" or hint_t > 0.0
 	if edit.visible != (mode == "name"):
 		edit.visible = mode == "name"
 	if node.visible:
@@ -154,11 +160,6 @@ func tap(pos: Vector2) -> void:
 	if t < 0.25:
 		return  # защита от случайного двойного касания
 	match mode:
-		"switch":
-			if rects.get("yes", Rect2()).has_point(pos):
-				confirm()
-			elif rects.get("no", Rect2()).has_point(pos) or not rects.get("panel", Rect2()).has_point(pos):
-				back()
 		"migrated":
 			if rects.get("ok", Rect2()).has_point(pos):
 				back()
@@ -173,18 +174,6 @@ func tap(pos: Vector2) -> void:
 				edit.grab_focus()
 				if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
 					DisplayServer.virtual_keyboard_show(edit.text, Rect2(), DisplayServer.KEYBOARD_TYPE_DEFAULT, 12)
-
-
-## «Сменить»: прежнему герою — возврат, новый — с нуля.
-func confirm() -> void:
-	if mode != "switch":
-		return
-	mode = ""
-	var n: int = g.meta.switch_hero(to)
-	g.play("levelup")
-	g.screens.switched(n)
-	if g.state == g.State.PICK_HERO:
-		g.go_home()
 
 
 ## «Отмена» / «Назад» на телефоне. Для сообщения об обновлении — закрыть (больше не покажется).
@@ -235,7 +224,7 @@ func _button(name: String, r: Rect2, label: String, primary: bool) -> void:
 	_text(r.get_center().x, r.get_center().y + 12, label, 34, DARK_TEXT if primary else g.TEXT, r.size.x - 24)
 
 
-## Строка «Вернётся N осколков» с кристаллом
+## Строка «Возвращено: N осколков» с кристаллом
 func _refund_line(cy: float, key: String) -> void:
 	var label := I18n.t(key) % [refund, I18n.forms("shards_forms", refund)]
 	var fs := 34
@@ -253,49 +242,39 @@ func _refund_line(cy: float, key: String) -> void:
 func _draw() -> void:
 	rects.clear()
 	if mode == "":
+		if hint_t > 0.0:
+			_draw_hint()
 		return
 	var H: float = g.H
 	var k := clampf(t / 0.2, 0.0, 1.0)
 	node.draw_rect(Rect2(0, 0, g.W, H), Color(0.02, 0.01, 0.06, 0.72 * k))
-	if mode == "switch":
-		_draw_switch(H, k)
-	elif mode == "name":
+	if mode == "name":
 		_draw_name(H, k)
 	else:
 		_draw_migrated(H, k)
 
 
-func _draw_switch(H: float, k: float) -> void:
-	var old: String = g.meta.hero
-	var r := Rect2(28, H * 0.5 - 330 + (1.0 - k) * 40.0, g.W - 56, 640)
-	rects["panel"] = r
-	_box(r.grow(6), Color(0.02, 0.01, 0.06, 0.6), 40)
-	_box(r, PANEL, 36)
-	node.draw_polyline(_outline(r.grow(-2), 34), Color(g.ACCENT, 0.85), 3.0, true)
-	_text(r.get_center().x, r.position.y + 70, I18n.t("switch_title"), 46, g.TEXT, r.size.x - 40)
-	# прежний друг в наряде → новый друг
-	var y := r.position.y + 190
-	var hero = g.screens.hero
-	hero.draw_avatar(node, old, Vector2(g.W / 2.0 - 150, y), 74, g.meta.outfit(), g.t_total, g.DIM)
-	hero.draw_avatar(node, to, Vector2(g.W / 2.0 + 150, y), 74, g.meta.look(to), g.t_total + 1.3, g.ACCENT, 0.4 + fposmod(t, 3.0))
-	var ax: float = g.W / 2.0
-	var bob := sin(t * 4.0) * 6.0
-	node.draw_colored_polygon(PackedVector2Array([Vector2(ax - 26 + bob, y - 18), Vector2(ax + 8 + bob, y - 18), Vector2(ax + 8 + bob, y - 34),
-		Vector2(ax + 40 + bob, y), Vector2(ax + 8 + bob, y + 34), Vector2(ax + 8 + bob, y + 18), Vector2(ax - 26 + bob, y + 18)]), g.ACCENT)
-	_text(g.W / 2.0 - 150, y + 116, g.meta.display_name(old), 28, g.DIM, 260)
-	_text(g.W / 2.0 + 150, y + 116, g.meta.display_name(to), 28, g.ACCENT, 260)
-	# 0.13: склонение по полу (вещи Совёнка / Совушки); с именем — «Имя: вещи и украшения вернутся осколками»
-	var body: String
-	if g.meta.name_of(old) != "":
-		body = I18n.t("switch_text_named") % g.meta.name_of(old)
-	else:
-		body = I18n.t("switch_text") % Meta.hero_gen(old, g.meta.gender_of(old))
-	node.draw_multiline_string(g.font, Vector2(r.position.x + 30, r.position.y + 368), body, HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 60, 28, 2, g.TEXT)
-	_refund_line(r.position.y + 470, "switch_refund")
-	_text(r.get_center().x, r.position.y + 520, I18n.t("switch_keep"), 22, g.DIM, r.size.x - 40)
-	var by := r.end.y - 92
-	_button("no", Rect2(r.position.x + 24, by, 250, 72), I18n.t("cancel"), false)
-	_button("yes", Rect2(r.position.x + 290, by, r.size.x - 314, 72), I18n.t("switch_yes"), true)
+## 0.16: плашка «У каждого друга свой гардероб и свой дом...» вверху экрана: аватарка нового друга
+## и текст в две строки; плавно появляется и исчезает.
+func _draw_hint() -> void:
+	var a := clampf(minf((HINT_TIME - hint_t) / 0.25, hint_t / 0.4), 0.0, 1.0)
+	var oy: float = (g.H - 1280.0) * 0.5
+	var r := Rect2(24, 150 + oy - (1.0 - a) * 24.0, g.W - 48, 132)
+	_box(r.grow(5), Color(0.02, 0.01, 0.06, 0.45 * a), 36)
+	_box(r, Color(PANEL, 0.96 * a), 32)
+	node.draw_polyline(_outline(r.grow(-2), 30), Color(g.ACCENT, 0.85 * a), 3.0, true)
+	var kind := hint_kind if hint_kind != "" else String(g.meta.hero)
+	if kind != "":
+		g.screens.hero.draw_avatar(node, kind, Vector2(r.position.x + 70, r.get_center().y), 46, g.meta.outfit_for(kind), g.t_total, Color(g.ACCENT, a))
+	var tx := r.position.x + 134
+	var tw := r.end.x - tx - 22
+	var txt := I18n.t("switch_hint")
+	var fs := 28
+	while fs > 18 and g.font.get_multiline_string_size(txt, HORIZONTAL_ALIGNMENT_CENTER, tw, fs, 3).y > r.size.y - 24:
+		fs -= 1
+	var hgt: float = g.font.get_multiline_string_size(txt, HORIZONTAL_ALIGNMENT_CENTER, tw, fs, 3).y
+	node.draw_multiline_string(g.font, Vector2(tx, r.get_center().y - hgt / 2.0 + g.font.get_ascent(fs)), txt,
+		HORIZONTAL_ALIGNMENT_CENTER, tw, fs, 3, Color(g.TEXT, a))
 
 
 func _draw_migrated(H: float, k: float) -> void:
@@ -358,7 +337,7 @@ func _draw_name(H: float, k: float) -> void:
 	node.draw_polyline(_outline(r.grow(-2), 34), Color(g.ACCENT, 0.85), 3.0, true)
 	var hero = g.screens.hero
 	var kind := name_for
-	hero.draw_avatar(node, kind, Vector2(r.position.x + 96, r.position.y + 96), 56, g.meta.outfit() if kind == g.meta.hero else g.meta.look(kind), g.t_total, g.ACCENT, 0.4 + fposmod(t, 3.0))
+	hero.draw_avatar(node, kind, Vector2(r.position.x + 96, r.position.y + 96), 56, g.meta.outfit_for(kind), g.t_total, g.ACCENT, 0.4 + fposmod(t, 3.0))
 	_text(r.position.x + 96 + (r.size.x - 150) / 2.0 + 20, r.position.y + 82, I18n.t("name_title"), 40, g.TEXT, r.size.x - 190)
 	_text(r.position.x + 96 + (r.size.x - 150) / 2.0 + 20, r.position.y + 124, Meta.hero_name(kind, g.meta.gender_of(kind)), 26, g.DIM, r.size.x - 190)
 	# поле ввода (LineEdit) — поверх окна

@@ -261,12 +261,13 @@ func _process(delta: float) -> void:
 	for i in range(_fx.size() - 1, -1, -1):
 		var f: Dictionary = _fx[i]
 		var u: float = (_t - f.t0) / f.life
-		var nd: Node3D = f.n
-		if u >= 1.0 or not is_instance_valid(nd):
-			if is_instance_valid(nd):
-				nd.queue_free()
+		var raw = f.n  # 0.16: узел мог удалиться (дом перестроен при смене героя) — проверяем до присвоения типу
+		if u >= 1.0 or not is_instance_valid(raw):
+			if is_instance_valid(raw):
+				raw.queue_free()
 			_fx.remove_at(i)
 			continue
+		var nd: Node3D = raw
 		if f.kind == "flash":
 			nd.scale = Vector3.ONE * (0.5 + 2.6 * sin(u * PI * 0.5))
 			var mi := nd as MeshInstance3D

@@ -219,7 +219,7 @@ func draw_pick() -> void:
 		for k in 4:
 			g.draw_circle(r.position + Vector2(r.size.x / 2.0, 114), 108 - k * 21, Color(glow, 0.05 + k * 0.02), true, -1.0, true)
 		var sc: float = PICK_SCALE.get(kind, 0.64) * 0.96
-		hero.draw(g, kind, r.position + Vector2(r.size.x / 2.0, 132), sc, g.meta.look(kind), g.t_total + i * 1.7, react if sel else 99.0)
+		hero.draw(g, kind, r.position + Vector2(r.size.x / 2.0, 132), sc, g.meta.outfit_for(kind), g.t_total + i * 1.7, react if sel else 99.0)
 		var nm: String = g.meta.display_name(kind)
 		_ctext(r.get_center().x, r.end.y - 46, nm, fit_size(nm, r.size.x - 20, 36), g.ACCENT if sel else g.TEXT, r.size.x)
 		var lv := I18n.t("pick_lives_" + kind)
@@ -245,10 +245,12 @@ func tap_pick(pos: Vector2) -> void:
 			g.play("crystal")
 			return
 	if rects.get("ok", Rect2()).has_point(pos) and pick_choice != "":
-		if g.meta.switch_asks(pick_choice):
-			g.notice_ui.ask_switch(pick_choice)  # 0.12b: смена друга — с возвратом осколков
-			return
+		# 0.16: смена мгновенная — у каждого друга свои вещи и дом, ничего не снимается
+		var first: bool = g.meta.hero == ""
+		var changed: bool = g.meta.hero != pick_choice
 		g.meta.switch_hero(pick_choice)
+		if changed and g.meta.take_switch_hint(first):
+			g.notice_ui.show_hint(pick_choice)
 		g._save()
 		g.play("levelup")
 		fade = 1.0
@@ -353,25 +355,18 @@ func pencil_icon(c: Vector2, s: float, col: Color) -> void:
 	g.draw_colored_polygon(PackedVector2Array([b + n, b + d * s * 0.16 + n, b + d * s * 0.16 - n, b - n]), Color("#FF8FB8"))
 
 
-## 0.12b: сменить друга. Если у прежнего есть вещи или украшения — сначала окно с возвратом
-## осколков (scripts/notice_ui.gd), иначе сразу.
+## 0.16: сменить друга — сразу, без окна: у каждого друга свой гардероб и свой дом (meta.gd,
+## switch_hero). При первой смене в жизни — плашка-подсказка (scripts/notice_ui.gd, show_hint).
 func request_switch(h: String) -> void:
-	if g.meta.switch_asks(h):
-		tryon.clear()
-		g.notice_ui.ask_switch(h)
+	if h == g.meta.hero or not g.meta.switch_hero(h):
 		return
-	switched(g.meta.switch_hero(h))
-
-
-## Смена состоялась (вызывается и из окна подтверждения): эффект, сохранение.
-func switched(refund: int) -> void:
 	tryon.clear()
 	page = 0
 	fade = 1.0
 	poke_hero()
+	if g.meta.take_switch_hint(false):
+		g.notice_ui.show_hint(h)
 	g._save()
-	if refund > 0:
-		say(I18n.t("switch_done") % [refund, I18n.forms("shards_forms", refund)])
 
 
 # ---------- Дом ----------
@@ -677,7 +672,7 @@ func draw_wardrobe() -> void:
 			if sel:
 				g.draw_polyline(_rr_outline(r.grow(-1), 20), g.ACCENT, 3.0, true)
 			# 0.12b: вещи — только свои, другие друзья в чипах без нарядов (0.13: но в своём виде — мальчик/девочка)
-			hero.draw_avatar(g, h, r.position + Vector2(29, 31), 20, tryon.outfit(g.meta) if sel else g.meta.look(h), g.t_total, g.ACCENT if sel else g.DIM)
+			hero.draw_avatar(g, h, r.position + Vector2(29, 31), 20, tryon.outfit(g.meta) if sel else g.meta.outfit_for(h), g.t_total, g.ACCENT if sel else g.DIM)
 			var nm: String = g.meta.display_name(h)
 			_text(Vector2(r.position.x + 59, r.position.y + 40), nm, fit_size(nm, r.size.x - 66, 24), g.ACCENT if sel else g.TEXT)
 	# вкладки (0.12: значками — их восемь; название вкладки — на сцене)

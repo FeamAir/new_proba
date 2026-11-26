@@ -35,7 +35,7 @@ const Assist := preload("res://scripts/assist.gd")
 const AssistUI := preload("res://scripts/assist_ui.gd")
 ## 0.12: Кристальная кузница (scripts/forge_ui.gd)
 const ForgeUI := preload("res://scripts/forge_ui.gd")
-## 0.12b: окна «Сменить друга?» и «Гардероб обновлён» поверх экранов (scripts/notice_ui.gd)
+## 0.12b: окно «Гардероб обновлён», окно имени, 0.16: подсказка о своём гардеробе (scripts/notice_ui.gd)
 const NoticeUI := preload("res://scripts/notice_ui.gd")
 const Home3D := preload("res://scripts/home3d/home3d.gd")  # 0.12: 3D-дома
 const TrophyUI := preload("res://scripts/trophy_ui.gd")  # 0.14: кубки залов
@@ -110,7 +110,7 @@ var tut = Tutorial.new()      # 0.9: обучение
 var assist = Assist.new()     # 0.9: помощь, попытки, подарок новичку
 var assist_ui
 var forge_ui                  # 0.12: Кристальная кузница
-var notice_ui                 # 0.12b: смена друга с возвратом, сообщение об обновлении гардероба
+var notice_ui                 # 0.12b: сообщение об обновлении гардероба, имя друга; 0.16: подсказка при первой смене друга
 var home3d                    # 0.12: 3D-дом на экране «Дом» (scripts/home3d/home3d.gd)
 var trophy_ui                 # 0.14: «Новый кубок!», кнопка «Кубки», полка славы 2D
 var decor_ui                  # 0.15: режим украшения комнаты (scripts/decorate_ui.gd)

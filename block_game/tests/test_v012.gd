@@ -1,8 +1,8 @@
 extends SceneTree
 ## Тесты версии 0.12 / 0.12b: редкости, слоты «Спутник» и «Сияние», ГАРДЕРОБ ПО ГЕРОЯМ (у каждого
 ## друга 19 своих вещей: 3 набора × 5, 3 легендарные, супер-эксклюзив), Кристальная кузница по героям,
-## нельзя надеть чужую вещь, смена друга с возвратом осколков (точная сумма, без двойного возврата,
-## «Отмена» ничего не меняет), обновление старых сохранений, доход и путь до супер-награды,
+## нельзя надеть чужую вещь, смена друга (0.16: без возврата, у каждого своё; см. test_v016.gd),
+## обновление старых сохранений, доход и путь до супер-награды,
 ## сохранение, примерка, рисование всех вещей на своих героях.
 ## Запуск: godot --headless --path block_game -s tests/test_v012.gd
 
@@ -149,7 +149,7 @@ func _test_catalogs() -> void:
 		for it in Meta.ITEMS:
 			if not I18n.STR[l].has("item_" + it.id):
 				tr_ok = false
-		for k in ["switch_title", "switch_text", "switch_refund", "switch_keep", "switch_yes", "switch_done", "migrate_title", "migrate_text", "migrate_refund", "forge_say_super", "forge_legends"]:
+		for k in ["migrate_title", "migrate_text", "migrate_refund", "forge_say_super", "forge_legends"]:
 			if not I18n.STR[l].has(k):
 				tr_ok = false
 		for h in Meta.HEROES:
@@ -281,29 +281,26 @@ func _test_income(g) -> void:
 	check(late >= tail, "уровни 51–100 (%d) покрывают набор 3, его ковку и супер (%d)" % [late, tail])
 
 
-## 0.12b: смена друга — потраченное на прежнего возвращается осколками
+## 0.16: смена друга — ничего не возвращается и не снимается, у каждого друга своё
 func _test_switch(g) -> void:
-	print("— смена друга с возвратом")
+	print("— смена друга (0.16: у каждого своё)")
 	var m = Meta.new()
-	check(not m.switch_asks("owl") and m.switch_hero("owl") == 0 and m.hero == "owl", "первый выбор новичка — без окна и без возврата")
+	check(m.switch_hero("owl") and m.hero == "owl", "первый выбор новичка")
 	m.shards = 1000
 	for id in ["ow_mortarboard", "ow_halfglasses", "ow_scholar_scarf", "ow_book", "ow_skin_snowy"]:
 		m.buy_item(id, 0, 1)
 	check(m.forge("ow_page_whirl", 1) == "forged", "сковано: Вихрь страниц")
 	m.buy_decor("owl", "near", "owl_nest", 0, 1)
 	m.buy_decor("owl", "hang", "owl_lantern", 0, 1)
-	m.buy_decor("puppy", "near", "pup_ball", 0, 1)  # украшение другого дома остаётся
-	var spent := 290 + 120 + 10 + 15
-	check(m.shards == 1000 - spent - 10, "потрачено 445 на совёнка и 10 на дом щенка (%d)" % m.shards)
-	check(m.refund_value("owl") == spent and m.switch_asks("kitten"), "вернётся ровно 435: вещи 290 + ковка 120 + украшения 25")
+	m.buy_decor("puppy", "near", "pup_ball", 0, 1)
 	var before: int = m.shards
-	check(m.switch_hero("kitten") == spent and m.shards == before + spent and m.hero == "kitten", "смена на котика: +435 осколков")
-	check(m.owned.is_empty() and m.forged.is_empty() and m.equipped.is_empty() and m.decor_placed.owl.is_empty(), "у совёнка сняты вещи, наряд, скованное и украшения дома")
-	check(m.decor_owned == ["pup_ball"] and m.placed_at("puppy", "near") == "pup_ball", "украшения другого дома не тронуты")
-	check(not m.switch_asks("owl") and m.switch_hero("owl") == 0 and m.shards == before + spent, "обратно на совёнка — котик ничего не купил, второго возврата нет")
-	check(m.collection_count() == 0, "совёнок наряжается заново")
-	check(m.switch_hero("owl") == 0 and m.switch_hero("dragon") == -1, "тот же друг / неизвестный — ничего")
-	# через экран: окно подтверждения, «Отмена» ничего не меняет
+	var look: Dictionary = m.equipped.duplicate()
+	check(m.switch_hero("kitten") and m.shards == before and m.hero == "kitten", "смена на котика: осколки не меняются")
+	check(m.owned.size() == 5 and m.forged == ["ow_page_whirl"] and m.placed_at("owl", "near") == "owl_nest", "вещи, скованное и украшения совёнка остались у него")
+	check(m.equipped.is_empty() and m.collection_count() == 0, "котик начинает с пустого гардероба")
+	check(m.switch_hero("owl") and m.shards == before and m.equipped == look and m.collection_count() == 6, "обратно на совёнка — наряд и коллекция на месте")
+	check(m.switch_hero("owl") and not m.switch_hero("dragon"), "тот же друг / неизвестный — ничего")
+	# через экран: смена в гардеробе мгновенная, без окна
 	if g.screens == null:
 		g.screens = load("res://scripts/screens.gd").new(g)
 	if g.notice_ui == null:
@@ -318,20 +315,9 @@ func _test_switch(g) -> void:
 	g.stars = {}
 	g._set_state(g.State.WARDROBE)
 	g.screens.request_switch("axolotl")
-	check(g.notice_ui.active() and g.notice_ui.mode == "switch" and g.notice_ui.refund == 50 and w.hero == "puppy", "в гардеробе — окно «Сменить друга?», вернётся 50")
-	g.notice_ui.t = 1.0
-	g.notice_ui.back()
-	check(not g.notice_ui.active() and w.hero == "puppy" and w.shards == 450 and w.owned.size() == 2 and w.is_equipped("pu_whistle"), "«Отмена» — ничего не изменилось")
-	g.screens.request_switch("axolotl")
-	g.notice_ui.t = 1.0
-	g.notice_ui.confirm()
-	check(not g.notice_ui.active() and w.hero == "axolotl" and w.shards == 500 and w.owned.is_empty(), "«Сменить» — аксолотль, 50 осколков вернулись")
-	g.screens.request_switch("kitten")
-	check(not g.notice_ui.active() and w.hero == "kitten" and w.shards == 500, "нечего снимать — смена сразу, без окна")
-	I18n.set_lang("ru")
-	check(I18n.t("switch_text") % I18n.t("hero_gen_owl") == "Вещи, украшения и настроения комнаты Совёнка вернутся осколками" and I18n.t("switch_refund") % [435, I18n.forms("shards_forms", 435)] == "Вернётся 435 осколков", "текст окна по-русски")
-	I18n.set_lang("en")
-	check(I18n.t("switch_text") % I18n.t("hero_gen_puppy") == "Puppy's items, decorations and room moods will be traded back for shards", "текст окна по-английски")
+	check(not g.notice_ui.active() and w.hero == "axolotl" and w.shards == 450 and w.owned.size() == 2 and w.equipped.is_empty(), "в гардеробе — смена сразу, без окна; осколки те же")
+	g.screens.request_switch("puppy")
+	check(w.hero == "puppy" and w.is_equipped("pu_whistle") and w.is_equipped("pu_cap"), "щенок снова в своём наряде")
 	I18n.set_lang("ru")
 
 

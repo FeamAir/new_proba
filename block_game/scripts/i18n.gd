@@ -225,16 +225,10 @@ const STR := {
 		"forge_great": "Hooray!",
 		"forge_try_left": "Try-on: %d s",
 		# 0.12b: гардероб героев
-		"switch_title": "Switch buddy?",
-		"switch_text": "%s's items, decorations and room moods will be traded back for shards",
 		"hero_gen_owl": "Owlet",
 		"hero_gen_axolotl": "Axolotl",
 		"hero_gen_puppy": "Puppy",
 		"hero_gen_kitten": "Kitten",
-		"switch_refund": "You'll get back %d %s",
-		"switch_keep": "Levels, stars, trophies and shards stay with you",
-		"switch_yes": "Switch",
-		"switch_done": "%d %s refunded",
 		"migrate_title": "Wardrobe update!",
 		"migrate_text": "Every buddy now has their very own items!",
 		"migrate_refund": "%d %s refunded",
@@ -342,7 +336,6 @@ const STR := {
 		"name_done": "Done",
 		"name_clear": "No name",
 		"name_hello": "Hi, %s!",
-		"switch_text_named": "%s's items, decorations and room moods will be traded back for shards",
 		"migrate_sets_text": "New sets: %s and %s! Items from the old sets were refunded as shards.",
 		"forge_say_start_owl_girl": "Complete a set, and I'll forge you an owlish wonder!",
 		"set_kit_detective": "Detective Cat",
@@ -590,16 +583,10 @@ const STR := {
 		"forge_great": "Ура!",
 		"forge_try_left": "Примерка: %d с",
 		# 0.12b: гардероб героев
-		"switch_title": "Сменить друга?",
-		"switch_text": "Вещи, украшения и настроения комнаты %s вернутся осколками",
 		"hero_gen_owl": "Совёнка",
 		"hero_gen_axolotl": "Аксолотля",
 		"hero_gen_puppy": "Щенка",
 		"hero_gen_kitten": "Котика",
-		"switch_refund": "Вернётся %d %s",
-		"switch_keep": "Уровни, звёзды, кубки и осколки останутся",
-		"switch_yes": "Сменить",
-		"switch_done": "Возвращено: %d %s",
 		"migrate_title": "Гардероб обновлён!",
 		"migrate_text": "У каждого друга теперь свои вещи!",
 		"migrate_refund": "Возвращено: %d %s",
@@ -707,7 +694,6 @@ const STR := {
 		"name_done": "Готово",
 		"name_clear": "Без имени",
 		"name_hello": "Привет, %s!",
-		"switch_text_named": "%s: вещи, украшения и настроения комнаты вернутся осколками",
 		"migrate_sets_text": "Новые наборы: «%s» и «%s»! Вещи из старых наборов вернулись осколками.",
 		"forge_say_start_owl_girl": "Собери набор, дружок, — выкую тебе совиное чудо!",
 		"set_kit_detective": "Кот-детектив",
@@ -762,22 +748,28 @@ const STR := {
 
 ## Строка на текущем языке; нет перевода — английская; нет и её — сам ключ.
 static func has(key: String) -> bool:
-	return STR[DEFAULT].has(key) or STR_015[DEFAULT].has(key)
+	return has_in(DEFAULT, key)
 
 
-## Есть ли ключ в языке l (в основном словаре или в блоке 0.15)
+## Словари языка l: основной и блоки версий (0.15, 0.16)
+static func _dicts(l: String) -> Array:
+	return [STR.get(l, {}), STR_015.get(l, {}), STR_016.get(l, {})]
+
+
+## Есть ли ключ в языке l (в основном словаре или в блоках версий)
 static func has_in(l: String, key: String) -> bool:
-	return STR.get(l, {}).has(key) or STR_015.get(l, {}).has(key)
+	for d in _dicts(l):
+		if d.has(key):
+			return true
+	return false
 
 
 static func t(key: String) -> String:
-	var d: Dictionary = STR.get(lang, {})
-	if d.has(key):
-		return d[key]
-	var d2: Dictionary = STR_015.get(lang, {})
-	if d2.has(key):
-		return d2[key]
-	return STR[DEFAULT].get(key, STR_015[DEFAULT].get(key, key))
+	for l in [lang, DEFAULT]:
+		for d in _dicts(l):
+			if d.has(key):
+				return d[key]
+	return key
 
 
 ## Язык по коду языка телефона (OS.get_locale_language()): знакомый — он, иначе английский.
@@ -830,15 +822,18 @@ static func forms(key: String, n: int) -> String:
 static func missing_keys() -> Array:
 	var all := {}
 	for l in LANGS:
-		for k in STR[l]:
-			all[k] = true
-		for k in STR_015.get(l, {}):
-			all[k] = true
+		for d in _dicts(l):
+			for k in d:
+				all[k] = true
 	var out: Array = []
 	for l in LANGS:
 		for k in all:
-			var v = STR[l].get(k, STR_015.get(l, {}).get(k, ""))
-			if String(v).strip_edges() == "":
+			var v := ""
+			for d in _dicts(l):
+				if d.has(k):
+					v = String(d[k])
+					break
+			if v.strip_edges() == "":
 				out.append("%s:%s" % [l, k])
 	return out
 
@@ -1225,5 +1220,17 @@ const STR_015 := {
 		"spot_shelf_low": "Низкая полка",
 		"spot_beam": "Балка",
 		"spot_beam_2": "Балка 2",
+	},
+}
+
+
+# ---------- 0.16 ----------
+## Смена друга без возврата: у каждого друга свой гардероб и свой дом (подсказка при первой смене).
+const STR_016 := {
+	"en": {
+		"switch_hint": "Each buddy has their own wardrobe and home — everything you buy stays with them",
+	},
+	"ru": {
+		"switch_hint": "У каждого друга свой гардероб и свой дом — всё, что купишь, останется у него",
 	},
 }

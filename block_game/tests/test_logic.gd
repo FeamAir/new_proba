@@ -460,8 +460,8 @@ func _test_meta(g, _chain3: int) -> void:
 	bad.set_value("meta", "decor_placed", {"owl": {"hang": "axo_lily"}})
 	var m3 = Meta.new()
 	m3.load_from(bad)
-	check(m3.hero == "" and m3.owned.is_empty() and m3.equipped.is_empty() and m3.decor_placed.owl.is_empty(), "испорченные мета-данные отбрасываются")
-	check(m3.shards == 20 and m3.migrated == 20, "вещь без своего героя возвращается осколками (20)")
+	check(m3.hero == "" and m3.owned == ["ow_mortarboard"] and m3.equipped.is_empty() and m3.decor_placed.owl.is_empty(), "испорченные мета-данные отбрасываются (0.16: вещь совёнка остаётся у совёнка)")
+	check(m3.shards == 0 and m3.migrated == 0, "0.16: ничего не возвращается и не начисляется")
 
 
 # ---------- Примерка 0.7 (scripts/tryon.gd + экран гардероба) ----------
@@ -677,12 +677,12 @@ func _test_new_heroes(g) -> void:
 	I18n.set_lang("ru")
 	check(Meta.item_name("pu_skin_corgi") == "Корги" and Meta.item_name("ki_skin_tabby") == "Полосатик" and Meta.hero_name("puppy") == "Щенок" and Meta.hero_name("kitten") == "Котик", "русский: Щенок, Котик, Корги, Полосатик")
 	I18n.set_lang(keep_lang)
-	# 0.12b: вещи свои — при смене друга вещи прежнего снимаются и возвращаются осколками
+	# 0.16: вещи свои — при смене друга вещи прежнего остаются у него, осколки не возвращаются
 	m.shards = 500
 	m.set_hero("puppy")
 	check(m.buy_item("pu_cap", 0, 1) == "bought" and m.buy_item("pu_skin_corgi", 0, 1) == "bought" and m.shards == 360, "щенок: купить бейсболку и окраску")
 	m.set_hero("kitten")
-	check(m.outfit().is_empty() and m.owned.is_empty() and m.shards == 500, "смена на котика: вещи щенка сняты, 140 осколков вернулись")
+	check(m.outfit().is_empty() and m.owned.size() == 2 and m.shards == 360 and m.collection_count() == 0, "смена на котика: котик пустой, вещи щенка остались у щенка, осколки те же")
 	# Украшения: у каждого дома свои
 	check(m.tap_decor("puppy", "hang", "pup_kite") == "try" and m.buy_decor("puppy", "hang", "pup_kite", 0, 1) == "locked", "змей: примерить можно, купить — за 25 звёзд")
 	check(m.buy_decor("puppy", "hang", "pup_lamp", 0, 1) == "bought" and m.placed_at("puppy", "hang") == "pup_lamp", "щенок: фонарь повешен")

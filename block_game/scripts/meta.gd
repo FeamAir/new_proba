@@ -223,7 +223,12 @@ enum Buy { OK, OWNED, LOCKED, POOR, UNKNOWN }
 var hero := ""               # "" — ещё не выбран (первый запуск)
 var shards := 0
 var owned: Array = []        # id купленных вещей
-var equipped: Dictionary = {}  # слот -> id
+var equipped: Dictionary = {}  # слот -> id: наряд ТЕКУЩЕГО героя
+## 0.16: наряды по героям (герой -> {слот -> id}). У текущего героя наряд — в equipped (то же самое;
+## при смене героя equipped прежнего уходит сюда, а наряд нового берётся отсюда).
+var equipped_by_hero: Dictionary = {}
+## 0.16: подсказка «У каждого друга свой гардероб и свой дом» уже показана (при первой смене героя)
+var switch_hint_seen := false
 var decor_owned: Array = []    # id купленных украшений (свои для каждого дома)
 var decor_placed: Dictionary = {"owl": {}, "axolotl": {}, "puppy": {}, "kitten": {}}  # дом -> {место -> id}
 ## 0.15: текущая расстановка дома — decor_placed (место -> id) + decor_rot (место -> поворот, шаги по 45°: 0..7)
@@ -663,53 +668,41 @@ func forge(id: String, max_level: int) -> String:
 	return "forged"
 
 
-# ---------- 0.12b: смена героя с возвратом осколков ----------
+# ---------- 0.16: смена героя — у каждого своё ----------
 
-## Сколько осколков вернётся, если сменить героя kind: цены его вещей + плата за ковку его наград
-## + цены купленных украшений его дома (всё это снимется).
-func refund_value(kind: String) -> int:
-	var n := 0
-	for id in owned:
-		if owner_of(id) == kind:
-			n += int(item(id).get("price", 0))
-	for id in forged:
-		if owner_of(id) == kind:
-			n += int(recipe(id).get("cost", 0))
-	for id in decor_owned:
-		if item(id).get("home", "") == kind:
-			n += int(item(id).get("price", 0))
-	for id in room_owned:  # 0.15: стены / пол / свет его дома
-		if Catalog.room_item(id).get("house", "") == kind:
-			n += int(Catalog.room_item(id).get("price", 0))
-	return n
-
-
-## Нужно ли спрашивать при смене на героя h (есть что снимать с прежнего).
-func switch_asks(h: String) -> bool:
-	return hero != "" and h != hero and HEROES.has(h) and (refund_value(hero) > 0 or not equipped.is_empty())
-
-
-## Сменить героя: всё прежнего (вещи, наряд, скованное, украшения его дома) снимается,
-## потраченное возвращается осколками; новый герой наряжается с нуля.
-## Возвращает число вернувшихся осколков (-1 — нет такого героя). Тот же герой — ничего не меняется.
-func switch_hero(h: String) -> int:
+## Сменить героя: ничего не снимается и осколки не возвращаются. Вещи, скованное, украшения дома,
+## настроения и стили комнаты остаются у прежнего героя (owned / forged / decor_owned / room_owned
+## хранят id с привязкой к герою — owner_of / дом), его наряд — в equipped_by_hero. У нового героя —
+## его прежний наряд (или пусто, если на него ещё ничего не тратили).
+## Возвращает true, если такой герой есть (тот же герой — ничего не меняется).
+func switch_hero(h: String) -> bool:
 	if not HEROES.has(h):
-		return -1
+		return false
 	if h == hero:
-		return 0
-	var n := 0
+		return true
 	if hero != "":
-		var old := hero
-		n = refund_value(old)
-		owned = owned.filter(func(id): return owner_of(id) != old)
-		forged = forged.filter(func(id): return owner_of(id) != old)
-		decor_owned = decor_owned.filter(func(id): return item(id).get("home", "") != old)
-		room_owned = room_owned.filter(func(id): return Catalog.room_item(id).get("house", "") != old)
-		_reset_home(old)  # 0.15: все три настроения дома — пустые, стиль комнаты — по умолчанию
-		shards += n
-	equipped = {}
+		equipped_by_hero[hero] = equipped.duplicate()
+	equipped = outfit_of(h)
+	equipped_by_hero.erase(h)
 	hero = h
-	return n
+	return true
+
+
+## Наряд героя kind (слот -> id): у текущего — equipped, у остальных — сохранённый.
+func outfit_of(kind: String) -> Dictionary:
+	if kind == hero:
+		return equipped.duplicate()
+	var o = equipped_by_hero.get(kind, {})
+	return (o as Dictionary).duplicate() if o is Dictionary else {}
+
+
+## 0.16: показать подсказку «у каждого друга своё» — true только при первой смене героя в жизни игрока
+## (после вызова больше не покажется). first_pick — это был первый выбор героя, не смена.
+func take_switch_hint(first_pick: bool) -> bool:
+	if first_pick or switch_hint_seen:
+		return false
+	switch_hint_seen = true
+	return true
 
 
 func is_owned(id: String) -> bool:
@@ -1031,9 +1024,9 @@ func _reset_home(home: String) -> void:
 	_store_mood(home)
 
 
-## Выбрать героя (первый выбор или смена — с возвратом за прежнего, см. switch_hero).
+## Выбрать героя (первый выбор или смена, см. switch_hero).
 func set_hero(h: String) -> bool:
-	return switch_hero(h) >= 0
+	return switch_hero(h)
 
 
 ## Наряд для рисования: слот -> id (без героя). 0.13: у девочки добавляется "gender": "girl"
@@ -1041,6 +1034,13 @@ func set_hero(h: String) -> bool:
 func outfit() -> Dictionary:
 	var o := equipped.duplicate()
 	o.merge(look(hero))
+	return o
+
+
+## 0.16: наряд любого героя для рисования (его собственный наряд + пол) — аватарки, выбор друга.
+func outfit_for(kind: String) -> Dictionary:
+	var o := outfit_of(kind)
+	o.merge(look(kind))
 	return o
 
 
@@ -1116,6 +1116,8 @@ func save_to(cfg: ConfigFile) -> void:
 	cfg.set_value("meta", "shards", shards)
 	cfg.set_value("meta", "owned", owned)
 	cfg.set_value("meta", "equipped", equipped)
+	cfg.set_value("meta", "equipped_by_hero", equipped_by_hero)  # 0.16: наряды остальных героев
+	cfg.set_value("meta", "switch_hint_seen", switch_hint_seen)
 	cfg.set_value("meta", "decor_owned", decor_owned)
 	cfg.set_value("meta", "decor_placed", decor_placed)
 	# 0.15: настроения (в каждом — расстановка, повороты, стиль комнаты), текущее настроение, купленные стили
@@ -1138,8 +1140,8 @@ func load_from(cfg: ConfigFile) -> void:
 	hero = h if h is String and HEROES.has(h) else ""
 	var s = cfg.get_value("meta", "shards", 0)
 	shards = maxi(0, int(s)) if (s is int or s is float) else 0
-	# 0.12b: вещи — только своего героя. Старые общие вещи (0.6–0.12) и скованные награды
-	# возвращаются осколками по прежним ценам; вещи другого героя (не должно быть) — по новым.
+	# 0.12b: старые общие вещи (0.6–0.12) и скованные награды возвращаются осколками по прежним ценам.
+	# 0.16: вещи всех героев хранятся (у каждого героя — свои), ничего не отнимается.
 	migrated = 0
 	var sets_back := false
 	owned = []
@@ -1155,10 +1157,7 @@ func load_from(cfg: ConfigFile) -> void:
 			elif it.is_empty() and LEGACY_PRICES.has(id):
 				migrated += int(LEGACY_PRICES[id])
 			elif it.has("hero") and not it.get("forge", false):
-				if it.hero == hero:
-					owned.append(id)
-				else:
-					migrated += int(it.price)
+				owned.append(id)
 	forged = []
 	var fg = cfg.get_value("meta", "forged", [])
 	if fg is Array:
@@ -1171,10 +1170,7 @@ func load_from(cfg: ConfigFile) -> void:
 			elif item(id).is_empty() and LEGACY_FORGE.has(id):
 				migrated += int(LEGACY_FORGE[id])
 			elif is_forge(id):
-				if owner_of(id) == hero:
-					forged.append(id)
-				else:
-					migrated += int(recipe(id).get("cost", 0))
+				forged.append(id)
 	shards += migrated
 	var nr = cfg.get_value("meta", "notice_refund", 0)
 	notice_refund = (maxi(0, int(nr)) if (nr is int or nr is float) else 0) + migrated
@@ -1244,10 +1240,28 @@ func load_from(cfg: ConfigFile) -> void:
 					for spot in d:
 						if spot is String and d[spot] is String:
 							place(home, spot, d[spot])
-	equipped = {}
-	var e = cfg.get_value("meta", "equipped", {})
-	if e is Dictionary:
-		for slot in e:
-			var id = e[slot]
-			if id is String and (owned.has(id) or forged.has(id)) and item(id).get("slot", "") == slot:
-				put_on(equipped, id)
+	# 0.16: наряды по героям. В старом сохранении — один общий equipped: он становится нарядом
+	# текущего героя (вещи чужих героев отбрасываются), у остальных — пусто.
+	var ss = cfg.get_value("meta", "switch_hint_seen", false)
+	switch_hint_seen = ss is bool and ss
+	equipped_by_hero = {}
+	var eb = cfg.get_value("meta", "equipped_by_hero", {})
+	if eb is Dictionary:
+		for k in eb:
+			if k is String and HEROES.has(k) and k != hero and eb[k] is Dictionary:
+				var oe := _clean_outfit(k, eb[k])
+				if not oe.is_empty():
+					equipped_by_hero[k] = oe
+	equipped = _clean_outfit(hero, cfg.get_value("meta", "equipped", {}))
+
+
+## Наряд героя kind из сохранения: только его купленные / скованные вещи на своих слотах.
+func _clean_outfit(kind: String, e) -> Dictionary:
+	var out := {}
+	if kind == "" or not (e is Dictionary):
+		return out
+	for slot in e:
+		var id = e[slot]
+		if id is String and (owned.has(id) or forged.has(id)) and owner_of(id) == kind and item(id).get("slot", "") == slot:
+			put_on(out, id)
+	return out

@@ -1,7 +1,7 @@
 extends SceneTree
 ## Тесты версии 0.15 — украшение комнаты (каркас): каталог (места и их типы, стили, украшения, варианты
 ## стен / пола / света), совместимость старых сохранений, поворот вещи, стиль комнаты (покупка, примерка,
-## применение в 3D и 2D), настроения (переключение, сохранение, редактирование), возврат при смене героя,
+## применение в 3D и 2D), настроения (переключение, сохранение, редактирование), смена героя (0.16: дом остаётся у героя),
 ## режим украшения (вход / выход, касания, «Назад»), 3D: все места каталога есть в комнатах, вещи
 ## строятся на новых местах, метки «+» только в режиме украшения.
 ## Запуск: godot --headless --path block_game -s tests/test_v015.gd
@@ -338,7 +338,7 @@ func _test_old_save() -> void:
 
 
 func _test_refund() -> void:
-	print("— возврат при смене героя: украшения и стиль комнаты")
+	print("— 0.16: смена героя — украшения, настроения и стиль комнаты остаются у дома")
 	var m := _fresh("owl", 500)
 	m.buy_decor("owl", "near", "owl_nest", 0, 1)            # 10
 	m.buy_decor("owl", "window", "owl_books", 0, 1)         # 30
@@ -349,12 +349,16 @@ func _test_refund() -> void:
 	m.decor_owned.append("pup_ball")
 	m.decor_placed.puppy = {"near": "pup_ball"}
 	m._store_mood("puppy")
-	check(m.refund_value("owl") == 100, "к возврату: 10 + 30 + 30 + 30 = 100")
+	var room0: Dictionary = m.room_of("owl")
+	var placed0: Dictionary = m.decor_placed.owl.duplicate()
+	var mood1: Dictionary = m.mood_room("owl", 0)
 	var sh: int = m.shards
-	check(m.switch_hero("axolotl") == 100 and m.shards == sh + 100, "смена героя — вернулось 100 осколков")
-	check(m.room_owned.is_empty() and m.decor_owned == ["pup_ball"] and m.room_of("owl") == Catalog.default_room("owl"), "варианты и украшения совёнка сняты, стиль — по умолчанию")
-	check(m.mood_of("owl") == 0 and m.mood_empty("owl", 1) and m.decor_placed.owl.is_empty() and m.decor_rot.owl.is_empty(), "все настроения дома совёнка пустые")
+	check(m.switch_hero("axolotl") and m.shards == sh, "смена героя — осколки не меняются (ничего не возвращается)")
+	check(m.room_owned.size() == 2 and m.decor_owned.size() == 3 and m.room_of("owl") == room0, "варианты и украшения совёнка остались, стиль комнаты тот же")
+	check(m.mood_of("owl") == 1 and m.decor_placed.owl == placed0 and m.mood_room("owl", 0) == mood1 and not m.mood_empty("owl", 0), "настроения дома совёнка на месте (текущее — второе)")
 	check(m.placed_at("puppy", "near") == "pup_ball", "дом щенка не тронут")
+	m.switch_hero("owl")
+	check(m.mood_of("owl") == 1 and m.placed_at("owl", "window") == "owl_books" and m.room_of("owl") == room0 and m.room_is_owned("owl_walls_moss"), "вернулись к совёнку — дом как был")
 
 
 # ---------- Режим украшения (2D-дом) ----------

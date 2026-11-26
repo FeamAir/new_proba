@@ -82,7 +82,7 @@ func _test_gender_rules() -> void:
 	var dec0: Array = m.decor_owned.duplicate()
 	check(m.set_gender("kitten", "girl") and m.is_girl("kitten"), "кошечка: девочка")
 	check(m.owned == owned0 and m.equipped == eq0 and m.shards == sh0 and m.forged == ["ki_teacup"] and m.decor_owned == dec0 and m.placed_at("kitten", "floor_l") == "kit_yarn", "смена пола: вещи, наряд, скованное, украшения и осколки не тронуты")
-	check(m.hero == "kitten" and not m.switch_asks("kitten"), "тот же герой — окна возврата нет")
+	check(m.hero == "kitten" and m.switch_hero("kitten") and m.owned == owned0 and m.equipped == eq0, "тот же герой — ничего не меняется")
 	check(m.outfit().get("gender", "") == "girl" and m.outfit().get("head", "") == "ki_pompom_hat", "наряд для рисования: вещи + gender girl")
 	check(m.look("kitten") == {"gender": "girl"} and m.look("owl") == {}, "вид героя без наряда")
 	check(not m.set_gender("kitten", "cat") and not m.set_gender("dragon", "girl") and m.is_girl("kitten"), "неверные значения не принимаются")
@@ -303,7 +303,7 @@ func _test_texts() -> void:
 			ok = false
 			printerr("    ", k, ": ", Meta.hero_name(k, "boy"), " ", Meta.hero_name(k, "girl"), " ", Meta.hero_gen(k, "boy"), " ", Meta.hero_gen(k, "girl"))
 	check(ok, "ru: названия и родительный падеж по полу")
-	check(I18n.t("switch_text") % Meta.hero_gen("kitten", "girl") == "Вещи, украшения и настроения комнаты Кошечки вернутся осколками", "окно смены: «Вещи и украшения Кошечки…»")
+	check(I18n.t("switch_hint") == "У каждого друга свой гардероб и свой дом — всё, что купишь, останется у него", "0.16: подсказка при смене друга (вместо окна возврата)")
 	check(Meta.item_name("ki_starry", "kitten", "girl") == "Звёздная кошечка" and Meta.item_name("ki_starry", "kitten", "boy") == "Звёздный котик", "супер-награда котика по полу")
 	check(Meta.item_name("pu_hero", "puppy", "girl") == "Собачка-героиня" and Meta.item_name("ki_skin_siamese", "kitten", "boy") == "Сиамский", "Собачка-героиня, Сиамский")
 	check(Meta.set_title(Meta.set_index("kit_detective"), "girl") == "Кошка-детектив" and Meta.set_title(Meta.set_index("kit_detective"), "boy") == "Кот-детектив", "набор: Кот-детектив / Кошка-детектив")
