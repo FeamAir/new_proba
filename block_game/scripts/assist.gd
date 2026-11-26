@@ -54,11 +54,14 @@ func on_lose(n: int) -> void:
 	streak[n] = int(streak.get(n, 0)) + 1
 
 
-func on_win(n: int, pieces: int) -> void:
+## slow (0.17) — победа с «медленным падением»: звёзды не меняются, но в статистике отмечается (поле "slow").
+func on_win(n: int, pieces: int, slow := false) -> void:
 	if not track:
 		return
 	var r := rec(n)
 	r.wins += 1
+	if slow:
+		r["slow"] = int(r.get("slow", 0)) + 1
 	r.best = pieces if r.best <= 0 else mini(r.best, pieces)
 	streak.erase(n)
 
@@ -193,6 +196,9 @@ func load_from(cfg: ConfigFile) -> void:
 				for f in ["tries", "losses", "wins", "best", "help"]:
 					var v = r.get(f, 0)
 					d[f] = maxi(0, int(v)) if (v is int or v is float) else 0
+				var sv = r.get("slow", 0)  # 0.17: побед с медленным падением (в старых сохранениях нет)
+				if (sv is int or sv is float) and int(sv) > 0:
+					d["slow"] = int(sv)
 	var st = cfg.get_value("stats", "streak", {})
 	if st is Dictionary:
 		for n in st:

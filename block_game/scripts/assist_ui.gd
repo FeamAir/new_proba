@@ -233,6 +233,8 @@ func draw_stats() -> void:
 		if (j - from) % 2 == 0:
 			g.draw_rect(Rect2(20, y - 26, g.W - 40, 34), Color(1, 1, 1, 0.04))
 		var vals := [str(n), str(r.tries), str(r.losses), str(r.wins), str(r.best) if r.best > 0 else "–", str(r.help)]
+		if int(r.get("slow", 0)) > 0:
+			vals[3] += "*"  # 0.17: были победы с медленным падением
 		for i in vals.size():
 			var col: Color = g.TEXT
 			if i == 2 and r.losses >= 3:
@@ -242,6 +244,10 @@ func draw_stats() -> void:
 			sc._text(Vector2(xs[i], y), vals[i], 24, col, ws[i], HORIZONTAL_ALIGNMENT_CENTER)
 		y += 34.0
 	var by := H - 230.0
+	for n in ks:  # 0.17: пояснение к «*» — победы с медленным падением
+		if int(g.assist.levels[n].get("slow", 0)) > 0:
+			sc._ctext(g.W / 2.0, by - (106.0 if pages() > 1 else 18.0), I18n.t("stats_slow_note"), 22, g.DIM)
+			break
 	for k in ["st_prev", "st_next", "st_copy", "st_close"]:
 		sc.rects.erase(k)
 	if pages() > 1:

@@ -40,6 +40,12 @@ const NoticeUI := preload("res://scripts/notice_ui.gd")
 const Home3D := preload("res://scripts/home3d/home3d.gd")  # 0.12: 3D-дома
 const TrophyUI := preload("res://scripts/trophy_ui.gd")  # 0.14: кубки залов
 const DecorateUI := preload("res://scripts/decorate_ui.gd")  # 0.15: режим украшения комнаты
+## 0.17: герой рядом с полем (scripts/play_hero.gd) и «Удобство» (scripts/access.gd, access_ui.gd)
+const PlayHero := preload("res://scripts/play_hero.gd")
+const Access := preload("res://scripts/access.gd")
+const AccessUI := preload("res://scripts/access_ui.gd")
+## 0.17: после победы/поражения герой на панели празднует/грустит, затем появляется окно итога
+const RESULT_BEAT := 0.75
 ## true — после очистки падают все группы поля (и камень уровня над дырами ниже линии);
 ## false — только то, что выше нижней очищенной линии (ниже неё поле не трогается).
 const FALL_ALL := false
@@ -114,6 +120,9 @@ var notice_ui                 # 0.12b: сообщение об обновлен�
 var home3d                    # 0.12: 3D-дом на экране «Дом» (scripts/home3d/home3d.gd)
 var trophy_ui                 # 0.14: «Новый кубок!», кнопка «Кубки», полка славы 2D
 var decor_ui                  # 0.15: режим украшения комнаты (scripts/decorate_ui.gd)
+var play_hero = PlayHero.new()  # 0.17: герой на панели уровня
+var access = Access.new()       # 0.17: настройки «Удобство»
+var access_ui                   # 0.17: окно «Удобство» в паузе
 
 var fall_timer := 0.0
 var lock_timer := 0.0
@@ -170,6 +179,7 @@ func _ready() -> void:
 	notice_ui = NoticeUI.new(self)
 	trophy_ui = TrophyUI.new(self)
 	decor_ui = DecorateUI.new(self)
+	access_ui = AccessUI.new(self)
 	home3d = Home3D.new()
 	home3d.name = "Home3D"
 	add_child(home3d)
@@ -190,15 +200,17 @@ func _layout() -> void:
 	var avail := btn_y - 16.0 - top
 	board_pos = Vector2(24, top + maxf(0.0, (avail - ROWS * CELL) / 2.0))
 	panel_x = board_pos.x + COLS * CELL + 24.0
-	var names := ["left", "right", "soft", "hard", "rotate"]
+	# 0.17: «для левшей» — зеркально: поворот и сброс слева, стрелки справа
+	var names := ["rotate", "hard", "soft", "left", "right"] if access.lefty else ["left", "right", "soft", "hard", "rotate"]
 	var w := (W - 32.0 - 4 * 12.0) / 5.0
 	for i in names.size():
 		buttons[names[i]] = Rect2(16 + i * (w + 12), btn_y, w, btn_h)
-	var mw := 460.0
-	var y0 := H * 0.5 - 260.0
-	var items := ["resume", "music", "sound", "language", "graphics", "tutorial", "restart", "menu"]
+	var mw := 480.0
+	var y0 := H * 0.5 - 330.0
+	var items := ["resume", "music", "sound", "language", "graphics", "access", "tutorial", "restart", "menu"]
+	menu_buttons.clear()
 	for i in items.size():
-		menu_buttons[items[i]] = Rect2((W - mw) / 2.0, y0 + i * 96.0, mw, 82)
+		menu_buttons[items[i]] = Rect2((W - mw) / 2.0, y0 + i * 86.0, mw, 74)
 
 
 # ---------- Звук ----------
@@ -304,6 +316,7 @@ func start_level(n: int) -> void:
 	rng.seed = randi()
 	next_type = _pick_type(-1)
 	_apply_assist(n)
+	play_hero.reset()
 	tut.on_start(self)
 	if tut.wants_first_piece(n):
 		next_type = Tutorial.FIRST_PIECE
@@ -346,7 +359,15 @@ func _pick_type(avoid: int) -> int:
 
 
 func fall_interval() -> float:
-	return maxf(0.14, 0.9 * pow(0.94, speed_step - 1))
+	return access.fall(maxf(0.14, 0.9 * pow(0.94, speed_step - 1)))  # 0.17: «медленное падение» ×0.7
+
+
+## 0.17: поле почти заполнено — блоки в трёх верхних рядах (красная подсветка, испуг героя)
+func in_danger() -> bool:
+	for i in COLS * 3:
+		if board.size() > i and board[i] != EMPTY:
+			return true
+	return false
 
 
 func _set_state(s: State) -> void:
@@ -520,6 +541,7 @@ func _check_lines() -> bool:
 	shake = maxf(shake, 3.0 + 3.0 * (n - 1) + 3.0 * (chain - 1))
 	var mid_y: float = board_pos.y + (clearing_rows[0] + 0.5) * CELL
 	var px := board_pos.x + COLS * CELL / 2.0
+	play_hero.on_cascade(chain)  # 0.17: ×2 — радость, ×3+ — прыжок с искорками
 	if chain >= 2:
 		_popup(I18n.t("cascade") % chain, Vector2(px, mid_y - 50), ACCENT, 46)
 		play("combo%d" % mini(chain - 1, 5))
@@ -568,7 +590,7 @@ func _win() -> void:
 	if gift > 0:
 		last_reward.gift = gift
 		last_reward.total += gift
-	assist.on_win(level, pieces_used)
+	assist.on_win(level, pieces_used, access.slow)  # 0.17: победа с медленным падением отмечается в статистике
 	meta.shards += last_reward.total
 	stars[level] = maxi(stars.get(level, 0), last_stars)
 	if trophy_ui:
@@ -578,6 +600,8 @@ func _win() -> void:
 	max_level = maxi(max_level, level + 1)
 	_save()
 	_set_state(State.WIN)
+	state_time = -RESULT_BEAT  # 0.17: сначала герой на панели празднует, потом окно победы
+	play_hero.on_win()
 	if screens:
 		screens.poke_hero()
 	play("levelup")
@@ -593,6 +617,8 @@ func _lose() -> void:
 	if assist.track:
 		_save()
 	_set_state(State.LOSE)
+	state_time = -RESULT_BEAT  # 0.17: сначала герой на панели грустит, потом окно поражения
+	play_hero.on_lose()
 	play("gameover")
 
 
@@ -647,6 +673,7 @@ func _load() -> void:
 		stars = cfg.get_value("progress", "stars", {})
 		music_on = cfg.get_value("settings", "music", true)
 		sfx_on = cfg.get_value("settings", "sfx", true)
+	access.load_from(cfg)  # 0.17: «Удобство»; в старом сохранении — всё выключено
 	# язык: из [settings] language; в старом сохранении его нет — по языку телефона
 	I18n.load_from(cfg, OS.get_locale_language())
 	if home3d:
@@ -676,6 +703,16 @@ func set_language(l: String) -> void:
 		_save()
 
 
+## 0.17: переключатель «Удобства» (k — ключ из Access.KEYS); сразу применяется и сохраняется.
+func set_access(k: String, on: bool) -> void:
+	if not Access.KEYS.has(k):
+		return
+	access.set(k, on)
+	if k == "lefty":
+		_layout()
+	_save()
+
+
 static func legacy_gift(total: int) -> int:
 	return 30 + total * 5
 
@@ -686,6 +723,7 @@ func _save() -> void:
 	cfg.set_value("progress", "stars", stars)
 	cfg.set_value("settings", "music", music_on)
 	cfg.set_value("settings", "sfx", sfx_on)
+	access.save_to(cfg)
 	I18n.save_to(cfg)
 	meta.save_to(cfg)
 	tut.save_to(cfg)
@@ -749,6 +787,7 @@ func _process(delta: float) -> void:
 	screens.update(delta)
 	tut.update(delta)
 	assist_ui.update(delta)
+	play_hero.update(delta, in_danger() and state in [State.PLAYING, State.CLEARING, State.SETTLE, State.PAUSED])
 	if forge_ui:
 		forge_ui.update(delta)
 	if notice_ui:
@@ -785,6 +824,8 @@ func _notification(what: int) -> void:
 				forge_ui.back()
 			State.PAUSED when assist_ui.stats_open:
 				assist_ui.stats_open = false
+			State.PAUSED when access_ui and access_ui.open:
+				access_ui.close()
 			State.PAUSED, State.WIN, State.LOSE, State.MAP:
 				go_home()
 			State.PICK_HERO:
@@ -871,6 +912,9 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 			forge_ui.tap(pos)
 			return
 		State.WIN, State.LOSE:
+			if state_time < 0.0:
+				state_time = 0.0  # 0.17: касание пропускает паузу с реакцией героя
+				return
 			if state == State.LOSE and assist_ui.tap_lose(pos):
 				return
 			if state == State.WIN and trophy_ui and trophy_ui.tap_win(pos):
@@ -878,6 +922,8 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 			screens.tap_end(pos)
 			return
 		State.PAUSED:
+			if access_ui and access_ui.tap(pos):
+				return
 			if not assist_ui.tap_pause(pos):
 				_pause_menu_tap(pos)
 			return
@@ -895,7 +941,11 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 			_press(n)
 			return
 	if pos.y < buttons["left"].position.y - 8:
-		board_touch[idx] = {"start": pos, "ax": pos.x, "ay": pos.y, "t": Time.get_ticks_msec() / 1000.0, "moved": false}
+		# 0.17: касание героя на панели — его реакция; провести пальцем от героя всё так же двигает фигуру
+		var on_hero: bool = state in [State.PLAYING, State.CLEARING, State.SETTLE] and play_hero.hit(pos)
+		if on_hero:
+			play_hero.poke()
+		board_touch[idx] = {"start": pos, "ax": pos.x, "ay": pos.y, "t": Time.get_ticks_msec() / 1000.0, "moved": false, "hero": on_hero}
 
 
 func _pause_menu_tap(pos: Vector2) -> void:
@@ -915,6 +965,9 @@ func _pause_menu_tap(pos: Vector2) -> void:
 				"graphics":  # 0.12: качество 3D-дома: высокое -> простое -> 2D
 					home3d.cycle_quality()
 					_save()
+				"access":  # 0.17: окно «Удобство»
+					if access_ui:
+						access_ui.show()
 				"tutorial":  # 0.9: повтор обучения — уровень 1 с первыми шагами
 					tut.replay()
 					_save()
@@ -966,7 +1019,7 @@ func _touch_up(idx: int, pos: Vector2) -> void:
 	var dt: float = Time.get_ticks_msec() / 1000.0 - t.t
 	if d.y > 140 and dt < 0.3 and absf(d.y) > absf(d.x) * 2:
 		hard_drop()
-	elif not t.moved and d.length() < 24:
+	elif not t.moved and d.length() < 24 and not t.get("hero", false):
 		rotate_piece()
 
 
@@ -1157,13 +1210,18 @@ func _draw_block(p: Vector2, s: float, v: int, glow := false) -> void:
 	draw_colored_polygon(PackedVector2Array([tl, tl + Vector2(r.size.x * 0.45, 0), tl + Vector2(0, r.size.y * 0.45)]), Color(1, 1, 1, 0.28))
 	var bl := r.position + Vector2(r.size.x * 0.72, r.size.y * 0.22)
 	draw_colored_polygon(PackedVector2Array([bl + Vector2(0, -4), bl + Vector2(4, 0), bl + Vector2(0, 4), bl + Vector2(-4, 0)]), Color(1, 1, 1, 0.75))
+	if access.symbols:  # 0.17: знак цвета для дальтоников (у кристалла и камня форма своя)
+		Access.draw_sign(self, r.get_center() + Vector2(0, -1.5), s, v)
 
 
+## Правая панель: «Далее», кристаллы, счёт/уровень/фигуры; 0.17: внизу — герой (scripts/play_hero.gd).
+## Кристаллы — на y+220 (на них показывает обучение, scripts/tutorial.gd).
 func _draw_panel() -> void:
 	var pw := W - panel_x - 20.0
 	var y := board_pos.y + 4.0
-	draw_string(font, Vector2(panel_x, y + 20), I18n.t("panel_next"), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, DIM)
-	var box := Rect2(panel_x, y + 34, pw, 130)
+	var lab := access.fs(22)
+	draw_string(font, Vector2(panel_x, y + 20), I18n.t("panel_next"), HORIZONTAL_ALIGNMENT_LEFT, pw, lab, DIM)
+	var box := Rect2(panel_x, y + 34, pw, 124)
 	_rbox(box, BTN, 18)
 	if true:
 		var s: Dictionary = SHAPES[next_type]
@@ -1178,16 +1236,25 @@ func _draw_panel() -> void:
 			_draw_block(origin + Vector2(c) * cs, cs, next_type)
 
 	y += 220.0
-	draw_string(font, Vector2(panel_x, y), I18n.t("panel_crystals"), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, DIM)
+	draw_string(font, Vector2(panel_x, y), I18n.t("panel_crystals"), HORIZONTAL_ALIGNMENT_LEFT, pw, lab, DIM)
 	_draw_block(Vector2(panel_x - 6, y + 10), 56, CRYSTAL)
-	draw_string(font, Vector2(panel_x + 52, y + 52), "%d/%d" % [crystals_total - crystals_left, crystals_total], HORIZONTAL_ALIGNMENT_LEFT, -1, 38, CRYSTAL_COL)
+	draw_string(font, Vector2(panel_x + 52, y + 52), "%d/%d" % [crystals_total - crystals_left, crystals_total], HORIZONTAL_ALIGNMENT_LEFT, pw - 52, access.fs(38), CRYSTAL_COL)
 
 	var bump := 1.0 + 0.25 * score_bump
-	var stats := [[I18n.t("panel_score"), str(int(shown_score)), 40 * bump], [I18n.t("panel_level"), str(level), 40], [I18n.t("panel_pieces"), "%d" % pieces_used, 40]]
+	var val := access.fs(40)
+	var stats := [[I18n.t("panel_score"), str(int(shown_score)), val * bump], [I18n.t("panel_level"), str(level), val], [I18n.t("panel_pieces"), "%d" % pieces_used, val]]
+	var step_y := 86.0 if access.big else 80.0
+	var sy := y + 104.0
 	for i in stats.size():
-		var sy := y + 130.0 + i * 100.0
-		draw_string(font, Vector2(panel_x, sy), stats[i][0], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, DIM)
-		draw_string(font, Vector2(panel_x, sy + 46), stats[i][1], HORIZONTAL_ALIGNMENT_LEFT, pw, int(stats[i][2]), ACCENT if i == 0 else TEXT)
+		sy = y + 104.0 + i * step_y
+		draw_string(font, Vector2(panel_x, sy), stats[i][0], HORIZONTAL_ALIGNMENT_LEFT, pw, lab, DIM)
+		draw_string(font, Vector2(panel_x, sy + val + 2), stats[i][1], HORIZONTAL_ALIGNMENT_LEFT, pw, int(stats[i][2]), ACCENT if i == 0 else TEXT)
+	# 0.17: герой в своём наряде — от последней строки до низа поля
+	var top := sy + val + 24.0
+	var bottom := board_pos.y + ROWS * CELL
+	if bottom - top > 120.0:
+		var kind: String = meta.hero if meta.hero != "" else "owl"
+		play_hero.draw(self, kind, meta.outfit(), Rect2(panel_x - 8, top, pw + 16, bottom - top))
 
 
 func _draw_controls() -> void:
@@ -1234,7 +1301,7 @@ func _draw_effects() -> void:
 		var sc: float = 0.6 + minf(age / 0.12, 1.0) * 0.55
 		if age > 0.12:
 			sc = 1.15 - minf((age - 0.12) / 0.1, 1.0) * 0.15
-		var size := int(p.size * sc)
+		var size := int(p.size * sc * (Access.TEXT_K if access.big else 1.0))
 		var a: float = clampf(p.life / 0.4, 0.0, 1.0)
 		var pos := Vector2(0, p.p.y)
 		for o in [Vector2(-3, 0), Vector2(3, 0), Vector2(0, -3), Vector2(0, 3)]:
@@ -1262,18 +1329,22 @@ func _draw_overlay() -> void:
 	match state:
 		State.PAUSED:
 			draw_rect(Rect2(0, 0, W, H), Color(0.05, 0.03, 0.1, 0.85))
-			_center_text(I18n.t("pause_title"), menu_buttons["resume"].position.y - 50, 60, TEXT)
-			var labels := {"resume": I18n.t("pause_resume"), "music": I18n.t("pause_music") % I18n.t("on" if music_on else "off"),
-				"sound": I18n.t("pause_sound") % I18n.t("on" if sfx_on else "off"), "language": I18n.t("pause_lang") % I18n.lang_name(),
-				"restart": I18n.t("pause_restart"), "menu": I18n.t("home"), "tutorial": I18n.t("pause_tutorial"),
-				"graphics": I18n.t("pause_graphics") % I18n.t("gfx_" + home3d.quality)}
+			_center_text(I18n.t("pause_title"), menu_buttons["resume"].position.y - 40, access.fs(60), TEXT)
+			var labels := pause_labels()
 			for n in menu_buttons:
 				var r: Rect2 = menu_buttons[n]
 				_rbox(r, ACCENT if n == "resume" else BTN, 24)
-				draw_string(font, Vector2(r.position.x, r.get_center().y + 13), labels[n], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 34, Color("#2A1A0A") if n == "resume" else TEXT)
+				var fsz: int = assist_ui.fit(labels[n], access.fs(32), r.size.x - 24)
+				draw_string(font, Vector2(r.position.x, r.get_center().y + fsz * 0.36), labels[n], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, fsz, Color("#2A1A0A") if n == "resume" else TEXT)
 			assist_ui.draw_pause_version()
 			if assist_ui.stats_open:
 				assist_ui.draw_stats()
+			elif access_ui and access_ui.open:
+				access_ui.draw()
+		State.WIN when state_time < 0.0:
+			pass  # 0.17: герой на панели празднует — окно победы чуть позже
+		State.LOSE when state_time < 0.0:
+			pass
 		State.WIN:
 			screens.draw_win()
 			if trophy_ui:
@@ -1283,6 +1354,14 @@ func _draw_overlay() -> void:
 				assist_ui.draw_lose()
 			else:
 				screens.draw_lose()
+
+
+## Подписи пунктов паузы (0.17: «Удобство»).
+func pause_labels() -> Dictionary:
+	return {"resume": I18n.t("pause_resume"), "music": I18n.t("pause_music") % I18n.t("on" if music_on else "off"),
+		"sound": I18n.t("pause_sound") % I18n.t("on" if sfx_on else "off"), "language": I18n.t("pause_lang") % I18n.lang_name(),
+		"restart": I18n.t("pause_restart"), "menu": I18n.t("home"), "tutorial": I18n.t("pause_tutorial"),
+		"graphics": I18n.t("pause_graphics") % I18n.t("gfx_" + home3d.quality), "access": I18n.t("pause_access")}
 
 
 func _draw_splash() -> void:

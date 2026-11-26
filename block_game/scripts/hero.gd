@@ -89,6 +89,8 @@ var _girl := false
 var _fur_lod := 2
 var _fur_t := 0.0
 var _fur_env := 0.0
+## 0.17: глаза героя на панели уровня: >1 — распахнуты (испуг), <1 — полуопущены (грусть); 1 — как обычно
+var eye_k := 1.0
 
 
 # ---------- Объёмные сетки ----------
@@ -562,7 +564,7 @@ func _owl(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only: 
 		_glow(Vector2(sx * 62, 4), 17, 10, _blush())
 
 	# Большие блестящие глаза
-	var b := blink(t)
+	var b := blink(t) * eye_k
 	var happy := env > 0.55 and absf(turn) < 0.6
 	for sx in [-1.0, 1.0]:
 		var ec := Vector2(sx * 37, -30)
@@ -722,7 +724,7 @@ func _axolotl(p: Dictionary, outfit: Dictionary, t: float, react: float, head_on
 			_dot(Vector2(sx * f.x, f.y), 1.9, Color(gill.darkened(0.15), 0.55))
 
 	# Большие блестящие глаза
-	var b := blink(t, 1.3)
+	var b := blink(t, 1.3) * eye_k
 	var happy := env > 0.5
 	for sx in [-1.0, 1.0]:
 		var ec := Vector2(sx * 44, -30)
@@ -976,7 +978,7 @@ func _puppy(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only
 		_glow(Vector2(sx * 62, -8), 19, 11, _blush())
 
 	# Большие блестящие глаза; при касании — радостные дужки
-	var b := blink(t, 0.7)
+	var b := blink(t, 0.7) * eye_k
 	var happy := env > 0.4
 	for sx in [-1.0, 1.0]:
 		var ec := Vector2(sx * 38, -44)
@@ -1242,7 +1244,7 @@ func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_onl
 		_glow(Vector2(sx * 62, -8), 19, 11, _blush())
 
 	# Глаза: большие, с вертикальным зрачком-овалом; при касании — довольно щурится
-	var b := blink(t, 2.1)
+	var b := blink(t, 2.1) * eye_k
 	var content := env > 0.25
 	for sx in [-1.0, 1.0]:
 		var ec := Vector2(sx * 38, -42)
