@@ -144,7 +144,6 @@
 		"Occluder3D",
 		"OccluderInstance3D",
 		"OccluderPolygon2D",
-		"OggPacketSequence",
 		"OpenXRAction",
 		"OpenXRActionMap",
 		"OpenXRActionSet",
