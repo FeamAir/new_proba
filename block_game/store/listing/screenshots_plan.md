@@ -27,7 +27,7 @@ Status: DRAFT. Nothing is uploaded. Publishing only after Vladimir's approval.
 | 3 | Wardrobe: hero in legendary item(s), golden/rainbow rarity frames visible | Dress up in legendary style | Легендарные наряды |
 | 4 | 3D home fully furnished in the best-looking style (e.g. owl "Stargazer" or kitten "Cozy Evening") | Your cozy 3D home | Уютный 3D-дом |
 | 5 | Decorate mode with the style tabs open | Decorate in 3 styles | Укрась дом в 3 стилях |
-| 6 | Crystal Forge with Master Hoot / мастер Ух, set card and legendary silhouette | Forge legendary items | Скуй легендарную вещь |
+| 6 | Crystal Forge with Master Hoot / мастер Ух, set card and legendary silhouette | Forge legendary items | Выкуй легендарную вещь |
 | 7 | Hall of Fame shelf with several trophies (3D home, camera at the shelf) | Win 10 trophies | Собери 10 кубков |
 | 8 | Cave map with the 10 halls | 100 levels, 10 crystal halls | 100 уровней, 10 залов |
 
