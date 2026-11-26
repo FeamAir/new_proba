@@ -39,6 +39,7 @@ const ForgeUI := preload("res://scripts/forge_ui.gd")
 const NoticeUI := preload("res://scripts/notice_ui.gd")
 const Home3D := preload("res://scripts/home3d/home3d.gd")  # 0.12: 3D-дома
 const TrophyUI := preload("res://scripts/trophy_ui.gd")  # 0.14: кубки залов
+const DecorateUI := preload("res://scripts/decorate_ui.gd")  # 0.15: режим украшения комнаты
 ## true — после очистки падают все группы поля (и камень уровня над дырами ниже линии);
 ## false — только то, что выше нижней очищенной линии (ниже неё поле не трогается).
 const FALL_ALL := false
@@ -112,6 +113,7 @@ var forge_ui                  # 0.12: Кристальная кузница
 var notice_ui                 # 0.12b: смена друга с возвратом, сообщение об обновлении гардероба
 var home3d                    # 0.12: 3D-дом на экране «Дом» (scripts/home3d/home3d.gd)
 var trophy_ui                 # 0.14: «Новый кубок!», кнопка «Кубки», полка славы 2D
+var decor_ui                  # 0.15: режим украшения комнаты (scripts/decorate_ui.gd)
 
 var fall_timer := 0.0
 var lock_timer := 0.0
@@ -167,6 +169,7 @@ func _ready() -> void:
 	forge_ui = ForgeUI.new(self)
 	notice_ui = NoticeUI.new(self)
 	trophy_ui = TrophyUI.new(self)
+	decor_ui = DecorateUI.new(self)
 	home3d = Home3D.new()
 	home3d.name = "Home3D"
 	add_child(home3d)
@@ -347,6 +350,10 @@ func fall_interval() -> float:
 
 
 func _set_state(s: State) -> void:
+	if s != State.HOME and decor_ui and decor_ui.active:
+		decor_ui.active = false  # 0.15: ушли с экрана «Дом» — режим украшения закрывается
+		decor_ui.tryon.clear()
+		decor_ui.spot = ""
 	state = s
 	state_time = 0.0
 
@@ -764,6 +771,8 @@ func _notification(what: int) -> void:
 		if notice_ui and notice_ui.active():
 			notice_ui.back()
 			return
+		if state == State.HOME and decor_ui and decor_ui.back():
+			return
 		if state == State.HOME and trophy_ui and trophy_ui.back():
 			return
 		match state:
@@ -838,6 +847,11 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 			go_home()
 			return
 		State.HOME:
+			if decor_ui and decor_ui.active:
+				# 0.15: режим украшения: панель и полоса — свои касания, остальное — камера 3D-дома
+				if not decor_ui.tap(pos) and home3d:
+					home3d.touch(idx, pos, true)
+				return
 			if trophy_ui and trophy_ui.tap_home(pos):
 				return
 			if not assist_ui.tap_home(pos) and not screens.tap_home(pos) and home3d:
@@ -979,6 +993,8 @@ func _draw() -> void:
 	match state:
 		State.HOME:
 			screens.draw_home()
+			if decor_ui and decor_ui.active:
+				return  # 0.15: в режиме украшения — только его полоса и панель (рисует screens.draw_home)
 			assist_ui.draw_home_goal()
 			if trophy_ui:
 				trophy_ui.draw_home()

@@ -160,12 +160,8 @@ func tap_home(pos: Vector2) -> bool:
 		return false
 	g.play("click")
 	if gl.home != "":
-		var it := Meta.item(gl.id)
-		for s in Meta.SPOTS:
-			if it.spots.has(Meta.spot_kind(s)):
-				g.screens.spot = s
-				break
-		g.screens.open_wardrobe("home")
+		# 0.15: украшение — режим украшения: место подбирается само, вещь сразу примеряется
+		g.decor_ui.open("", gl.id)
 	else:
 		g.screens.open_wardrobe(gl.slot, gl.id)
 	return true

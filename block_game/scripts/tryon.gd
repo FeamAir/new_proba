@@ -2,8 +2,10 @@ extends RefCounted
 ## Примерка в гардеробе (Cascado 0.7): некупленная вещь или украшение показываются
 ## временно, ничего не покупая. Купить — confirm(), отказаться — clear().
 ## Примерка не сохраняется: в save.cfg попадают только купленные вещи (meta.gd).
+## 0.15: примерка варианта стен / пола / света комнаты (start_room, room()).
 
 const Meta := preload("res://scripts/meta.gd")
+const Catalog := preload("res://scripts/decor_catalog.gd")
 
 var id := ""        # что примеряем; "" — примерки нет
 var home := ""      # для украшения — дом героя
@@ -16,6 +18,17 @@ func active() -> bool:
 
 func is_decor() -> bool:
 	return active() and Meta.item(id).has("home")
+
+
+## 0.15: примеряется вариант слоя стиля комнаты
+func is_room() -> bool:
+	return active() and Catalog.is_room_item(id)
+
+
+func start_room(h: String, item_id: String) -> void:
+	id = item_id
+	home = h
+	spot = ""
 
 
 func start_item(item_id: String) -> void:
@@ -52,11 +65,29 @@ func placed(meta, h: String) -> Dictionary:
 	return d
 
 
+## 0.15: повороты вещей для рисования (у примеряемой — без поворота)
+func rots(meta, h: String) -> Dictionary:
+	var r: Dictionary = meta.decor_rot.get(h, {}).duplicate()
+	if is_decor() and h == home:
+		r.erase(spot)
+	return r
+
+
+## 0.15: стиль комнаты для рисования: выбранный, а в слое примерки — примеряемый вариант
+func room(meta, h: String) -> Dictionary:
+	var st: Dictionary = meta.room_of(h)
+	if is_room() and h == home:
+		st[Catalog.room_item(id).layer] = id
+	return st
+
+
 ## Можно ли купить: "ok", "poor" (не хватает осколков), "locked" (условие: звёзды / зал).
 func status(meta, total_stars: int, max_level: int) -> String:
 	if not active():
 		return "locked"
 	if Meta.lock_reason(id, total_stars, max_level) != "":
+		return "locked"
+	if is_room() and Catalog.room_item(id).house != meta.hero:
 		return "locked"
 	if Meta.owner_of(id) != "" and Meta.owner_of(id) != meta.hero:
 		return "locked"  # 0.12b: чужую вещь не купить
@@ -66,6 +97,8 @@ func status(meta, total_stars: int, max_level: int) -> String:
 
 
 func price() -> int:
+	if is_room():
+		return int(Catalog.room_item(id).get("price", 0))
 	return int(Meta.item(id).get("price", 0))
 
 
@@ -80,7 +113,9 @@ func confirm(meta, total_stars: int, max_level: int) -> String:
 	if not active():
 		return "locked"
 	var res: String
-	if is_decor():
+	if is_room():
+		res = meta.buy_room(home, id, total_stars, max_level)
+	elif is_decor():
 		res = meta.buy_decor(home, spot, id, total_stars, max_level)
 	else:
 		res = meta.buy_item(id, total_stars, max_level)

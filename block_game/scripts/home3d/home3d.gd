@@ -239,7 +239,7 @@ func _build(k: String, st: int) -> void:
 	vp.audio_listener_enable_3d = false
 	add_child(vp)
 	room = ROOMS[k].new()
-	room.setup(k, st, g.meta.decor_placed.get(k, {}), g.meta.outfit(), quality == "high")
+	room.setup(k, st, g.meta.decor_placed.get(k, {}), g.meta.outfit(), quality == "high", g.meta.decor_rot.get(k, {}), g.meta.room_of(k))
 	room.trophies_done = Meta.trophies(g.max_level)
 	room.trophies_hidden = g.meta.trophies_pending(g.max_level)
 	reveal_halls = []
@@ -308,16 +308,29 @@ func target_rect() -> Rect2:
 ## Украшения, наряд, метки и кольцо примерки — каждый кадр (дёшево: меняется только то, что изменилось)
 func _sync(delta: float) -> void:
 	var sc = g.screens
+	var du = g.decor_ui
+	var decorating: bool = du != null and du.active and mode == "home"
 	if mode == "stage":
-		room.set_placed(sc.tryon.placed(g.meta, kind))
+		room.set_placed(sc.tryon.placed(g.meta, kind), g.meta.decor_rot.get(kind, {}))
+		room.set_style(g.meta.room_of(kind))
 		if room.highlight != sc.spot:
 			room.set_highlight(sc.spot)
 		if _stage_spot != sc.spot:
 			_stage_spot = sc.spot
 			room.focus_spot(sc.spot)
 		room.cam.idle_sway = 0.12
+	elif decorating:
+		# 0.15: режим украшения: примерка вещи / стиля комнаты, выбранное место подсвечено кольцом
+		room.set_placed(du.tryon.placed(g.meta, kind), du.tryon.rots(g.meta, kind))
+		room.set_style(du.tryon.room(g.meta, kind))
+		if room.highlight != du.spot:
+			room.set_highlight(du.spot)
+		_stage_spot = ""
+		show_spot = ""
+		room.cam.idle_sway = 0.0
 	else:
-		room.set_placed(g.meta.decor_placed.get(kind, {}))
+		room.set_placed(g.meta.decor_placed.get(kind, {}), g.meta.decor_rot.get(kind, {}))
+		room.set_style(g.meta.room_of(kind))
 		if room.highlight != "":
 			room.set_highlight("")
 		if show_spot != "" and mode == "home":
@@ -329,7 +342,7 @@ func _sync(delta: float) -> void:
 			if _pending_spot == "":
 				room.cam.fly_home()
 		room.cam.idle_sway = 0.0
-	room.set_markers(true)
+	room.set_markers(decorating or mode == "stage")  # 0.15: метки «+» — только в режиме украшения
 	room.set_outfit(g.meta.outfit())
 	# 0.14: кубки (общие для всех героев) и что сейчас в фокусе камеры
 	var hid: Array = g.meta.trophies_pending(g.max_level).filter(func(n): return not reveal_halls.has(n))
@@ -341,10 +354,9 @@ func _sync(delta: float) -> void:
 		if _pending_t <= 0.0:
 			var s := _pending_spot
 			_pending_spot = ""
-			if mode == "home":
+			if mode == "home" and du != null and not du.active:
 				g.play("click")
-				sc.spot = s
-				sc.open_wardrobe("home")
+				du.open(s)  # 0.15: касание по вещи — режим украшения, место выбрано
 
 
 # ---------- Рисование ----------
@@ -400,6 +412,9 @@ func _on_tap(p: Vector2) -> void:
 	if mode != "home":
 		return
 	var c: Dictionary = room.pick(p, 110.0 * room.cam.px_scale)
+	if g.decor_ui and g.decor_ui.active:
+		g.decor_ui.tap_3d(c)  # 0.15: место — выбрать; мимо — снять выбор (из режима не выходим)
+		return
 	if c.is_empty():
 		return
 	if c.type == "hero":
@@ -417,6 +432,9 @@ func _on_tap(p: Vector2) -> void:
 
 func _on_double_tap(p: Vector2) -> void:
 	if mode != "home":
+		return
+	if g.decor_ui and g.decor_ui.active:
+		_on_tap(p)
 		return
 	_pending_spot = ""
 	var c: Dictionary = room.pick(p, 130.0 * room.cam.px_scale)
@@ -452,7 +470,10 @@ func focus_trophy(n: int) -> void:
 ## Сдвиг картинки по вертикали: в обзоре — как раньше; у полки и кубка — меньше (плавно)
 func _v_offset_goal() -> float:
 	var goal := -0.42
-	if room.focused_trophy() > 0 or room.focused_shelf():
+	if g.decor_ui and g.decor_ui.active:
+		# 0.15: режим украшения: снизу панель выше — центр видимой части дома выше середины экрана
+		goal = -0.26 * room.cam.dist
+	elif room.focused_trophy() > 0 or room.focused_shelf():
 		goal = -0.42 * clampf(room.cam.dist / maxf(0.1, room.cam.home_dist), 0.0, 1.0) * 0.75
 	var cur: float = room.cam.v_offset
 	if cur == 0.0 or absf(cur - goal) < 0.002:
@@ -469,7 +490,7 @@ func _reveal_step(delta: float) -> void:
 			reveal_t = -1.0
 			reveal_halls = []
 		return
-	if _home_time < REVEAL_AFTER or room.shelf == null or room.cam.is_touching() or _pending_spot != "":
+	if _home_time < REVEAL_AFTER or room.shelf == null or room.cam.is_touching() or _pending_spot != "" or (g.decor_ui and g.decor_ui.active):
 		return
 	var p: Array = g.meta.trophies_pending(g.max_level)
 	if p.is_empty():

@@ -36,6 +36,11 @@ func _init() -> void:
 	}
 	for s in ["floor_l", "floor_r"]:
 		spots[s]["mark"] = Vector3(0, 0.3, 0)
+	# 0.15: места-заготовки (типы — scripts/decor_data/puppy.gd): второе «рядом» — слева от щенка,
+	# второй подвес «tree» — ближе к стволу на той же ветке
+	spots["near_2"] = {"pos": Vector3(-0.95, 0.0, 1.45), "yaw": -0.25, "mark": Vector3(0, 0.3, 0)}
+	spots["tree"] = {"pos": tree_p + (Vector3.ZERO - tree_p).normalized() * 0.85 + Vector3(0, 2.06, 0), "yaw": PI - TREE_A,
+		"mark": Vector3(0, -0.8, 0)}
 	# 0.14: полка славы — деревянный стенд «доска почёта» в саду справа от будки (не загораживает скалу с местом «стена справа»)
 	var sp_pos := Vector3(3.1, 0, -0.45)
 	shelf_def = {"style": "puppy", "pos": sp_pos, "yaw": face_to(sp_pos, Vector3(-0.3, 0, 2.6)), "rows": [[0.52, 0.0], [0.94, 0.0]],
@@ -159,6 +164,7 @@ func _ground(h: Node3D) -> void:
 	mi.mesh = _geo["ground"]
 	mi.material_override = vmat(1.0, 0.1)
 	h.add_child(mi)
+	floor_parts.append(mi)  # 0.15: стиль «пол» — земля и трава
 	# травинки колышутся (шейдер)
 	if not _geo.has("blade"):
 		_geo["blade"] = tube([Vector3(0, 0, 0), Vector3(0.01, 0.09, 0), Vector3(0.04, 0.2, 0)], 0.018, 0.002, 3)
@@ -242,8 +248,9 @@ func _fence(h: Node3D) -> void:
 		var b := Basis(Vector3.UP, face_center(a))
 		xfs.append(Transform3D(b, p + Vector3(0, 0.45, 0)))
 		tops.append(Transform3D(b, p + Vector3(0, 0.95, 0)))
-	scatter(h, box(Vector3(0.16, 0.9, 0.05)), mat(picket, 0.85), xfs)
-	scatter(h, prism(Vector3(0.16, 0.1, 0.05)), mat(picket, 0.85), tops)
+	# 0.15: стиль «стены» у щенка — забор и будка
+	wall_parts.append(scatter(h, box(Vector3(0.16, 0.9, 0.05)), mat(picket, 0.85), xfs))
+	wall_parts.append(scatter(h, prism(Vector3(0.16, 0.1, 0.05)), mat(picket, 0.85), tops))
 	# две перекладины — трубками по дуге
 	for y in [0.3, 0.72]:
 		var pts := []
@@ -343,6 +350,7 @@ func _rock(h: Node3D) -> void:
 func _doghouse(h: Node3D) -> void:
 	var d := node(h)
 	casters.append(d)
+	wall_parts.append(d)
 	var wood := mat(Color("#C88A58"), 0.85)
 	var wood_d := mat(Color("#9E6640"), 0.85)
 	var W := 1.3

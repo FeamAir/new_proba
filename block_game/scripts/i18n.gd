@@ -762,14 +762,22 @@ const STR := {
 
 ## Строка на текущем языке; нет перевода — английская; нет и её — сам ключ.
 static func has(key: String) -> bool:
-	return STR[DEFAULT].has(key)
+	return STR[DEFAULT].has(key) or STR_015[DEFAULT].has(key)
+
+
+## Есть ли ключ в языке l (в основном словаре или в блоке 0.15)
+static func has_in(l: String, key: String) -> bool:
+	return STR.get(l, {}).has(key) or STR_015.get(l, {}).has(key)
 
 
 static func t(key: String) -> String:
 	var d: Dictionary = STR.get(lang, {})
 	if d.has(key):
 		return d[key]
-	return STR[DEFAULT].get(key, key)
+	var d2: Dictionary = STR_015.get(lang, {})
+	if d2.has(key):
+		return d2[key]
+	return STR[DEFAULT].get(key, STR_015[DEFAULT].get(key, key))
 
 
 ## Язык по коду языка телефона (OS.get_locale_language()): знакомый — он, иначе английский.
@@ -824,10 +832,13 @@ static func missing_keys() -> Array:
 	for l in LANGS:
 		for k in STR[l]:
 			all[k] = true
+		for k in STR_015.get(l, {}):
+			all[k] = true
 	var out: Array = []
 	for l in LANGS:
 		for k in all:
-			if not STR[l].has(k) or String(STR[l][k]).strip_edges() == "":
+			var v = STR[l].get(k, STR_015.get(l, {}).get(k, ""))
+			if String(v).strip_edges() == "":
 				out.append("%s:%s" % [l, k])
 	return out
 
@@ -844,3 +855,197 @@ static func load_from(cfg: ConfigFile, os_lang: String) -> void:
 
 static func save_to(cfg: ConfigFile) -> void:
 	cfg.set_value("settings", "language", lang)
+
+
+# ---------- 0.15: украшение комнаты ----------
+## Тексты режима украшения, стилей и вариантов комнаты. Дизайнеры дописывают названия своих вещей
+## (item_<id>), вариантов (room_<id>) и мест (spot_<id>, по желанию) в раздел своего дома —
+## так правки разных домов не пересекаются. t() ищет ключ и здесь.
+const STR_015 := {
+	"en": {
+		# общее
+		"decorate": "Decorate",
+		"dec_done": "Done",
+		"dec_tab_items": "Items",
+		"dec_tab_room": "Room",
+		"dec_all": "All",
+		"mood_n": "Mood %d",
+		"dec_pick_spot": "Tap «+» in the room or pick an item",
+		"dec_remove": "Remove",
+		"dec_placed": "Placed",
+		"dec_place": "Place",
+		"dec_move": "Move here",
+		"dec_choose": "Choose",
+		"dec_chosen": "Chosen",
+		"dec_no_fit": "Nothing of this style fits here",
+		"layer_walls": "Walls",
+		"layer_floor": "Floor",
+		"layer_light": "Light",
+		"spot_kind_floor": "Floor",
+		"spot_kind_near": "Nearby",
+		"spot_kind_wall": "Wall",
+		"spot_kind_shelf": "Shelf",
+		"spot_kind_hang": "Top",
+		"spot_kind_window": "Window sill",
+		"spot_kind_big": "Big spot",
+		# owl
+		"dstyle_owl_nook": "Reading Nook",
+		"dstyle_owl_stars": "Stargazer",
+		"dstyle_owl_potions": "Potion Workshop",
+		"room_owl_walls_bark": "Bark",
+		"room_owl_walls_moss": "Mossy walls",
+		"room_owl_walls_starry": "Starry paint",
+		"room_owl_walls_runes": "Glowing runes",
+		"room_owl_floor_leaves": "Leaf litter",
+		"room_owl_floor_rug": "Woven rug",
+		"room_owl_floor_stars": "Constellation rug",
+		"room_owl_floor_roots": "Glow roots",
+		"room_owl_light_moon": "Moonlit night",
+		"room_owl_light_lamp": "Warm lamplight",
+		"room_owl_light_firefly": "Firefly evening",
+		"room_owl_light_aurora": "Aurora",
+		# axolotl
+		"dstyle_axo_coral": "Coral Garden",
+		"dstyle_axo_ship": "Sunken Treasure",
+		"dstyle_axo_glow": "Deep Glow",
+		"room_axo_walls_stone": "Stone grotto",
+		"room_axo_walls_pearl": "Mother-of-pearl",
+		"room_axo_walls_planks": "Ship planks",
+		"room_axo_walls_veins": "Glow veins",
+		"room_axo_floor_sand": "White sand",
+		"room_axo_floor_pink": "Pink shell sand",
+		"room_axo_floor_coins": "Coin sand",
+		"room_axo_floor_dark": "Dark glitter sand",
+		"room_axo_light_sun": "Sun rays",
+		"room_axo_light_sunset": "Underwater sunset",
+		"room_axo_light_party": "Party bubbles",
+		"room_axo_light_abyss": "Abyss dark",
+		# puppy
+		"dstyle_pup_picnic": "Garden Picnic",
+		"dstyle_pup_camp": "Campfire Camp",
+		"dstyle_pup_skate": "Skate Park",
+		"room_pup_walls_picket": "Picket fence",
+		"room_pup_walls_logs": "Log palisade",
+		"room_pup_walls_ivy": "Ivy stone wall",
+		"room_pup_walls_paint": "Painted concrete",
+		"room_pup_floor_lawn": "Lawn",
+		"room_pup_floor_meadow": "Flower meadow",
+		"room_pup_floor_pine": "Pine needles",
+		"room_pup_floor_court": "Court asphalt",
+		"room_pup_light_stars": "Starry night",
+		"room_pup_light_sunset": "Summer sunset",
+		"room_pup_light_party": "Party lights",
+		"room_pup_light_neon": "Street neon",
+		"layer_walls_puppy": "Fence",
+		"layer_floor_puppy": "Ground",
+		# kitten
+		"dstyle_kit_cozy": "Cozy Evening",
+		"dstyle_kit_rock": "Rock Loft",
+		"dstyle_kit_studio": "Star Studio",
+		"room_kit_walls_beams": "Wooden beams",
+		"room_kit_walls_floral": "Floral wallpaper",
+		"room_kit_walls_brick": "Brick wall",
+		"room_kit_walls_night": "Night sky",
+		"room_kit_floor_planks": "Planks",
+		"room_kit_floor_knit": "Knitted rug",
+		"room_kit_floor_checker": "Checker tiles",
+		"room_kit_floor_paint": "Paint-splash floor",
+		"room_kit_light_lamp": "Warm lamp",
+		"room_kit_light_moon": "Moonlight",
+		"room_kit_light_fairy": "Fairy lights",
+		"room_kit_light_neon": "Neon stage",
+	},
+	"ru": {
+		# общее
+		"decorate": "Украсить",
+		"dec_done": "Готово",
+		"dec_tab_items": "Вещи",
+		"dec_tab_room": "Комната",
+		"dec_all": "Все",
+		"mood_n": "Настроение %d",
+		"dec_pick_spot": "Нажми «+» в комнате или выбери вещь",
+		"dec_remove": "Убрать",
+		"dec_placed": "Стоит",
+		"dec_place": "Поставить",
+		"dec_move": "Переставить",
+		"dec_choose": "Выбрать",
+		"dec_chosen": "Выбрано",
+		"dec_no_fit": "Сюда нет вещей этого стиля",
+		"layer_walls": "Стены",
+		"layer_floor": "Пол",
+		"layer_light": "Свет",
+		"spot_kind_floor": "Пол",
+		"spot_kind_near": "Рядом",
+		"spot_kind_wall": "Стена",
+		"spot_kind_shelf": "Полка",
+		"spot_kind_hang": "Сверху",
+		"spot_kind_window": "Подоконник",
+		"spot_kind_big": "Большое место",
+		# owl
+		"dstyle_owl_nook": "Книжный уголок",
+		"dstyle_owl_stars": "Звездочёт",
+		"dstyle_owl_potions": "Лавка зелий",
+		"room_owl_walls_bark": "Кора",
+		"room_owl_walls_moss": "Мшистые стены",
+		"room_owl_walls_starry": "Звёздная роспись",
+		"room_owl_walls_runes": "Светящиеся руны",
+		"room_owl_floor_leaves": "Опавшие листья",
+		"room_owl_floor_rug": "Плетёный коврик",
+		"room_owl_floor_stars": "Ковёр-созвездие",
+		"room_owl_floor_roots": "Светящиеся корни",
+		"room_owl_light_moon": "Лунная ночь",
+		"room_owl_light_lamp": "Тёплая лампа",
+		"room_owl_light_firefly": "Светлячки",
+		"room_owl_light_aurora": "Северное сияние",
+		# axolotl
+		"dstyle_axo_coral": "Коралловый сад",
+		"dstyle_axo_ship": "Затонувший корабль",
+		"dstyle_axo_glow": "Сияние бездны",
+		"room_axo_walls_stone": "Каменный грот",
+		"room_axo_walls_pearl": "Перламутр",
+		"room_axo_walls_planks": "Корабельные доски",
+		"room_axo_walls_veins": "Светящиеся прожилки",
+		"room_axo_floor_sand": "Белый песок",
+		"room_axo_floor_pink": "Розовый песок с ракушками",
+		"room_axo_floor_coins": "Монеты в песке",
+		"room_axo_floor_dark": "Чёрный песок с огоньками",
+		"room_axo_light_sun": "Солнечные лучи",
+		"room_axo_light_sunset": "Закат под водой",
+		"room_axo_light_party": "Праздничные пузыри",
+		"room_axo_light_abyss": "Тьма бездны",
+		# puppy
+		"dstyle_pup_picnic": "Сад и пикник",
+		"dstyle_pup_camp": "Поход",
+		"dstyle_pup_skate": "Скейт-парк",
+		"room_pup_walls_picket": "Деревянный штакетник",
+		"room_pup_walls_logs": "Частокол из брёвен",
+		"room_pup_walls_ivy": "Каменная ограда с плющом",
+		"room_pup_walls_paint": "Цветная бетонная стена",
+		"room_pup_floor_lawn": "Газон",
+		"room_pup_floor_meadow": "Цветочный луг",
+		"room_pup_floor_pine": "Лесная хвоя и шишки",
+		"room_pup_floor_court": "Площадка с разметкой",
+		"room_pup_light_stars": "Звёздная ночь",
+		"room_pup_light_sunset": "Летний закат",
+		"room_pup_light_party": "Праздничные огоньки",
+		"room_pup_light_neon": "Неон улицы",
+		"layer_walls_puppy": "Забор",
+		"layer_floor_puppy": "Земля",
+		# kitten
+		"dstyle_kit_cozy": "Уютный вечер",
+		"dstyle_kit_rock": "Рок-чердак",
+		"dstyle_kit_studio": "Звёздная мастерская",
+		"room_kit_walls_beams": "Деревянные балки",
+		"room_kit_walls_floral": "Обои в цветочек",
+		"room_kit_walls_brick": "Кирпич",
+		"room_kit_walls_night": "Ночное небо",
+		"room_kit_floor_planks": "Доски",
+		"room_kit_floor_knit": "Вязаный коврик",
+		"room_kit_floor_checker": "Шахматная плитка",
+		"room_kit_floor_paint": "Пол в брызгах краски",
+		"room_kit_light_lamp": "Тёплая лампа",
+		"room_kit_light_moon": "Лунный свет",
+		"room_kit_light_fairy": "Праздничные огоньки",
+		"room_kit_light_neon": "Неон и прожекторы",
+	},
+}

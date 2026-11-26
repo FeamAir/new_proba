@@ -45,6 +45,15 @@ func _init() -> void:
 		elif s == "hang":
 			mark = Vector3(0, -0.85, 0)
 		spots[s] = {"pos": dir(a) * r + Vector3(0, d[2], 0), "yaw": face_center(a), "mark": mark, "stand": Vector3(0, 0.07, 0.24)}
+	# 0.15: места-заготовки (типы — scripts/decor_data/owl.gd): подоконник дупла, полка на стене слева от камеры
+	# (между грибами-трутовиками, далеко от полки славы), второе «рядом» — слева от гнезда
+	spots["window"] = {"pos": dir(WIN_ANG) * (wall_r(WIN_Y) - 0.22) + Vector3(0, WIN_Y - WIN_HALF_H + 0.11, 0), "yaw": face_center(WIN_ANG),
+		"mark": Vector3(0, 0.3, 0.1)}
+	var sa := deg_to_rad(155.0)
+	spots["shelf_l"] = {"pos": dir(sa) * (wall_r(1.55) - 0.04) + Vector3(0, 1.55, 0), "yaw": face_center(sa), "mark": Vector3(0, 0.3, 0.32),
+		"stand": Vector3(0, 0.07, 0.24)}
+	var na := deg_to_rad(152.0)
+	spots["near_2"] = {"pos": dir(na) * 1.12, "yaw": face_center(na), "mark": Vector3(0, 0.3, 0)}
 	# 0.14: полка славы — на стене напротив окна (за спиной камеры в обычном обзоре; места украшений не занимает)
 	shelf_def = {"style": "owl", "pos": dir(PI / 2.0) * R, "yaw": face_center(PI / 2.0), "room_r": R,
 		"rows": [[1.2, wall_r(1.2) - 0.06], [1.78, wall_r(1.78) - 0.06]], "spacing": 0.42, "scale": 1.15, "depth": 0.34,
@@ -110,6 +119,7 @@ func _walls(h: Node3D) -> void:
 	mi.mesh = _geo["walls"]
 	mi.material_override = vmat(0.95, 0.15)
 	h.add_child(mi)
+	wall_parts.append(mi)  # 0.15: стиль «стены» красит кору
 	# грибы-трутовики на стенах — маленькие «полочки» для уюта (больше на поздних ступенях)
 	var n_f := 3 if stage == 0 else 5
 	for k in n_f:
@@ -196,6 +206,7 @@ func _floor(h: Node3D) -> void:
 	mi.mesh = _geo["floor"]
 	mi.material_override = vmat(1.0, 0.1)
 	h.add_child(mi)
+	floor_parts.append(mi)  # 0.15: стиль «пол»
 	# опавшие листики по полу (MultiMesh — дёшево)
 	var xfs := []
 	var leaf_cols := [Color("#C98A3E"), Color("#B5603A"), Color("#D6AE55"), Color("#7FA552"), Color("#A85A5E")]
@@ -210,6 +221,8 @@ func _floor(h: Node3D) -> void:
 		var a := TAU * i / 9.0 + 0.3
 		var skip := false
 		for s in ["floor_l", "floor_r"]:
+			if not spots.has(s):
+				continue
 			var sp: Vector3 = spots[s].pos
 			if absf(angle_difference(a, atan2(sp.z, sp.x))) < 0.35:
 				skip = true

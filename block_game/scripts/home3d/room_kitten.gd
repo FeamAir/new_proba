@@ -15,6 +15,8 @@ const WIN_R := 0.62
 
 static var _geo := {}
 var _surf: ShaderMaterial
+var _shell_mi: MeshInstance3D
+var _shell_mat: ShaderMaterial
 
 
 static func roof_y(x: float) -> float:
@@ -36,6 +38,11 @@ func _init() -> void:
 	}
 	for s in ["floor_l", "floor_r", "near"]:
 		spots[s]["mark"] = Vector3(0, 0.3, 0)
+	# 0.15: места-заготовки (типы — scripts/decor_data/kitten.gd): подоконник круглого окна (левая половина),
+	# низкая полка в левом углу (под «стеной слева»), второе «рядом» — слева от корзинки
+	spots["window"] = {"pos": Vector3(-0.42, WIN_C.y - WIN_R - 0.08, back + 0.12), "yaw": 0.0, "mark": Vector3(0, 0.3, 0.1)}
+	spots["shelf_low"] = {"pos": Vector3(-2.35, 0.6, back), "yaw": 0.0, "mark": Vector3(0, 0.3, 0.3), "stand": Vector3(0, 0.04, 0.17)}
+	spots["near_2"] = {"pos": Vector3(-0.98, 0, 0.5), "yaw": 0.4, "mark": Vector3(0, 0.3, 0)}
 	# 0.14: полка славы — застеклённая витрина у стены напротив окна (за спиной камеры в обычном обзоре)
 	shelf_def = {"style": "kitten", "pos": Vector3(0, 0, HL - 0.02), "yaw": PI, "rows": [[1.0, 0.0], [1.47, 0.0]],
 		"spacing": 0.34, "scale": 0.95, "depth": 0.36, "front_z": 0.19, "plaque_z": 0.165, "plaque_y": -0.035,
@@ -110,6 +117,25 @@ func _build_house(h: Node3D) -> void:
 	shader_swarm(h, "flies", 4 + stage * 3, {"center": Vector3(0, 2.2, -0.5), "spread": Vector3(1.6, 0.6, 1.6), "col": Color(1.0, 0.85, 0.6, 1.0), "size": 0.03})
 
 
+# ---------- 0.15: стиль комнаты (пол и стены — одна сетка, свой материал с двумя оттенками) ----------
+
+func apply_walls(id: String) -> void:
+	_shell_tint("wall_tint", Catalog.room_item(id).get("tint", Color(1, 1, 1)))
+
+
+func apply_floor(id: String) -> void:
+	_shell_tint("floor_tint", Catalog.room_item(id).get("tint", Color(1, 1, 1)))
+
+
+func _shell_tint(param: String, c: Color) -> void:
+	if _shell_mi == null:
+		return
+	if _shell_mat == null:
+		_shell_mat = _surf.duplicate()
+		_shell_mi.material_override = _shell_mat
+	_shell_mat.set_shader_parameter(param, Vector3(c.r, c.g, c.b))
+
+
 # ---------- Пол, стены, крыша ----------
 
 func _shell(h: Node3D) -> void:
@@ -119,6 +145,9 @@ func _shell(h: Node3D) -> void:
 	mi.mesh = _geo["shell"]
 	mi.material_override = _surf
 	h.add_child(mi)
+	# 0.15: пол и стены чердака — одна сетка; стиль красит их своим материалом (apply_walls / apply_floor ниже)
+	_shell_mi = mi
+	wall_parts.append(mi)
 
 
 func _shell_mesh() -> ArrayMesh:

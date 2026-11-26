@@ -226,6 +226,16 @@ var owned: Array = []        # id купленных вещей
 var equipped: Dictionary = {}  # слот -> id
 var decor_owned: Array = []    # id купленных украшений (свои для каждого дома)
 var decor_placed: Dictionary = {"owl": {}, "axolotl": {}, "puppy": {}, "kitten": {}}  # дом -> {место -> id}
+## 0.15: текущая расстановка дома — decor_placed (место -> id) + decor_rot (место -> поворот, шаги по 45°: 0..7)
+## + room_style (слой -> id варианта). Это всегда то же, что в текущем настроении moods[дом][mood_cur[дом]].
+var decor_rot: Dictionary = {"owl": {}, "axolotl": {}, "puppy": {}, "kitten": {}}
+var room_style: Dictionary = {}
+## 0.15: купленные варианты стен / пола / света (бесплатные первые не записываются)
+var room_owned: Array = []
+## 0.15: настроения: дом -> [3 × {"placed": {}, "rot": {}, "room": {}}]; {} — настроение ещё не трогали
+## (при первом выборе становится копией текущего). mood_cur: дом -> номер 0..2
+var moods: Dictionary = {}
+var mood_cur: Dictionary = {}
 var forged: Array = []         # 0.12: id скованных в кузнице вещей
 ## 0.12b: осколки, вернувшиеся при обновлении старого сохранения (общие вещи убраны);
 ## пока не 0 — один раз показывается сообщение «Гардероб обновлён» (scripts/notice_ui.gd).
@@ -280,8 +290,18 @@ static func slot_name(slot: String) -> String:
 	return I18n.t("slot_" + slot)
 
 
-static func spot_name(spot: String) -> String:
-	return I18n.t("spot_" + spot)
+static func spot_name(spot: String, home := "") -> String:
+	if I18n.has("spot_" + spot) or home == "":
+		return I18n.t("spot_" + spot)
+	# 0.15: новое место без своего названия — «Полка 2», «Пол 3»: тип и номер среди мест этого типа
+	var k := Catalog.spot_kind(spot, home)
+	var n := 0
+	for s in Catalog.spots(home):
+		if s.kind == k:
+			n += 1
+		if s.id == spot:
+			break
+	return I18n.t("spot_kind_" + k) + (" %d" % n if n > 1 else "")
 
 
 ## kind — герой: у окрасок для разных героев свои названия (ключ item_<id>_<герой>, если есть).
@@ -417,13 +437,14 @@ static func item(id: String) -> Dictionary:
 	return {}
 
 
-static func spot_kind(spot: String) -> String:
-	return spot.trim_suffix("_l").trim_suffix("_r")
+## Тип места (0.15: по каталогу дома; без дома — по любому дому, где оно есть)
+static func spot_kind(spot: String, home := "") -> String:
+	return Catalog.spot_kind(spot, home)
 
 
-static func decor_for(home: String, spot: String) -> Array:
-	var k := spot_kind(spot)
-	return DECOR.filter(func(it): return it.home == home and it.spots.has(k))
+## Украшения дома для места (0.15: style — фильтр по стилю, "" — все)
+static func decor_for(home: String, spot: String, style := "") -> Array:
+	return Catalog.decor_for(home, spot, style)
 
 
 ## Ступень богатства дома (0..3) по пройденным залам: 1 зал — ступень 1,
@@ -475,6 +496,8 @@ static func put_on(o: Dictionary, id: String) -> void:
 ## Пустая строка — условие выполнено; иначе — почему вещь закрыта.
 static func lock_reason(id: String, total_stars: int, max_level: int) -> String:
 	var it := item(id)
+	if it.is_empty():
+		it = Catalog.room_item(id)  # 0.15: вариант стен / пола / света
 	if it.is_empty():
 		return "?"
 	if it.has("stars") and total_stars < int(it.stars):
@@ -655,6 +678,9 @@ func refund_value(kind: String) -> int:
 	for id in decor_owned:
 		if item(id).get("home", "") == kind:
 			n += int(item(id).get("price", 0))
+	for id in room_owned:  # 0.15: стены / пол / свет его дома
+		if Catalog.room_item(id).get("house", "") == kind:
+			n += int(Catalog.room_item(id).get("price", 0))
 	return n
 
 
@@ -678,7 +704,8 @@ func switch_hero(h: String) -> int:
 		owned = owned.filter(func(id): return owner_of(id) != old)
 		forged = forged.filter(func(id): return owner_of(id) != old)
 		decor_owned = decor_owned.filter(func(id): return item(id).get("home", "") != old)
-		decor_placed[old] = {}
+		room_owned = room_owned.filter(func(id): return Catalog.room_item(id).get("house", "") != old)
+		_reset_home(old)  # 0.15: все три настроения дома — пустые, стиль комнаты — по умолчанию
 		shards += n
 	equipped = {}
 	hero = h
@@ -766,21 +793,29 @@ func placed_at(home: String, spot: String) -> String:
 
 ## Поставить купленное украшение на место своего дома (с прежнего места оно уходит).
 func place(home: String, spot: String, id: String) -> bool:
-	var it := item(id)
-	if not decor_owned.has(id) or it.get("home", "") != home or not SPOTS.has(spot) or not it.spots.has(spot_kind(spot)):
+	if not decor_owned.has(id) or not Catalog.fits(home, spot, id):
 		return false
 	var d: Dictionary = decor_placed.get(home, {})
+	var r: Dictionary = decor_rot.get(home, {})
 	for s in d.keys():
 		if d[s] == id:
 			d.erase(s)
+			r.erase(s)
+	if d.get(spot, "") != id:
+		r.erase(spot)  # новая вещь на месте — поворот сначала
 	d[spot] = id
 	decor_placed[home] = d
+	decor_rot[home] = r
+	_store_mood(home)
 	return true
 
 
 func remove_decor(home: String, spot: String) -> void:
 	if decor_placed.has(home):
 		decor_placed[home].erase(spot)
+	if decor_rot.has(home):
+		decor_rot[home].erase(spot)
+	_store_mood(home)
 
 
 ## Нажатие на украшение для места: стоит тут — убрать; куплено — поставить;
@@ -797,8 +832,7 @@ func tap_decor(home: String, spot: String, id: String) -> String:
 
 
 func fits_spot(home: String, spot: String, id: String) -> bool:
-	var it := item(id)
-	return it.get("home", "") == home and SPOTS.has(spot) and it.spots.has(spot_kind(spot))
+	return Catalog.fits(home, spot, id)
 
 
 ## Купить украшение и сразу поставить на место. Возвращает: "bought", "owned", "poor", "locked".
@@ -815,6 +849,186 @@ func buy_decor(home: String, spot: String, id: String, total_stars: int, max_lev
 		Buy.POOR:
 			return "poor"
 	return "locked"
+
+
+# ---------- 0.15: поворот вещи на месте ----------
+
+## Поворот вещи на месте: шаги по 45° (0..7)
+func rot_at(home: String, spot: String) -> int:
+	return int(decor_rot.get(home, {}).get(spot, 0))
+
+
+## Повернуть вещь на месте на steps шагов по 45° (+ — по часовой, если смотреть сверху). false — нечего / нельзя.
+func rotate_decor(home: String, spot: String, steps: int) -> bool:
+	var id := placed_at(home, spot)
+	if not Catalog.can_rotate(home, spot, id):
+		return false
+	var r: Dictionary = decor_rot.get(home, {})
+	var v := posmod(int(r.get(spot, 0)) + steps, 8)
+	if v == 0:
+		r.erase(spot)
+	else:
+		r[spot] = v
+	decor_rot[home] = r
+	_store_mood(home)
+	return true
+
+
+# ---------- 0.15: стиль комнаты (стены / пол / свет) ----------
+
+func room_of(home: String) -> Dictionary:
+	var st: Dictionary = Catalog.default_room(home)
+	st.merge(room_style.get(home, {}), true)
+	return st
+
+
+func room_is_owned(id: String) -> bool:
+	return Catalog.is_free(id) or room_owned.has(id)
+
+
+## Выбрать купленный (или бесплатный) вариант слоя для текущего настроения дома
+func set_room(home: String, id: String) -> bool:
+	var it := Catalog.room_item(id)
+	if it.is_empty() or it.house != home or not room_is_owned(id):
+		return false
+	var st := room_of(home)
+	st[it.layer] = id
+	room_style[home] = st
+	_store_mood(home)
+	return true
+
+
+## Нажатие на вариант слоя: куплен — выбрать ("on"); не куплен — "try" (примерка); чужой — "locked"
+func tap_room(home: String, id: String) -> String:
+	var it := Catalog.room_item(id)
+	if it.is_empty() or it.house != home:
+		return "locked"
+	if room_is_owned(id):
+		set_room(home, id)
+		return "on"
+	return "try"
+
+
+## Купить вариант слоя и сразу выбрать. "bought", "owned", "poor", "locked"
+func buy_room(home: String, id: String, total_stars: int, max_level: int) -> String:
+	var it := Catalog.room_item(id)
+	if it.is_empty() or it.house != home or (hero != "" and home != hero):
+		return "locked"
+	if room_is_owned(id):
+		set_room(home, id)
+		return "owned"
+	if lock_reason(id, total_stars, max_level) != "":
+		return "locked"
+	if shards < int(it.price):
+		return "poor"
+	shards -= int(it.price)
+	room_owned.append(id)
+	set_room(home, id)
+	return "bought"
+
+
+# ---------- 0.15: настроения (три сохранённые расстановки на дом) ----------
+
+func mood_of(home: String) -> int:
+	return int(mood_cur.get(home, 0))
+
+
+## Пустое (ещё не тронутое) настроение
+func mood_empty(home: String, i: int) -> bool:
+	var list: Array = moods.get(home, [])
+	return i >= list.size() or (list[i] as Dictionary).is_empty()
+
+
+## Стиль комнаты настроения i (для значка-превью); пустое — по умолчанию
+func mood_room(home: String, i: int) -> Dictionary:
+	if i == mood_of(home):
+		return room_of(home)
+	var st: Dictionary = Catalog.default_room(home)
+	if not mood_empty(home, i):
+		st.merge(moods[home][i].get("room", {}), true)
+	return st
+
+
+## Сколько вещей стоит в настроении i
+func mood_count(home: String, i: int) -> int:
+	if i == mood_of(home):
+		return decor_placed.get(home, {}).size()
+	return 0 if mood_empty(home, i) else (moods[home][i].get("placed", {}) as Dictionary).size()
+
+
+## Переключить настроение одним нажатием: купленное не пропадает, вещи просто переставляются.
+## Ещё не тронутое настроение начинается копией текущего.
+func switch_mood(home: String, i: int) -> bool:
+	if not HEROES.has(home) or i < 0 or i >= MOODS:
+		return false
+	if i == mood_of(home):
+		return true
+	_store_mood(home)
+	var fresh := mood_empty(home, i)
+	mood_cur[home] = i
+	if not fresh:
+		_load_mood(home, moods[home][i])
+	_store_mood(home)
+	return true
+
+
+## Записать текущую расстановку в текущее настроение
+func _store_mood(home: String) -> void:
+	if not HEROES.has(home):
+		return
+	var list: Array = moods.get(home, [])
+	while list.size() < MOODS:
+		list.append({})
+	list[mood_of(home)] = {"placed": decor_placed.get(home, {}).duplicate(), "rot": decor_rot.get(home, {}).duplicate(),
+		"room": room_of(home)}
+	moods[home] = list
+
+
+## Сделать текущей расстановку из словаря настроения (с проверкой: только купленное и подходящее)
+func _load_mood(home: String, m: Dictionary) -> void:
+	var cl := _clean_mood(home, m)
+	decor_placed[home] = cl.placed
+	decor_rot[home] = cl.rot
+	room_style[home] = cl.room
+
+
+## Проверить настроение из сохранения: вещи — купленные, своего дома, на подходящих местах, каждая один раз;
+## повороты — 1..7 и только у стоящих вещей; варианты слоёв — купленные или бесплатные
+func _clean_mood(home: String, m) -> Dictionary:
+	var out := {"placed": {}, "rot": {}, "room": Catalog.default_room(home)}
+	if not (m is Dictionary):
+		return out
+	var pl = m.get("placed", {})
+	var used := {}
+	if pl is Dictionary:
+		for sp in pl:
+			var id = pl[sp]
+			if sp is String and id is String and decor_owned.has(id) and Catalog.fits(home, sp, id) and not used.has(id):
+				out.placed[sp] = id
+				used[id] = true
+	var rt = m.get("rot", {})
+	if rt is Dictionary:
+		for sp in rt:
+			var v = rt[sp]
+			if out.placed.has(sp) and (v is int or v is float) and posmod(int(v), 8) != 0 and Catalog.can_rotate(home, sp, out.placed[sp]):
+				out.rot[sp] = posmod(int(v), 8)
+	var rm = m.get("room", {})
+	if rm is Dictionary:
+		for l in Catalog.LAYERS:
+			var id = rm.get(l, "")
+			if id is String and Catalog.room_item(id).get("house", "") == home and Catalog.room_item(id).layer == l and room_is_owned(id):
+				out.room[l] = id
+	return out
+
+
+## Дом с нуля: три пустых настроения, первое выбрано
+func _reset_home(home: String) -> void:
+	decor_placed[home] = {}
+	decor_rot[home] = {}
+	room_style[home] = Catalog.default_room(home)
+	mood_cur[home] = 0
+	moods[home] = [{}, {}, {}]
+	_store_mood(home)
 
 
 ## Выбрать героя (первый выбор или смена — с возвратом за прежнего, см. switch_hero).
@@ -890,6 +1104,11 @@ func display_name(kind: String) -> String:
 	return n if n != "" else hero_name(kind, gender_of(kind))
 
 
+func _init() -> void:
+	for h in HEROES:
+		_reset_home(h)
+
+
 # ---------- Сохранение ----------
 
 func save_to(cfg: ConfigFile) -> void:
@@ -899,6 +1118,12 @@ func save_to(cfg: ConfigFile) -> void:
 	cfg.set_value("meta", "equipped", equipped)
 	cfg.set_value("meta", "decor_owned", decor_owned)
 	cfg.set_value("meta", "decor_placed", decor_placed)
+	# 0.15: настроения (в каждом — расстановка, повороты, стиль комнаты), текущее настроение, купленные стили
+	for h in HEROES:
+		_store_mood(h)
+	cfg.set_value("meta", "decor_moods", moods)
+	cfg.set_value("meta", "decor_mood_cur", mood_cur)
+	cfg.set_value("meta", "room_owned", room_owned)
 	cfg.set_value("meta", "forged", forged)
 	cfg.set_value("meta", "notice_refund", notice_refund)
 	cfg.set_value("meta", "notice_sets", notice_sets)
@@ -984,17 +1209,41 @@ func load_from(cfg: ConfigFile) -> void:
 		for id in dow:
 			if id is String and item(id).has("home") and not decor_owned.has(id):
 				decor_owned.append(id)
-	decor_placed = {}
+	# 0.15: купленные стили комнат; настроения. В старом сохранении настроений нет —
+	# текущая расстановка становится «Настроением 1», стиль комнаты — по умолчанию
+	room_owned = []
+	var ro = cfg.get_value("meta", "room_owned", [])
+	if ro is Array:
+		for id in ro:
+			if id is String and Catalog.is_room_item(id) and not Catalog.is_free(id) and not room_owned.has(id):
+				room_owned.append(id)
 	for home in HEROES:
-		decor_placed[home] = {}
-	var dp = cfg.get_value("meta", "decor_placed", {})
-	if dp is Dictionary:
+		_reset_home(home)
+	var dm = cfg.get_value("meta", "decor_moods") if cfg.has_section_key("meta", "decor_moods") else null
+	var dc = cfg.get_value("meta", "decor_mood_cur", {})
+	if dm is Dictionary:
 		for home in HEROES:
-			var d = dp.get(home, {})
-			if d is Dictionary:
-				for spot in d:
-					if spot is String and d[spot] is String:
-						place(home, spot, d[spot])
+			var list = dm.get(home, [])
+			var cur = dc.get(home, 0) if dc is Dictionary else 0
+			var ci := clampi(int(cur), 0, MOODS - 1) if (cur is int or cur is float) else 0
+			var ml: Array = [{}, {}, {}]
+			if list is Array:
+				for i in mini(list.size(), MOODS):
+					if list[i] is Dictionary and not (list[i] as Dictionary).is_empty():
+						ml[i] = _clean_mood(home, list[i])
+			moods[home] = ml
+			mood_cur[home] = ci
+			_load_mood(home, ml[ci])
+			_store_mood(home)
+	else:
+		var dp = cfg.get_value("meta", "decor_placed", {})
+		if dp is Dictionary:
+			for home in HEROES:
+				var d = dp.get(home, {})
+				if d is Dictionary:
+					for spot in d:
+						if spot is String and d[spot] is String:
+							place(home, spot, d[spot])
 	equipped = {}
 	var e = cfg.get_value("meta", "equipped", {})
 	if e is Dictionary:

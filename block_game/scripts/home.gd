@@ -9,6 +9,7 @@ extends RefCounted
 ## stage 0..3 — «дом богатеет» по пройденным залам (Meta.home_stage), украшения — поверх.
 
 const Hero := preload("res://scripts/hero.gd")
+const Catalog := preload("res://scripts/decor_catalog.gd")
 const OUT := Color("#1E1236")
 
 ## Места для украшений в координатах сцены: точка и масштаб.
@@ -71,12 +72,27 @@ func to_screen(v: Vector2) -> Vector2:
 	return origin + v * scale
 
 
+## 0.15: точка и масштаб места в 2D: старые шесть — SPOTS, новые — "p2d" из каталога; нет — пусто
+static func spot_def(kind: String, spot: String) -> Array:
+	if SPOTS.get(kind, {}).has(spot):
+		return SPOTS[kind][spot]
+	return Catalog.spot(kind, spot).get("p2d", [])
+
+
+## Висит ли вещь места на нитке (тип «сверху» в доме без высокой полки)
+static func _hangs(kind: String, spot: String) -> bool:
+	return Catalog.spot_kind(spot, kind) == "hang" and not HANG_SHELF.has(kind)
+
+
+## Где место на экране; места нет в 2D — Vector2(-1000, -1000)
 func spot_screen(kind: String, spot: String) -> Vector2:
-	var sp: Array = SPOTS[kind][spot]
+	var sp := spot_def(kind, spot)
+	if sp.is_empty():
+		return Vector2(-1000, -1000)
 	var p: Vector2 = sp[0]
 	var k: float = sp[1]
 	var h: float = 60.0
-	if spot == "hang" and not HANG_SHELF.has(kind):
+	if _hangs(kind, spot):
 		return to_screen(p + Vector2(0, 70 * k))
 	return to_screen(p - Vector2(0, h * 0.5 * k))
 
@@ -138,7 +154,7 @@ static func _hash(i: int, k: int) -> float:
 ## view — видимая часть сцены (в её координатах): фон заполняет её целиком.
 ## highlight — место, которое подсвечивается (выбор украшений), "" — нет.
 func draw(target: CanvasItem, kind: String, at: Vector2, sc: float, view: Rect2, stage: int, placed: Dictionary,
-		outfit: Dictionary, t: float, react: float, highlight := "", show_empty := false) -> void:
+		outfit: Dictionary, t: float, react: float, highlight := "", show_empty := false, room_st := {}) -> void:
 	ci = target
 	origin = at
 	scale = sc
@@ -151,9 +167,14 @@ func draw(target: CanvasItem, kind: String, at: Vector2, sc: float, view: Rect2,
 		_attic(view, stage, t)
 	else:
 		_hollow_tree(view, stage, t)
-	# украшения позади героя
-	for spot in ["hang", "wall_l", "wall_r", "floor_l", "floor_r"]:
-		_place_decor(kind, spot, placed.get(spot, ""), t)
+	_room_tint(kind, view, room_st)
+	# украшения позади героя (0.15: и на новых местах; «рядом» — перед героем)
+	var front := []
+	for spot in Catalog.spot_ids(kind):
+		if Catalog.spot_kind(spot, kind) == "near":
+			front.append(spot)
+		else:
+			_place_decor(kind, spot, placed.get(spot, ""), t)
 	_xf(false)
 	var ha: Array = HERO_AT[kind]
 	var hp: Vector2 = ha[0]
@@ -166,12 +187,15 @@ func draw(target: CanvasItem, kind: String, at: Vector2, sc: float, view: Rect2,
 		_nest_front(t)
 	elif kind == "kitten":
 		_basket_front()
-	_place_decor(kind, "near", placed.get("near", ""), t)
+	for spot in front:
+		_place_decor(kind, spot, placed.get(spot, ""), t)
 	if kind == "axolotl":
 		_bubbles(view, t, stage, true)
-	for spot in SPOTS[kind]:
-		var sp: Array = SPOTS[kind][spot]
-		var c: Vector2 = sp[0] + (Vector2(0, 70) if spot == "hang" and not HANG_SHELF.has(kind) else Vector2(0, -34)) * sp[1]
+	for spot in Catalog.spot_ids(kind):
+		var sp := spot_def(kind, spot)
+		if sp.is_empty():
+			continue
+		var c: Vector2 = sp[0] + (Vector2(0, 70) if _hangs(kind, spot) else Vector2(0, -34)) * sp[1]
 		if spot == highlight:
 			var pulse := 0.5 + 0.5 * sin(t * 5.0)
 			ci.draw_arc(c, 62 * sp[1] + 6 * pulse, 0, TAU, 40, Color(1, 0.84, 0.4, 0.9), 5.0, true)
@@ -183,13 +207,37 @@ func draw(target: CanvasItem, kind: String, at: Vector2, sc: float, view: Rect2,
 	_xf(false)
 
 
+## 0.15: стиль комнаты в 2D — оттенком поверх фона: стены (выше пола), пол, свет (вся сцена)
+func _room_tint(kind: String, view: Rect2, st: Dictionary) -> void:
+	if st.is_empty():
+		return
+	var floor_y := 830.0
+	var w: Color = Catalog.room_item(st.get("walls", "")).get("tint", Color.WHITE)
+	if w != Color.WHITE:
+		ci.draw_rect(Rect2(view.position.x, view.position.y, view.size.x, floor_y - view.position.y), Color(w, 0.26))
+	var f: Color = Catalog.room_item(st.get("floor", "")).get("tint", Color.WHITE)
+	if f != Color.WHITE:
+		ci.draw_rect(Rect2(view.position.x, floor_y, view.size.x, view.end.y - floor_y), Color(f, 0.3))
+	var li := Catalog.room_item(st.get("light", ""))
+	var amb: Color = li.get("ambient", Color.WHITE)
+	if amb != Color.WHITE:
+		ci.draw_rect(view, Color(amb, 0.16))
+	var e := float(li.get("energy", 1.0))
+	if e < 1.0:
+		ci.draw_rect(view, Color(0, 0, 0.05, (1.0 - e) * 1.2))
+	elif e > 1.0:
+		ci.draw_rect(view, Color(1, 0.97, 0.9, (e - 1.0) * 0.35))
+
+
 func _place_decor(kind: String, spot: String, id: String, t: float) -> void:
 	if id == "":
 		return
-	var sp: Array = SPOTS[kind][spot]
+	var sp := spot_def(kind, spot)
+	if sp.is_empty():
+		return
 	var p: Vector2 = sp[0]
 	var k: float = sp[1]
-	if spot == "hang" and not SELF_HUNG.has(id) and not HANG_SHELF.has(kind):
+	if _hangs(kind, spot) and not SELF_HUNG.has(id):
 		var len := 50.0 * k
 		var sw := sin(t * 1.3) * 0.05
 		var end := p + Vector2(0, len).rotated(sw)
@@ -954,6 +1002,16 @@ func draw_decor(id: String, p: Vector2, k: float, t: float) -> void:
 		"kit_lamp": _kit_lamp(p, k, t)
 		"kit_aquarium": _kit_aquarium(p, k, t)
 		"kit_tree": _kit_tree(p, k, t)
+		_: _generic_decor(id, p, k, t)
+
+
+## 0.15: новая вещь без своего 2D-рисунка (дизайнер добавил только 3D) — коробочка со звездой цвета её стиля
+func _generic_decor(id: String, p: Vector2, k: float, t: float) -> void:
+	var col := Catalog.style_col(Catalog.decor_item(id).get("style", ""))
+	var r := Rect2(p + Vector2(-34, -60) * k, Vector2(68, 60) * k)
+	_fill(_rrect(r, 10 * k), col.darkened(0.15), OUT, 3.0 * k)
+	ci.draw_rect(Rect2(r.position + Vector2(r.size.x * 0.42, 0), Vector2(r.size.x * 0.16, r.size.y)), col.lightened(0.4))
+	_sparkle(p + Vector2(0, -78) * k, (14 + 3 * sin(t * 3.0)) * k, Color(1, 0.95, 0.7))
 
 
 ## Значок украшения для карточки гардероба (вписан в квадрат size вокруг c)

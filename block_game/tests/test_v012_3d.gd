@@ -106,13 +106,18 @@ func _test_rooms() -> void:
 					spots_ok = false
 			check(ok and spots_ok, "%s, ступень %d: дом построен, 6 мест, украшения стоят (%d шт.)" % [kind, stage, placed.size()])
 			if stage == 3:
-				# все места пустые — видны метки «+»; занятые — без метки
+				# все места пустые — вне режима украшения меток нет (0.15), в режиме — видны все метки «+»
 				r.set_placed({})
 				var marks := 0
 				for spot in r.markers:
 					if r.markers[spot].visible:
 						marks += 1
-				check(marks == 6, "%s: пустые места показаны метками «+» (%d)" % [kind, marks])
+				check(marks == 0, "%s: вне режима украшения меток «+» нет" % kind)
+				r.set_markers(true)
+				for spot in r.markers:
+					if r.markers[spot].visible:
+						marks += 1
+				check(marks == r.spot_list().size() and marks >= 6, "%s: в режиме украшения пустые места показаны метками «+» (%d)" % [kind, marks])
 				r.set_placed({"near": placed.get("near", "")})
 				check(not r.markers["near"].visible and r.markers["floor_l"].visible, "%s: на занятом месте метки нет" % kind)
 				# примерка: кольцо на месте
@@ -217,8 +222,9 @@ func _test_screen(gm) -> void:
 	h.room.card.react = 99.0
 	h.room.cam.tapped.emit(hp)
 	check(h.room.card.react < 0.5, "тап по герою — он реагирует")
-	# тап по пустому месту: камера летит к месту, потом открывается гардероб, вкладка «Дом»
+	# 0.15: тап по месту в режиме украшения: место выбрано, камера летит к нему, панель — для этого места
 	gm.meta.decor_placed["owl"] = {}
+	gm.decor_ui.open()
 	_step(gm, 0.1)
 	var target := ""
 	var sp := Vector2.ZERO
@@ -235,22 +241,23 @@ func _test_screen(gm) -> void:
 		h.room.cam.tapped.emit(sp)
 		check(h.room.cam.focused, "камера подлетает к месту")
 		_step(gm, 0.7)
-		check(gm.state == gm.State.WARDROBE and gm.screens.tab == "home" and gm.screens.spot == target, "открылся гардероб, вкладка «Дом», выбрано это место")
+		check(gm.state == gm.State.HOME and gm.decor_ui.active and gm.decor_ui.spot == target, "режим украшения: выбрано это место")
 		_step(gm, 0.2)
-		check(h.showing_stage() and h.room.highlight == target and h.room.ring.visible, "в гардеробе 3D-дом в окне сцены, кольцо на месте")
+		check(h.showing() and h.room.highlight == target and h.room.ring.visible, "3D-дом на весь экран, кольцо на месте")
 		# примерка украшения видна в 3D на месте
 		var it: Dictionary = Meta.decor_for("owl", target)[0]
-		gm.screens.tryon.start_decor("owl", target, it.id)
+		gm.decor_ui.tap_item(it.id)
 		_step(gm, 0.1)
 		check(h.room.placed.get(target, "") == it.id and h.room.spot_nodes.has(target), "примерка «%s» показана в 3D" % it.id)
-		gm.screens.tryon.clear()
+		gm.decor_ui.tryon.clear()
 		_step(gm, 0.1)
 		check(h.room.placed.get(target, "") == "", "примерка снята — место снова пустое")
 		var ss: Vector2 = h.spot_screen(target)
-		check(gm.screens._wr_layout().stage.has_point(ss), "место на экране — внутри окна сцены гардероба")
+		check(gm.decor_ui.view_rect().grow(60).has_point(ss), "место на экране — в видимой части дома (над панелью)")
+		gm.decor_ui.close()
 		gm.screens.open_wardrobe("head")
 		_step(gm, 0.1)
-		check(h.mode == "idle", "другая вкладка гардероба — дом на паузе")
+		check(h.mode == "idle", "гардероб — дом на паузе")
 	# смена героя: плавный переход в его дом
 	for k in ["axolotl", "puppy", "kitten"]:
 		gm.meta.set_hero(k)

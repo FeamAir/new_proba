@@ -136,6 +136,7 @@ void fragment() {
 	"caustic": """
 shader_type spatial;
 uniform float strength = 0.55;
+uniform vec3 tint = vec3(1.0);
 varying vec3 wp;
 void vertex() { wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
 float cell(vec2 p) {
@@ -156,7 +157,7 @@ void fragment() {
 	vec2 p = wp.xz * 1.6;
 	float c = pow(smoothstep(0.0, 0.9, cell(p)), 3.0) + 0.6 * pow(smoothstep(0.1, 0.95, cell(p * 1.3 + 5.0)), 4.0);
 	float fade = smoothstep(4.2, 1.0, length(wp.xz));
-	ALBEDO = COLOR.rgb;
+	ALBEDO = COLOR.rgb * tint;
 	ROUGHNESS = 0.95;
 	SPECULAR = 0.1;
 	EMISSION = vec3(0.55, 0.95, 1.0) * c * strength * fade;
@@ -242,6 +243,8 @@ shader_type spatial;
 uniform float stars = 0.0;
 uniform vec3 proj = vec3(0.0, 0.6, 0.0);
 uniform float rough = 0.9;
+uniform vec3 wall_tint = vec3(1.0);
+uniform vec3 floor_tint = vec3(1.0);
 varying vec3 wp;
 varying vec3 wn;
 void vertex() {
@@ -249,7 +252,7 @@ void vertex() {
 	wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 }
 void fragment() {
-	ALBEDO = COLOR.rgb;
+	ALBEDO = COLOR.rgb * (wp.y < 0.03 && wn.y > 0.7 ? floor_tint : wall_tint);
 	ROUGHNESS = rough;
 	SPECULAR = 0.15;
 	if (stars > 0.0) {

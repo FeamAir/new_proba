@@ -8,6 +8,7 @@ const Hero := preload("res://scripts/hero.gd")
 const Home := preload("res://scripts/home.gd")
 const I18n := preload("res://scripts/i18n.gd")
 const TryOn := preload("res://scripts/tryon.gd")
+const Catalog := preload("res://scripts/decor_catalog.gd")
 ## 0.12: редкости (рамки и блеск карточек)
 const Rarity := preload("res://scripts/rarity.gd")
 ## 0.12: вещей на странице гардероба (2 ряда по 3)
@@ -386,17 +387,31 @@ func draw_home() -> void:
 	var H: float = g.H
 	var hv := _home_view()
 	var kind: String = g.meta.hero if g.meta.hero != "" else "owl"
-	var placed: Dictionary = g.meta.decor_placed.get(kind, {})
+	var du = g.decor_ui
+	var decorating: bool = du != null and du.active
+	var placed: Dictionary = du.tryon.placed(g.meta, kind) if decorating else g.meta.decor_placed.get(kind, {})
 	if g.home3d.showing():
 		# 0.12: 3D-дом (scripts/home3d/); касания мимо кнопок крутят камеру, тап по месту / герою — там же
 		g.home3d.draw(g, Rect2(0, 0, g.W, H))
 	else:
-		# запасной 2D-дом: 3D недоступно или выбрано «Графика: 2D»
-		home.draw(g, kind, hv[0], 1.0, hv[1], Meta.home_stage(g.max_level), placed, g.meta.outfit(), g.t_total, react, "", true)
+		# запасной 2D-дом: 3D недоступно или выбрано «Графика: 2D» (0.15: стиль комнаты — оттенком;
+		# метки «+» пустых мест — только в режиме украшения)
+		var room_st: Dictionary = du.tryon.room(g.meta, kind) if decorating else g.meta.room_of(kind)
+		home.draw(g, kind, hv[0], 1.0, hv[1], Meta.home_stage(g.max_level), placed, g.meta.outfit(), g.t_total, react,
+			du.spot if decorating else "", decorating, room_st)
 		var ha: Array = Home.HERO_AT[kind]
-		rects["hero"] = Rect2(hv[0] + ha[0] - Vector2(110, 130), Vector2(220, 240))
-		for s in Meta.SPOTS:
-			rects["spot_" + s] = Rect2(home.spot_screen(kind, s) - Vector2(60, 60), Vector2(120, 120))
+		if not decorating:
+			rects["hero"] = Rect2(hv[0] + ha[0] - Vector2(110, 130), Vector2(220, 240))
+		for s in Catalog.spot_ids(kind):
+			if decorating or placed.get(s, "") != "":
+				var sp: Vector2 = home.spot_screen(kind, s)
+				if sp.x > -999.0:
+					rects["spot_" + s] = Rect2(sp - Vector2(56, 56), Vector2(112, 112))
+	if decorating:
+		du.draw()
+		_buy_fx()
+		_fade_over(Rect2(0, 0, g.W, H))
+		return
 	# верхняя полоса
 	g.draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(g.W, 0), Vector2(g.W, 250), Vector2(0, 250)]),
 		PackedColorArray([Color(0.04, 0.02, 0.1, 0.75), Color(0.04, 0.02, 0.1, 0.75), Color(0.04, 0.02, 0.1, 0), Color(0.04, 0.02, 0.1, 0)]))
@@ -435,12 +450,19 @@ func draw_home() -> void:
 	g._rbox(Rect2(pb.position + Vector2(8, 6), Vector2(pb.size.x - 16, pb.size.y * 0.4)), Color(1, 1, 1, 0.14), 30)
 	_ctext(g.W / 2.0, pr.position.y + 70, I18n.t("play"), 56, DARK_TEXT)
 	_ctext(g.W / 2.0, pr.position.y + 108, I18n.t("level_n") % g.max_level, 28, Color("#5A3A10"))
-	_button("map", Rect2(40, H - 140, 310, 104), "", false)
-	_button("wardrobe", Rect2(370, H - 140, 310, 104), "", false)
-	_map_icon(Vector2(100, H - 88))
-	_text(Vector2(140, H - 74), I18n.t("map"), 38, g.TEXT)
-	_hanger_icon(Vector2(430, H - 88))
-	_text(Vector2(470, H - 74), I18n.t("wardrobe"), 36, g.TEXT)
+	# 0.15: три кнопки: Карта, Украсить, Гардероб (значок сверху, подпись снизу)
+	var bw: float = (g.W - 40.0 - 2 * 12.0) / 3.0
+	var names := ["map", "decorate", "wardrobe"]
+	for i in 3:
+		var br := Rect2(20 + i * (bw + 12), H - 140, bw, 104)
+		_button(names[i], br, "", false)
+		var ic := br.position + Vector2(bw / 2.0, 36)
+		match names[i]:
+			"map": _map_icon(ic)
+			"decorate": brush_icon(ic)
+			"wardrobe": _hanger_icon(ic)
+		var lbl := I18n.t(names[i])
+		_text(Vector2(br.position.x, br.position.y + 92), lbl, fit_size(lbl, bw - 12, 28), g.TEXT, bw, HORIZONTAL_ALIGNMENT_CENTER)
 	_toast(260)
 	_fade_over(Rect2(0, 0, g.W, H))
 
@@ -450,6 +472,17 @@ func _map_icon(c: Vector2) -> void:
 		c + Vector2(26, 22), c + Vector2(8, 28), c + Vector2(-8, 22), c + Vector2(-26, 28)]), Color("#E8D6A8"))
 	g.draw_polyline(PackedVector2Array([c + Vector2(-18, 16), c + Vector2(-6, 2), c + Vector2(6, 8), c + Vector2(16, -12)]), Color("#C0392B"), 3.0, true)
 	g.draw_circle(c + Vector2(16, -12), 5, Color("#C0392B"), true, -1.0, true)
+
+
+## 0.15: значок «Украсить» — кисточка с каплей краски и звёздочкой
+func brush_icon(c: Vector2) -> void:
+	var a := Vector2(-20, 22)
+	var b := Vector2(10, -8)
+	g.draw_line(c + a, c + b, Color("#C98A5C"), 7.0, true)
+	g.draw_line(c + b, c + b + Vector2(6, -6), Color("#D9DDE8"), 9.0, true)
+	g.draw_colored_polygon(PackedVector2Array([c + b + Vector2(3, -9), c + b + Vector2(9, -3), c + Vector2(26, -24), c + Vector2(22, -28)]), Color("#FF5A7A"))
+	g.draw_circle(c + Vector2(24, -26), 5, Color("#FF5A7A"), true, -1.0, true)
+	g.draw_colored_polygon(_star(c + Vector2(-17, -15), 11, 4, 4), g.ACCENT)
 
 
 func _hanger_icon(c: Vector2) -> void:
@@ -468,6 +501,9 @@ func tap_home(pos: Vector2) -> bool:
 	elif rects.get("map", Rect2()).has_point(pos):
 		g.play("click")
 		open_map()
+	elif rects.get("decorate", Rect2()).has_point(pos):
+		g.play("click")
+		g.decor_ui.open()  # 0.15: режим украшения комнаты
 	elif rects.get("wardrobe", Rect2()).has_point(pos) or rects.get("avatar", Rect2()).has_point(pos):
 		g.play("click")
 		open_wardrobe("head" if tab == "home" else tab)
@@ -475,11 +511,10 @@ func tap_home(pos: Vector2) -> bool:
 		poke_hero()
 		g.play("crystal", randf_range(0.9, 1.15), -6.0)
 	else:
-		for s in Meta.SPOTS:
+		for s in Catalog.spot_ids(g.meta.hero):
 			if rects.get("spot_" + s, Rect2()).has_point(pos):
 				g.play("click")
-				spot = s
-				open_wardrobe("home")
+				g.decor_ui.open(s)  # 0.15: вещь в 2D-доме — режим украшения, это место выбрано
 				return true
 		return false
 	return true
@@ -489,6 +524,12 @@ func tap_home(pos: Vector2) -> bool:
 
 ## focus_id (0.12) — открыть страницу вкладки, где эта вещь.
 func open_wardrobe(t := "head", focus_id := "") -> void:
+	if t == "home":
+		# 0.15: украшения дома — в режиме украшения на экране «Дом» (выбрано место spot)
+		tryon.clear()
+		g.go_home()
+		g.decor_ui.open(spot if Catalog.has_spot(_kind(), spot) else "", focus_id)
+		return
 	tab = t
 	page = 0
 	if focus_id != "" and t != "home":
@@ -1056,6 +1097,9 @@ func tap_wardrobe(pos: Vector2) -> void:
 	for tname in wr_tabs():
 		if rects.get("tab_" + tname, Rect2()).has_point(pos):
 			g.play("click")
+			if tname == "home":
+				open_wardrobe("home")  # 0.15: вкладка «Дом» — режим украшения на экране «Дом»
+				return
 			if tab != tname:
 				page = 0
 			tab = tname

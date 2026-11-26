@@ -193,32 +193,29 @@ func _test_decor_return_2d() -> void:
 	g.meta.shards = 500
 	g.go_home()
 	_step(0.1)
-	# «+» у места на экране «Дом» (2D): касание по месту
+	# 0.15: прежний путь (вкладка «Дом» гардероба, «+» у места) ведёт в режим украшения на экране «Дом»
+	var du = g.decor_ui
 	sc.spot = "floor_l"
 	sc.open_wardrobe("home")
-	check(g.state == g.State.WARDROBE and sc.tab == "home" and sc.from_home_spot, "«+» с экрана «Дом» — гардероб, вкладка «Дом»")
+	check(g.state == g.State.HOME and du.active and du.spot == "floor_l", "«+» / вкладка «Дом» — режим украшения, место выбрано")
 	var id := _decor_for("owl", "floor_l")
-	sc.tap_card(id, "owl")
-	check(sc.tryon.active() and g.state == g.State.WARDROBE and g.meta.shards == 500, "примерка украшения — остаёмся, ничего не потрачено")
-	sc._confirm_try()
-	check(g.state == g.State.HOME and g.meta.placed_at("owl", "floor_l") == id and g.meta.shards < 500, "после «Купить» — сразу домой, украшение стоит")
-	# «Разместить» уже купленное — тоже домой
+	du.tap_item(id)
+	check(du.tryon.active() and g.state == g.State.HOME and g.meta.shards == 500, "примерка украшения — ничего не потрачено")
+	du.confirm()
+	check(du.active and g.meta.placed_at("owl", "floor_l") == id and g.meta.shards < 500, "после «Купить» — украшение стоит, режим не закрывается")
+	# «Поставить» уже купленное — сразу
 	g.meta.remove_decor("owl", "floor_l")
-	sc.open_wardrobe("home")
-	sc.tap_card(id, "owl")
-	check(g.state == g.State.HOME and g.meta.placed_at("owl", "floor_l") == id, "«Разместить» купленное — сразу домой")
-	# обычный вход кнопкой «Гардероб» — остаёмся
+	du.tap_item(id)
+	check(g.meta.placed_at("owl", "floor_l") == id and not du.tryon.active(), "«Поставить» купленное — сразу")
+	du.close()
+	# обычный вход кнопкой «Гардероб»
 	sc.open_wardrobe("head")
-	check(not sc.from_home_spot, "кнопка «Гардероб» — обычный вход")
-	sc.tab = "home"
-	sc.spot = "floor_r"
-	var id2 := _decor_for("owl", "floor_r")
-	if id2 == id:
-		g.meta.remove_decor("owl", "floor_l")
-	sc.tap_card(id2, "owl")
-	if sc.tryon.active():
-		sc._confirm_try()
-	check(g.state == g.State.WARDROBE and g.meta.placed_at("owl", "floor_r") == id2, "обычный вход: после покупки / размещения остаёмся в гардеробе")
+	check(g.state == g.State.WARDROBE and not du.active and not sc.from_home_spot, "кнопка «Гардероб» — обычный вход")
+	sc.rects["tab_home"] = Rect2(600, 900, 80, 64)
+	sc.tap_wardrobe(Vector2(640, 930))
+	check(g.state == g.State.HOME and du.active, "вкладка «Дом» в гардеробе — режим украшения")
+	du.close()
+	sc.open_wardrobe("head")
 	# касание по пустому месту сцены — домой; промах между карточками — нет
 	var L: Dictionary = sc._wr_layout()
 	sc.rects.clear()
@@ -247,21 +244,18 @@ func _test_decor_return_3d() -> void:
 	_step(0.3)
 	check(h.showing(), "3D-дом на экране «Дом»")
 	var target := "floor_r"
+	var du = g.decor_ui
 	sc.spot = target
 	sc.open_wardrobe("home")
 	_step(0.3)
-	check(h.showing_stage() and sc.from_home_spot, "гардероб по «+»: 3D-дом в окне сцены")
+	check(h.showing() and du.active and h.room.highlight == target, "вкладка «Дом»: 3D-дом на весь экран, режим украшения, место подсвечено")
 	var id := _decor_for("owl", target)
-	sc.tap_card(id, "owl")
-	sc._confirm_try()
-	check(g.state == g.State.HOME and h.show_spot == target, "после покупки — домой, камере задано место новой вещи")
+	du.tap_item(id)
+	du.confirm()
 	_step(0.1)
-	var at: Vector3 = h.room.spot_focus.get(target, [h.room.spot_point(target)])[0]
-	check(h.showing() and h.show_spot == "" and h.room.cam.focused and h.room.cam.goal_pivot.distance_to(at) < 0.01, "камера подлетает к новой вещи (а не к герою)")
+	check(g.state == g.State.HOME and du.active and h.room.cam.focused, "после покупки — остаёмся в режиме, камера у места")
 	check(h.room.placed.get(target, "") == id, "новая вещь стоит в 3D-доме")
-	# обычный путь (без покупки): из гардероба «Назад» — камера возвращается к герою
-	sc.open_wardrobe("home")
-	_step(0.3)
-	g.go_home()
+	# «Готово» — камера возвращается к обзору
+	du.close()
 	_step(0.1)
-	check(h.showing() and not h.room.cam.focused, "«Назад» без покупки — камера к герою, как раньше")
+	check(h.showing() and not du.active and not h.room.cam.focused, "«Готово» — камера к обзору")

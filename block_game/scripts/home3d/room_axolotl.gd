@@ -45,6 +45,15 @@ func _init() -> void:
 		elif s == "hang":
 			mark = Vector3(0, -1.05, 0)
 		spots[s] = {"pos": dir(a) * r + Vector3(0, d[2], 0), "yaw": face_center(a), "mark": mark, "stand": Vector3(0, 0.04, 0.24)}
+	# 0.15: места-заготовки (типы — scripts/decor_data/axolotl.gd): уступ на стене слева (выше «стены слева»),
+	# большое место у дальней стены, второе «рядом» — слева от героя
+	var sa := deg_to_rad(240.0)
+	spots["ledge_l"] = {"pos": dir(sa) * (wall_r(1.6) - 0.05) + Vector3(0, 1.6, 0), "yaw": face_center(sa), "mark": Vector3(0, 0.3, 0.34),
+		"stand": Vector3(0, 0.04, 0.24)}
+	var ba := deg_to_rad(275.0)
+	spots["big_back"] = {"pos": dir(ba) * 2.3, "yaw": face_center(ba), "mark": Vector3(0, 0.45, 0)}
+	var na := deg_to_rad(148.0)
+	spots["near_2"] = {"pos": dir(na) * 1.08, "yaw": face_center(na), "mark": Vector3(0, 0.3, 0)}
 	# 0.14: полка славы — каменная ниша напротив входа камеры (за спиной камеры в обычном обзоре)
 	shelf_def = {"style": "axolotl", "pos": dir(PI / 2.0) * R, "yaw": face_center(PI / 2.0), "room_r": R,
 		"rows": [[1.28, wall_r(1.28) - 0.04], [1.78, wall_r(1.78) - 0.04]], "spacing": 0.37, "scale": 1.0, "depth": 0.3,
@@ -113,6 +122,7 @@ func _walls(h: Node3D) -> void:
 	mi.mesh = _geo["walls"]
 	mi.material_override = vmat(0.8, 0.3)
 	h.add_child(mi)
+	wall_parts.append(mi)  # 0.15: стиль «стены»
 	# крупные валуны у подножия
 	for i in 8:
 		var a := TAU * i / 8.0 + 0.25
@@ -191,6 +201,7 @@ func _floor(h: Node3D) -> void:
 	var m := Shaders.material("caustic", {"strength": 0.22 + 0.04 * stage})
 	mi.material_override = m
 	h.add_child(mi)
+	floor_parts.append(mi)  # 0.15: стиль «пол» (параметр tint шейдера caustic)
 	# камешки
 	var xfs := []
 	for i in 46:

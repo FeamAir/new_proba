@@ -11,9 +11,14 @@ extends RefCounted
 ##   STYLES — стили вещей дома (ровно 3): {"id", "col"} (col — цвет значка).
 ##   DECOR  — украшения: {"id", "home", "style", "spots": [типы мест], "price", "stars"?, "hall"?, "flat"?}
 ##            id — уникален во всей игре (с приставкой дома: owl_, axo_, pup_, kit_).
+##            Для 3D (по желанию): "flat": true — плоская, висит на стене (на месте wall не стоит на полочке и не
+##            вращается); "self_hung": true — у вещи своя верёвка (точка места — точка подвеса, без нитки);
+##            "hang_h": 0.6 — высота вещи на нитке (м), чтобы верх вещи был у конца нитки.
 ##   WALLS, FLOORS, LIGHTS — варианты слоёв стиля комнаты: {"id", "price", ...}; первый — бесплатный,
-##            стоит с начала. walls/floor: "tint" (Color); light: "ambient" (Color), "energy" (×), "lamp" (Color).
-##            Условия "stars" / "hall" — как у украшений.
+##            стоит с начала. walls/floor: "tint" (Color — множитель цвета, компоненты можно больше 1);
+##            light: "ambient" (Color — оттенок рассеянного света), "energy" (× яркость), "lamp" (Color — оттенок ламп).
+##            Условия "stars" / "hall" — как у украшений. Свои красивые варианты комната делает в
+##            apply_walls(id) / apply_floor(id) / apply_light(id) (scripts/home3d/room.gd — базовые версии).
 ## Названия — в scripts/i18n.gd (блок «0.15»): item_<id> (украшение), dstyle_<id> (стиль), room_<id> (вариант слоя),
 ## spot_<id> — по желанию (нет — «Полка 2», «Пол 3»... по типу места).
 
@@ -22,11 +27,11 @@ const AxolotlData := preload("res://scripts/decor_data/axolotl.gd")
 const PuppyData := preload("res://scripts/decor_data/puppy.gd")
 const KittenData := preload("res://scripts/decor_data/kitten.gd")
 
-## Небольшой общий набор типов мест.
-##   floor — на полу у стены; near — на полу рядом с героем; wall — на стене (плоские вещи висят, прочие — на полочке);
-##   shelf — на полке (вещь стоит); hang — сверху (на нитке или высокой полке, как решит комната);
-##   window — на подоконнике (вещь стоит).
-const KINDS := ["floor", "near", "wall", "shelf", "hang", "window"]
+## Небольшой общий набор типов мест (как в docs/decor_catalog_0_15.md).
+##   floor — на полу у стены; near — на полу рядом с героем; big — крупная вещь у задней стены / в углу (стоит на полу);
+##   wall — на стене (плоские вещи висят, прочие — на полочке); shelf — на полке (вещь стоит);
+##   hang — сверху (на нитке или высокой полке, как решит комната); window — на подоконнике / в проёме (вещь стоит).
+const KINDS := ["floor", "near", "big", "wall", "shelf", "hang", "window"]
 ## Слои стиля комнаты
 const LAYERS := ["walls", "floor", "light"]
 ## Сколько мест на дом самое большее (интерфейс и производительность рассчитаны на это)

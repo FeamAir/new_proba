@@ -9,11 +9,26 @@ extends "res://scripts/home3d/kit.gd"
 ## Пол / рядом: вещь стоит на полу. Стена: в доме есть полочка-уступ; «плоские» вещи (скворечник,
 ## картина, табличка, звезда) висят на стене над ней, остальные стоят на ней.
 ## Сверху: на нитке/верёвке с покачиванием (hang_style = "rope") или на высокой полке ("shelf").
+##
+## 0.15 (украшение комнаты): мест в доме может быть до 16 — список и их типы в каталоге
+## (scripts/decor_data/<дом>.gd SPOTS), координаты — в комнате (spots в _init наследника):
+##   spots[id] = {"pos": Vector3 (точка, где вещь стоит / крепится), "yaw": поворот (+Z — в комнату),
+##                "mark": точка метки «+» (в координатах места, по умолчанию (0, 0.3, 0)),
+##                "stand": где на полочке стоит вещь (для wall / shelf)}
+## Типы мест: floor / near / big — на полу; wall — полочка на стене (плоские вещи висят на стене);
+## shelf — полочка (_ledge), вещь всегда стоит; hang — сверху (hang_style); window — на подоконнике
+## (полочку не строим: подоконник — часть комнаты; вещь стоит, sk = "ledge").
+## Поворот вещи (шаги по 45°) — set_placed(pl, rot). Стиль комнаты — set_style({walls, floor, light}):
+## вызывает apply_walls(id) / apply_floor(id) / apply_light(id). Базовые версии красят то, что комната
+## отметила в wall_parts / floor_parts (оттенок tint из каталога), и меняют свет (ambient, energy, lamp).
+## Комната может переопределить их и сделать свои варианты (другие сетки, узоры) — см. room_kitten.gd.
+## Метки «+» пустых мест видны только в режиме украшения (set_markers(true)).
 
 const HeroCard := preload("res://scripts/home3d/hero_card.gd")
 const TrophyShelf := preload("res://scripts/home3d/trophy_shelf.gd")
 const OrbitCam := preload("res://scripts/home3d/orbit_camera.gd")
 const Meta := preload("res://scripts/meta.gd")
+const Catalog := preload("res://scripts/decor_catalog.gd")
 
 ## Вещи, которые висят на стене (не стоят на полочке)
 const FLAT_WALL := ["owl_birdhouse", "owl_hammock", "axo_starfish", "pup_sign", "kit_picture", "pup_pinwheel"]
@@ -31,9 +46,19 @@ const LIGHTS_SIMPLE := 2
 var kind := "owl"
 var stage := 0
 var placed := {}
+## 0.15: повороты вещей на местах (место -> шаги по 45°)
+var rots := {}
+## 0.15: стиль комнаты (слой -> id варианта) и что красить: детали стен и пола (их не склеивают с остальным)
+var style := {}
+var wall_parts: Array = []
+var floor_parts: Array = []
+## Исходный свет окружения (до стиля «свет»)
+var _env0 := {}
+var _light_k := 1.0
+var _lamp_tint := Color(1, 1, 1)
 var outfit := {}
 var high := true
-var markers_on := true
+var markers_on := false
 var highlight := ""
 var hang_style := "rope"
 ## Длина нитки для подвеса
@@ -117,12 +142,19 @@ func _view_dir(at: Vector3, is_hero := false, turn := 0.55) -> Vector3:
 
 # ---------- Сборка ----------
 
-func setup(k: String, st: int, pl: Dictionary, of: Dictionary, hq: bool) -> void:
+func setup(k: String, st: int, pl: Dictionary, of: Dictionary, hq: bool, rt := {}, sty := {}) -> void:
 	kind = k
 	stage = clampi(st, 0, 3)
 	placed = pl.duplicate()
+	rots = rt.duplicate()
+	style = sty.duplicate()
 	outfit = of.duplicate()
 	high = hq
+
+
+## 0.15: места этого дома, которые есть и в каталоге, и в комнате (порядок — как в каталоге)
+func spot_list() -> Array:
+	return Catalog.spot_ids(kind).filter(func(s): return spots.has(s))
 
 
 func build() -> void:
@@ -134,24 +166,139 @@ func build() -> void:
 	var moving := []
 	for a in anims:
 		moving.append(a.n)
+	# 0.15: стены и пол склеиваются отдельно (их красит стиль комнаты)
+	for p in wall_parts + floor_parts:
+		if is_instance_valid(p):
+			merge_static(p, moving)
+			moving.append(p)
 	merge_static(_house, moving)
-	for spot in Meta.SPOTS:
+	_capture_env()
+	for spot in spot_list():
 		_place(spot)
 	_markers()
 	_build_shelf()
 	_camera()
 	built = true
+	var sty := style.duplicate()
+	style = {}
+	set_style(sty)
 	set_quality(high)
 
 
-## Сменить украшения (примерка, покупка): перестраиваются только изменившиеся места
-func set_placed(pl: Dictionary) -> void:
-	for spot in Meta.SPOTS:
+## Сменить украшения (примерка, покупка, поворот): перестраиваются только изменившиеся места
+func set_placed(pl: Dictionary, rt = null) -> void:
+	for spot in spot_list():
 		var id: String = pl.get(spot, "")
-		if id != placed.get(spot, ""):
+		var r := int(rt.get(spot, 0)) if rt is Dictionary else int(rots.get(spot, 0))
+		if id != placed.get(spot, "") or r != int(rots.get(spot, 0)):
 			placed[spot] = id
+			if r == 0:
+				rots.erase(spot)
+			else:
+				rots[spot] = r
 			_place(spot)
 			_update_markers()
+
+
+# ---------- 0.15: стиль комнаты ----------
+
+## Сменить стиль комнаты: вызываются apply_* только у изменившихся слоёв
+func set_style(st: Dictionary) -> void:
+	for l in Catalog.LAYERS:
+		var id: String = st.get(l, "")
+		if id == "":
+			id = Catalog.default_room(kind).get(l, "")
+		if id != style.get(l, "") or not style.has(l):
+			style[l] = id
+			if built:
+				call("apply_" + l, id)
+
+
+## Стены: базово — оттенок tint на деталях wall_parts
+func apply_walls(id: String) -> void:
+	_tint_parts(wall_parts, Catalog.room_item(id).get("tint", Color(1, 1, 1)), "tint")
+
+
+## Пол: базово — оттенок tint на деталях floor_parts
+func apply_floor(id: String) -> void:
+	_tint_parts(floor_parts, Catalog.room_item(id).get("tint", Color(1, 1, 1)), "tint")
+
+
+## Свет: оттенок и яркость рассеянного света, оттенок и яркость ламп дома и украшений
+func apply_light(id: String) -> void:
+	var it := Catalog.room_item(id)
+	var amb: Color = it.get("ambient", Color(1, 1, 1))
+	_light_k = float(it.get("energy", 1.0))
+	_lamp_tint = it.get("lamp", Color(1, 1, 1))
+	if env and not _env0.is_empty():
+		env.ambient_light_color = _env0.amb * amb
+		env.ambient_light_energy = _env0.amb_e * _light_k
+		env.fog_light_color = _env0.fog * amb
+	_tint_lights()
+
+
+func _capture_env() -> void:
+	if env:
+		_env0 = {"amb": env.ambient_light_color, "amb_e": env.ambient_light_energy, "fog": env.fog_light_color}
+
+
+## Окрасить детали: StandardMaterial3D — копия с albedo × tint; ShaderMaterial — копия с параметром param
+## (в шейдере должен быть uniform vec3 <param>). Исходный материал хранится в meta "m0" детали.
+func _tint_parts(parts: Array, tint: Color, param: String) -> void:
+	for p in parts:
+		if not is_instance_valid(p):
+			continue
+		var list: Array = [p] if p is GeometryInstance3D else []
+		list.append_array((p as Node).find_children("*", "GeometryInstance3D", true, false))
+		for gi in list:
+			var g3 := gi as GeometryInstance3D
+			if not g3.has_meta("m0"):
+				if g3.material_override == null:
+					continue
+				g3.set_meta("m0", g3.material_override)
+			g3.material_override = _tinted(g3.get_meta("m0"), tint, param)
+
+
+static var _tint_cache := {}
+
+
+static func _tinted(m0: Material, tint: Color, param: String) -> Material:
+	if tint == Color(1, 1, 1):
+		return m0
+	var key := [m0, tint, param]
+	if _tint_cache.has(key):
+		return _tint_cache[key]
+	var m: Material = m0.duplicate()
+	if m is StandardMaterial3D:
+		(m as StandardMaterial3D).albedo_color = (m0 as StandardMaterial3D).albedo_color * tint
+	elif m is ShaderMaterial:
+		(m as ShaderMaterial).set_shader_parameter(param, Vector3(tint.r, tint.g, tint.b))
+	_tint_cache[key] = m
+	return m
+
+
+## Лампы дома и украшений: исходные цвет и яркость (meta "c0", "e0") × оттенок и яркость стиля «свет»
+func _tint_lights() -> void:
+	var lists: Array = [lights]
+	for s in spot_lights:
+		lists.append(spot_lights[s])
+	for list in lists:
+		for l in list:
+			var light: Light3D = l[0]
+			if not light.has_meta("e0"):
+				light.set_meta("e0", float(l[1]))
+			l[1] = float(light.get_meta("e0")) * _light_k
+	var all: Array = _house.find_children("*", "Light3D", true, false) if _house else []
+	for s in spot_nodes:
+		if is_instance_valid(spot_nodes[s]):
+			all.append_array((spot_nodes[s] as Node).find_children("*", "Light3D", true, false))
+	for light in all:
+		if not light.has_meta("c0"):
+			light.set_meta("c0", light.light_color)
+		if not light.has_meta("e0"):
+			light.set_meta("e0", light.light_energy)
+		light.light_color = (light.get_meta("c0") as Color) * _lamp_tint
+		light.light_energy = float(light.get_meta("e0")) * _light_k
 
 
 func set_outfit(of: Dictionary) -> void:
@@ -169,8 +316,15 @@ func set_highlight(spot: String) -> void:
 		_update_markers()
 
 
+## 0.15: метки «+» пустых мест (и полочки новых мест-полок) — только в режиме украшения
 func set_markers(on: bool) -> void:
+	if markers_on == on:
+		return
 	markers_on = on
+	if built:
+		for spot in spot_list():
+			if placed.get(spot, "") == "" and spot_kind(spot) == "shelf":
+				_place(spot)
 	_update_markers()
 
 
@@ -200,8 +354,8 @@ func poke_hero() -> void:
 
 # ---------- Места украшений ----------
 
-static func spot_kind(spot: String) -> String:
-	return Meta.spot_kind(spot)
+func spot_kind(spot: String) -> String:
+	return Catalog.spot_kind(spot, kind)
 
 
 ## Точка метки «+» / кольца примерки / центр вещи на месте (мир)
@@ -230,9 +384,9 @@ func _ledge(_n: Node3D, _spot: String) -> void:
 	pass
 
 
-## Висит ли вещь на стене этого места (иначе стоит на полочке)
+## Висит ли вещь на стене этого места (иначе стоит на полочке). 0.15: или "flat" в каталоге
 func _is_flat(id: String, _spot: String) -> bool:
-	return FLAT_WALL.has(id)
+	return FLAT_WALL.has(id) or Meta.item(id).get("flat", false)
 
 
 func _place(spot: String) -> void:
@@ -244,8 +398,10 @@ func _place(spot: String) -> void:
 		id = ""
 	var sp: Dictionary = spots[spot]
 	var sk := spot_kind(spot)
-	var shelf := sk == "wall" or (sk == "hang" and hang_style == "shelf")
-	if id == "" and not shelf:
+	var shelf := sk == "wall" or sk == "shelf" or (sk == "hang" and hang_style == "shelf")
+	# полочки пустых новых мест-полок видны только в режиме украшения (иначе пустые полочки загромождают стены);
+	# старые места («стена», верхняя полка котика) — как раньше: полочка всегда, она часть дома
+	if id == "" and not (shelf and (sk != "shelf" or markers_on or Meta.SPOTS.has(spot))):
 		return
 	var n := node(self, sp.pos, sp.yaw)
 	n.name = "spot_" + spot
@@ -254,22 +410,32 @@ func _place(spot: String) -> void:
 	var saved_l := lights
 	anims = []
 	lights = []
-	var flat := id != "" and _is_flat(id, spot)
+	var flat := id != "" and sk == "wall" and _is_flat(id, spot)
 	if shelf and not flat:
 		_ledge(n, spot)
 	if id != "":
 		var item := n
-		if sk == "hang" and hang_style == "rope" and not SELF_HUNG.has(id):
-			# нитка от точки подвеса; вещь покачивается вместе с ней
+		var turn := int(rots.get(spot, 0)) * PI / 4.0
+		var it_data := Meta.item(id)
+		if sk == "hang" and hang_style == "rope" and not (SELF_HUNG.has(id) or it_data.get("self_hung", false)):
+			# нитка от точки подвеса; вещь покачивается вместе с ней (0.15: высота вещи — "hang_h" в каталоге)
 			var pend := node(n)
 			anim(pend, "pendulum", {"amp": 0.05, "spd": 1.1})
-			var hl: float = HANG_H.get(id, 0.5)
+			var hl: float = HANG_H.get(id, float(it_data.get("hang_h", 0.5)))
 			put(pend, cyl(0.008, 0.008, rope_len, 4), mat(Color("#C9B88A"), 1.0, 0.0, false), Vector3(0, -rope_len * 0.5, 0))
-			item = node(pend, Vector3(0, -rope_len - hl, 0))
+			item = node(pend, Vector3(0, -rope_len - hl, 0), turn)
 		elif shelf and not flat:
-			item = node(n, sp.get("stand", Vector3(0, 0.06, 0.22)))
+			item = node(n, sp.get("stand", Vector3(0, 0.06, 0.22)), turn)
 			sk = "ledge"  # стоит на полочке
+		elif sk == "window":
+			item = node(n, sp.get("stand", Vector3.ZERO), turn)
+			sk = "ledge"  # стоит на подоконнике
+		elif not flat and turn != 0.0:
+			item = node(n, Vector3.ZERO, turn)
+		var kids := item.get_child_count()
 		_decor(id, item, sk)
+		if item.get_child_count() == kids:
+			_placeholder(id, item)  # 0.15: у новой вещи ещё нет 3D — коробочка цвета её стиля
 	var moving := []
 	for a in anims:
 		moving.append(a.n)
@@ -285,9 +451,18 @@ func _place(spot: String) -> void:
 		var d := clampf(box_.size.length() * 1.5, 1.0, 2.2)
 		spot_focus[spot] = [c, d]
 	if built:
+		_tint_lights()
 		_light_budget()
 		_shadow_casters()
 		set_highlight(highlight)
+
+
+## Заготовка вещи без своего 3D (данные в каталоге уже есть, рисунка ещё нет): коробочка с лентой цвета стиля
+func _placeholder(id: String, n: Node3D) -> void:
+	var col := Catalog.style_col(Meta.item(id).get("style", ""))
+	put(n, box(Vector3(0.3, 0.26, 0.3)), mat(col.darkened(0.1)), Vector3(0, 0.13, 0))
+	put(n, box(Vector3(0.32, 0.27, 0.07)), mat(col.lightened(0.45)), Vector3(0, 0.135, 0))
+	put(n, sphere(0.06, 10), mat(Color("#FFE9B0"), 0.6, 0.6, false), Vector3(0, 0.3, 0))
 
 
 func _local_aabb(n: Node3D) -> AABB:
@@ -311,10 +486,8 @@ func _local_aabb(n: Node3D) -> AABB:
 
 ## Меткам и кольцу нужен шейдер с «всегда к камере»; у каждой метки — свой материал (мигание)
 func _markers() -> void:
-	for spot in Meta.SPOTS:
-		if not spots.has(spot):
-			continue
-		var m := Shaders.material("marker", {"col": Color(1.0, 0.9, 0.55, 0.9), "mode": 0.0, "px": 0.034})
+	for spot in spot_list():
+		var m := Shaders.material("marker", {"col": Color(1.0, 0.9, 0.55, 0.9), "mode": 0.0, "px": 0.046})
 		var mi := put(self, quad(Vector2(1, 1)), m, Vector3.ZERO)
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mi.extra_cull_margin = 2.0
@@ -572,7 +745,7 @@ func _light_budget() -> void:
 	for l in _house.find_children("*", "Light3D", true, false) if _house else []:
 		if not order.has(l):
 			order.append(l)
-	for spot in Meta.SPOTS:
+	for spot in spot_list():
 		if spot_nodes.has(spot) and is_instance_valid(spot_nodes[spot]):
 			for l in (spot_nodes[spot] as Node).find_children("*", "Light3D", true, false):
 				order.append(l)
