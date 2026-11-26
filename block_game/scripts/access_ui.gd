@@ -1,5 +1,5 @@
 extends RefCounted
-## 0.17: окно «Удобство» в паузе — четыре переключателя (scripts/access.gd) и кнопка «Назад».
+## 0.17: окно «Удобство» в паузе — переключатели (0.18: и «Вибрация») (scripts/access.gd) и кнопка «Назад».
 ## Рисует на узле игры (g — scripts/game.gd), касания — tap().
 
 const I18n := preload("res://scripts/i18n.gd")
@@ -107,6 +107,13 @@ func _icon(k: String, c: Vector2, on: bool) -> void:
 			g.draw_arc(c, 22, 0, TAU, 28, col, 4.0, true)
 			g.draw_line(c, c + Vector2(0, -14), col, 4.0, true)
 			g.draw_line(c, c + Vector2(10, 4), col, 4.0, true)
+		"vibrate":
+			# телефон с «дрожащими» дужками
+			g._rbox(Rect2(c - Vector2(11, 20), Vector2(22, 40)), col, 5)
+			g._rbox(Rect2(c - Vector2(7, 15), Vector2(14, 26)), Color(g.BTN, 0.9), 3)
+			for sx in [-1.0, 1.0]:
+				g.draw_arc(c + Vector2(sx * 6, 0), 16, -0.6 if sx > 0 else PI - 0.6, 0.6 if sx > 0 else PI + 0.6, 8, col, 3.0, true)
+				g.draw_arc(c + Vector2(sx * 6, 0), 24, -0.5 if sx > 0 else PI - 0.5, 0.5 if sx > 0 else PI + 0.5, 8, Color(col, 0.6), 3.0, true)
 		"big":
 			g.draw_string(g.font, c + Vector2(-30, 14), "A", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, col)
 			g.draw_string(g.font, c + Vector2(-8, 16), "A", HORIZONTAL_ALIGNMENT_LEFT, -1, 40, col)

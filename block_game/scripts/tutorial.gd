@@ -24,6 +24,7 @@ const STEPS := [
 	{"id": "l3_chain", "level": 3, "text": "tut_chain", "close": ALL, "hole": ["stone"], "hand": "tap_hang", "info": true},
 ]
 const WARDROBE := "wardrobe"
+const UNDO_HINT := "undo"  # 0.18: подсказка «Совиного времени» (scripts/owl_time.gd), один раз
 const FIRST_PIECE := 1   # палочка из трёх: повернуть и бросить в колодец — каскад ×2
 
 var enabled := true      # false — без обучения (робот-тестер)
@@ -136,6 +137,7 @@ func _show(id: String) -> void:
 func replay() -> void:
 	for s in STEPS:
 		seen.erase(s.id)
+	seen.erase(UNDO_HINT)
 	cur = ""
 	queued = ""
 
@@ -175,7 +177,7 @@ func load_from(cfg: ConfigFile, max_level: int) -> void:
 	var a = cfg.get_value("tutorial", "seen", [])
 	if a is Array:
 		for id in a:
-			if id is String and (id == WARDROBE or not step_by_id(id).is_empty()):
+			if id is String and (id == WARDROBE or id == UNDO_HINT or not step_by_id(id).is_empty()):
 				seen[id] = true
 
 

@@ -5,11 +5,14 @@ extends RefCounted
 ##  - lefty: «для левшей» — зеркальная раскладка кнопок (поворот и сброс слева, стрелки справа);
 ##  - slow: «медленное падение» — скорость падения ×0.7 (интервал ÷0.7); звёзды и награды
 ##    не меняются, в скрытой статистике отмечается победа с медленным падением;
-##  - big: «крупный текст» — шрифты интерфейса уровня и паузы ×1.2 (где помещается).
-## Хранится в user://save.cfg, раздел [settings] (access_*); в старом сохранении — всё выключено.
+##  - big: «крупный текст» — шрифты интерфейса уровня и паузы ×1.2 (где помещается);
+##  - vibrate (0.18): лёгкая вибрация телефона на сброс фигуры и каскад — по умолчанию включена.
+## Хранится в user://save.cfg, раздел [settings] (access_*); в старом сохранении — всё выключено,
+## кроме вибрации (DEFAULTS).
 ## Меню пункта — scripts/access_ui.gd.
 
-const KEYS := ["symbols", "lefty", "slow", "big"]
+const KEYS := ["symbols", "lefty", "slow", "big", "vibrate"]
+const DEFAULTS := {"vibrate": true}
 const SLOW_K := 0.7     # во сколько раз медленнее падение (скорость ×0.7)
 const TEXT_K := 1.2     # «крупный текст»
 ## Знаки по номеру цвета самоцвета (game.gd GEMS): круг, треугольник, ромб, крест, звезда, полоска, точка
@@ -19,6 +22,7 @@ var symbols := false
 var lefty := false
 var slow := false
 var big := false
+var vibrate := true
 
 
 func get_opt(k: String) -> bool:
@@ -49,8 +53,9 @@ func save_to(cfg: ConfigFile) -> void:
 
 func load_from(cfg: ConfigFile) -> void:
 	for k in KEYS:
-		var v = cfg.get_value("settings", "access_" + k, false)
-		set(k, v if v is bool else false)
+		var d: bool = DEFAULTS.get(k, false)
+		var v = cfg.get_value("settings", "access_" + k, d)
+		set(k, v if v is bool else d)
 
 
 ## Знак цвета v (0..6) в клетке с центром c и размером s; рисует на ci.

@@ -777,9 +777,9 @@ static func has(key: String) -> bool:
 	return has_in(DEFAULT, key)
 
 
-## Словари языка l: основной и блоки версий (0.15, 0.16, 0.17, 0.18)
+## Словари языка l: основной и блоки версий (0.15, 0.16, 0.17, 0.18, 0.18 «праздник каскада»)
 static func _dicts(l: String) -> Array:
-	return [STR.get(l, {}), STR_015.get(l, {}), STR_016.get(l, {}), STR_017_TOUR.get(l, {}), STR_018.get(l, {})]
+	return [STR.get(l, {}), STR_015.get(l, {}), STR_016.get(l, {}), STR_017_TOUR.get(l, {}), STR_018.get(l, {}), STR_018_FUN.get(l, {})]
 
 
 ## Есть ли ключ в языке l (в основном словаре или в блоках версий)
@@ -1321,5 +1321,116 @@ const STR_018 := {
 		"shelf_all": "Вся полка",
 		"shelf_close": "Закрыть",
 		"shelf_hint": "Листай пальцем — соседний кубок",
+	},
+}
+
+
+# ---------- 0.18: праздник каскада, «Совиное время», «до 3 звёзд» ----------
+## juice_* — крупная надпись на цепочку ×3 / ×4+ (scripts/juice.gd); owl_time* — отмена фигуры
+## (scripts/owl_time.gd); goal_left — строка «до 3 звёзд» (scripts/star_goal.gd);
+## say_<герой>_<событие>_<n>[_girl] — облачко героя у поля (scripts/hero_say.gd).
+## Ключи *_girl — только там, где по-русски виден род (в английском — та же фраза).
+const STR_018_FUN := {
+	"en": {
+		"juice_super": "Super!",
+		"juice_mega": "Mega!",
+		"owl_time": "Owl Time!",
+		"owl_time_hint": "Oops? Undo one piece",
+		"goal_left": "%d left",
+		"access_vibrate": "Vibration",
+		"access_vibrate_desc": "Light buzz on drops and cascades",
+		"say_owl_cascade_0": "Whoo!",
+		"say_owl_cascade_1": "Cascade!",
+		"say_owl_cascade_2": "Hoo-hoo, more!",
+		"say_owl_crystal_0": "A crystal!",
+		"say_owl_crystal_1": "Shiny!",
+		"say_owl_crystal_2": "Wise move!",
+		"say_owl_win_0": "I knew it!",
+		"say_owl_win_1": "Whoo, we won!",
+		"say_owl_win_2": "Splendid!",
+		"say_axolotl_cascade_0": "Bloop-bloop!",
+		"say_axolotl_cascade_1": "A wave!",
+		"say_axolotl_cascade_2": "Another wave!",
+		"say_axolotl_crystal_0": "Like a pearl!",
+		"say_axolotl_crystal_1": "Sparkly!",
+		"say_axolotl_crystal_2": "So pretty!",
+		"say_axolotl_win_0": "So happy!",
+		"say_axolotl_win_1": "Yay, bloop!",
+		"say_axolotl_win_2": "Swim on!",
+		"say_puppy_cascade_0": "Woof! More!",
+		"say_puppy_cascade_1": "Cascade!",
+		"say_puppy_cascade_2": "Wow!",
+		"say_puppy_crystal_0": "Found it!",
+		"say_puppy_crystal_1": "Fetch!",
+		"say_puppy_crystal_2": "A crystal!",
+		"say_puppy_win_0": "I'm the fastest!",
+		"say_puppy_win_1": "Woof woof, hooray!",
+		"say_puppy_win_2": "Victory!",
+		"say_kitten_cascade_0": "Purr, more!",
+		"say_kitten_cascade_1": "Meow, cascade!",
+		"say_kitten_cascade_2": "Ooh!",
+		"say_kitten_crystal_0": "Mine!",
+		"say_kitten_crystal_1": "Shiny thing!",
+		"say_kitten_crystal_2": "Caught it!",
+		"say_kitten_win_0": "Purr-fect!",
+		"say_kitten_win_1": "Meow, victory!",
+		"say_kitten_win_2": "Easy!",
+		"say_owl_win_0_girl": "I knew it!",
+		"say_axolotl_win_0_girl": "So happy!",
+		"say_puppy_crystal_0_girl": "Found it!",
+		"say_puppy_win_0_girl": "I'm the fastest!",
+		"say_kitten_crystal_2_girl": "Caught it!",
+		"say_kitten_win_0_girl": "Purr-fect!",
+	},
+	"ru": {
+		"juice_super": "Супер!",
+		"juice_mega": "Мега!",
+		"owl_time": "Совиное время!",
+		"owl_time_hint": "Ой? Отмени одну фигуру",
+		"goal_left": "ещё %d",
+		"access_vibrate": "Вибрация",
+		"access_vibrate_desc": "Лёгкая дрожь на сброс и каскад",
+		"say_owl_cascade_0": "Ух ты!",
+		"say_owl_cascade_1": "Каскад!",
+		"say_owl_cascade_2": "Ух-ух, ещё!",
+		"say_owl_crystal_0": "Кристалл!",
+		"say_owl_crystal_1": "Блестит!",
+		"say_owl_crystal_2": "Мудро!",
+		"say_owl_win_0": "Я так и знал!",
+		"say_owl_win_0_girl": "Я так и знала!",
+		"say_owl_win_1": "Ух, победа!",
+		"say_owl_win_2": "Превосходно!",
+		"say_axolotl_cascade_0": "Буль-буль!",
+		"say_axolotl_cascade_1": "Волна!",
+		"say_axolotl_cascade_2": "Ещё волну!",
+		"say_axolotl_crystal_0": "Как жемчуг!",
+		"say_axolotl_crystal_1": "Сверкает!",
+		"say_axolotl_crystal_2": "Красота!",
+		"say_axolotl_win_0": "Я довольный!",
+		"say_axolotl_win_0_girl": "Я довольная!",
+		"say_axolotl_win_1": "Ура, буль!",
+		"say_axolotl_win_2": "Плывём дальше!",
+		"say_puppy_cascade_0": "Гав! Ещё!",
+		"say_puppy_cascade_1": "Каскад!",
+		"say_puppy_cascade_2": "Ух ты!",
+		"say_puppy_crystal_0": "Нашёл!",
+		"say_puppy_crystal_0_girl": "Нашла!",
+		"say_puppy_crystal_1": "Апорт!",
+		"say_puppy_crystal_2": "Кристаллик!",
+		"say_puppy_win_0": "Я самый быстрый!",
+		"say_puppy_win_0_girl": "Я самая быстрая!",
+		"say_puppy_win_1": "Гав-гав, ура!",
+		"say_puppy_win_2": "Победа!",
+		"say_kitten_cascade_0": "Мур-р, ещё!",
+		"say_kitten_cascade_1": "Мяу, каскад!",
+		"say_kitten_cascade_2": "Ух ты!",
+		"say_kitten_crystal_0": "Моё!",
+		"say_kitten_crystal_1": "Блестяшка!",
+		"say_kitten_crystal_2": "Поймал!",
+		"say_kitten_crystal_2_girl": "Поймала!",
+		"say_kitten_win_0": "Я довольный, мур!",
+		"say_kitten_win_0_girl": "Я довольная, мур!",
+		"say_kitten_win_1": "Мяу, победа!",
+		"say_kitten_win_2": "Легко!",
 	},
 }

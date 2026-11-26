@@ -47,6 +47,12 @@ const AccessUI := preload("res://scripts/access_ui.gd")
 ## 0.17: после победы/поражения герой на панели празднует/грустит, затем появляется окно итога
 const RESULT_BEAT := 0.75
 const HomeTour := preload("res://scripts/home_tour.gd")  # 0.17: экскурсия по главному экрану
+## 0.18: праздник каскада (scripts/juice.gd), облачко героя (hero_say.gd), «Совиное время» — отмена
+## фигуры (owl_time.gd), строка «до 3 звёзд» на панели (star_goal.gd)
+const Juice := preload("res://scripts/juice.gd")
+const HeroSay := preload("res://scripts/hero_say.gd")
+const OwlTime := preload("res://scripts/owl_time.gd")
+const StarGoal := preload("res://scripts/star_goal.gd")
 ## true — после очистки падают все группы поля (и камень уровня над дырами ниже линии);
 ## false — только то, что выше нижней очищенной линии (ниже неё поле не трогается).
 const FALL_ALL := false
@@ -125,6 +131,10 @@ var decor_ui                  # 0.15: режим украшения комнат
 var play_hero = PlayHero.new()  # 0.17: герой на панели уровня
 var access = Access.new()       # 0.17: настройки «Удобство»
 var access_ui                   # 0.17: окно «Удобство» в паузе
+var juice                       # 0.18: праздник каскада
+var say = HeroSay.new()         # 0.18: облачко с фразой героя
+var owl = OwlTime.new()         # 0.18: «Совиное время» — одна отмена за попытку
+var _snapped := false           # 0.18: снимок для отмены уже сделан (сброс фигуры)
 
 var fall_timer := 0.0
 var lock_timer := 0.0
@@ -160,6 +170,10 @@ var repeat_left := {}
 var board_touch := {}
 var sb := StyleBoxFlat.new()
 var font: Font
+
+
+func _init() -> void:
+	juice = Juice.new(self)  # 0.18: и без _ready (тесты, робот-тестер)
 
 
 func _ready() -> void:
@@ -320,6 +334,10 @@ func start_level(n: int) -> void:
 	next_type = _pick_type(-1)
 	_apply_assist(n)
 	play_hero.reset()
+	juice.reset()
+	say.reset()
+	owl.reset()
+	_snapped = false
 	tut.on_start(self)
 	if tut.wants_first_piece(n):
 		next_type = Tutorial.FIRST_PIECE
@@ -402,6 +420,32 @@ func _spawn() -> void:
 		tut.on_spawn(self)
 
 
+## 0.18: после отмены («Совиное время») — та же фигура снова сверху (следующая не меняется).
+func _respawn_same() -> void:
+	piece_cells = SHAPES[piece_type].cells.duplicate()
+	var w := 0
+	for c in piece_cells:
+		w = maxi(w, c.x + 1)
+	piece_pos = Vector2i((COLS - w) / 2, 0)
+	fall_timer = 0.0
+	lock_timer = 0.0
+	lock_resets = 0
+	has_piece = true
+	_set_state(State.PLAYING)
+
+
+## 0.18: «Совиное время» — отменить последнюю фигуру (кнопка с песочными часами). true — отменено.
+func undo_piece() -> bool:
+	if not owl.undo(self):
+		return false
+	particles.clear()
+	juice.reset()
+	play_hero.reset()
+	play("rotate", 0.7)
+	play("crystal", 0.6, -6.0)
+	return true
+
+
 func fits(cells: Array, pos: Vector2i) -> bool:
 	for c in cells:
 		var x: int = c.x + pos.x
@@ -459,6 +503,9 @@ func soft_drop() -> bool:
 func hard_drop() -> void:
 	if state != State.PLAYING or not has_piece:
 		return
+	owl.take(self)  # 0.18: снимок до очков за сброс
+	_snapped = true
+	juice.on_drop()
 	var start_y := piece_pos.y
 	while fits(piece_cells, piece_pos + Vector2i(0, 1)):
 		piece_pos.y += 1
@@ -489,6 +536,9 @@ func _moved() -> void:
 
 
 func _lock(silent := false) -> void:
+	if not _snapped:
+		owl.take(self)  # 0.18: снимок для «Совиного времени» — до фиксации
+	_snapped = false
 	has_piece = false
 	pieces_used += 1
 	next_piece_id += 1
@@ -528,16 +578,21 @@ func _check_lines() -> bool:
 	var n := clearing_rows.size()
 	var gained: int = LINE_SCORES[mini(n, 4)] * chain
 	var freed := 0
+	var last_at := Vector2.ZERO
 	for y in clearing_rows:
 		for x in COLS:
 			var v: int = board[y * COLS + x]
 			var center := board_pos + Vector2(x + 0.5, y + 0.5) * CELL
 			if v == CRYSTAL:
 				freed += 1
+				last_at = center
 				_burst(center, CRYSTAL_COL, 16, 420.0)
+				juice.fly(center)  # 0.18: кристалл летит к счётчику на панели
 			else:
 				_burst(center, _cell_color(v), 6, 260.0)
 	crystals_left -= freed
+	if freed > 0 and crystals_left <= 0:
+		juice.on_last_crystal(last_at)  # 0.18: последний кристалл уровня — маленький праздник
 	gained += freed * 150
 	score += gained
 	score_bump = 1.0
@@ -545,10 +600,15 @@ func _check_lines() -> bool:
 	var mid_y: float = board_pos.y + (clearing_rows[0] + 0.5) * CELL
 	var px := board_pos.x + COLS * CELL / 2.0
 	play_hero.on_cascade(chain)  # 0.17: ×2 — радость, ×3+ — прыжок с искорками
+	juice.on_cascade(chain)  # 0.18: ×3+ — замедление, вспышка, «Супер!» / «Мега!»; вибрация
 	if chain >= 2:
 		_popup(I18n.t("cascade") % chain, Vector2(px, mid_y - 50), ACCENT, 46)
-		play("combo%d" % mini(chain - 1, 5))
+		var snd: Array = Juice.chain_sound(chain)  # 0.18: каждое звено — на ступень выше
+		play(snd[0], snd[1])
 		tut.on_cascade(self)
+		hero_says("cascade")
+	elif freed > 0:
+		hero_says("crystal")
 	else:
 		play("line%d" % mini(n, 4))
 	_popup("+%d" % gained, Vector2(px, mid_y), TEXT, 38)
@@ -605,6 +665,7 @@ func _win() -> void:
 	_set_state(State.WIN)
 	state_time = -RESULT_BEAT  # 0.17: сначала герой на панели празднует, потом окно победы
 	play_hero.on_win()
+	hero_says("win")
 	if screens:
 		screens.poke_hero()
 	play("levelup")
@@ -623,6 +684,12 @@ func _lose() -> void:
 	state_time = -RESULT_BEAT  # 0.17: сначала герой на панели грустит, потом окно поражения
 	play_hero.on_lose()
 	play("gameover")
+
+
+## 0.18: фраза героя у поля на событие ev ("cascade", "crystal", "win"), не чаще раза в ~3 с.
+func hero_says(ev: String) -> bool:
+	var kind: String = meta.hero if meta.hero != "" else "owl"
+	return say.on_event(kind, meta.gender_of(kind), ev)
 
 
 func step(delta: float) -> void:
@@ -787,8 +854,12 @@ func _update_effects(delta: float) -> void:
 # ---------- Ввод ----------
 
 func _process(delta: float) -> void:
-	step(delta)
-	_update_effects(delta)
+	juice.update(delta)  # 0.18: эффекты праздника — в настоящем времени
+	say.update(delta)
+	owl.update(self, delta)
+	var k: float = juice.time_k() if state in [State.PLAYING, State.CLEARING, State.SETTLE] else 1.0
+	step(delta * k)  # 0.18: на ×3+ — короткое замедление
+	_update_effects(delta * k)
 	screens.update(delta)
 	tut.update(delta)
 	tour.update(self, delta)
@@ -868,6 +939,7 @@ func _key(e: InputEventKey) -> void:
 		KEY_DOWN: _press("soft")
 		KEY_UP: _press("rotate")
 		KEY_SPACE: _press("hard")
+		KEY_Z, KEY_BACKSPACE: undo_piece()  # 0.18: «Совиное время» с клавиатуры
 		KEY_P, KEY_ESCAPE:
 			if state == State.PLAYING:
 				_set_state(State.PAUSED)
@@ -948,6 +1020,9 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 		if state == State.PLAYING:
 			play("pause")
 			_set_state(State.PAUSED)
+		return
+	if owl.rect.grow(12).has_point(pos):
+		undo_piece()  # 0.18: «Совиное время»; во время каскада и после итога — не срабатывает
 		return
 	for n in buttons:
 		if buttons[n].has_point(pos):
@@ -1102,11 +1177,17 @@ func _draw() -> void:
 	var off := Vector2(randf_range(-shake, shake), randf_range(-shake, shake)) if shake > 0.0 else Vector2.ZERO
 	draw_set_transform(off)
 	_draw_header()
+	var z: Array = juice.board_zoom()  # 0.18: последний кристалл — лёгкое приближение поля
+	draw_set_transform(off + z[1] * (1.0 - z[0]), 0.0, Vector2(z[0], z[0]))
 	_draw_board()
+	draw_set_transform(off)
 	_draw_panel()
 	draw_set_transform(Vector2.ZERO)
 	_draw_controls()
 	_draw_effects()
+	juice.draw()  # 0.18: вспышка, летящие кристаллы, «Супер!» / «Мега!»
+	if state in [State.PLAYING, State.CLEARING, State.SETTLE, State.WIN, State.LOSE]:
+		owl.draw(self)  # 0.18: кнопка «Совиное время»
 	if state in [State.PLAYING, State.CLEARING, State.SETTLE]:
 		tut.draw(self)
 	_draw_overlay()
@@ -1269,8 +1350,12 @@ func _draw_panel() -> void:
 
 	y += 220.0
 	draw_string(font, Vector2(panel_x, y), I18n.t("panel_crystals"), HORIZONTAL_ALIGNMENT_LEFT, pw, lab, DIM)
-	_draw_block(Vector2(panel_x - 6, y + 10), 56, CRYSTAL)
-	draw_string(font, Vector2(panel_x + 52, y + 52), "%d/%d" % [crystals_total - crystals_left, crystals_total], HORIZONTAL_ALIGNMENT_LEFT, pw - 52, access.fs(38), CRYSTAL_COL)
+	# 0.18: счётчик прибавляет кристалл, когда тот долетает, и «подпрыгивает»
+	var jb: float = juice.bump
+	var cs := 56.0 * (1.0 + 0.22 * jb)
+	_draw_block(Vector2(panel_x - 6 + 28, y + 38) - Vector2(cs, cs) / 2.0 - Vector2(0, 10 * jb), cs, CRYSTAL)
+	var got := maxi(0, crystals_total - crystals_left - juice.in_flight())
+	draw_string(font, Vector2(panel_x + 52, y + 52 - 8 * jb), "%d/%d" % [got, crystals_total], HORIZONTAL_ALIGNMENT_LEFT, pw - 52, int(access.fs(38) * (1.0 + 0.2 * jb)), CRYSTAL_COL)
 
 	var bump := 1.0 + 0.25 * score_bump
 	var val := access.fs(40)
@@ -1281,12 +1366,16 @@ func _draw_panel() -> void:
 		sy = y + 104.0 + i * step_y
 		draw_string(font, Vector2(panel_x, sy), stats[i][0], HORIZONTAL_ALIGNMENT_LEFT, pw, lab, DIM)
 		draw_string(font, Vector2(panel_x, sy + val + 2), stats[i][1], HORIZONTAL_ALIGNMENT_LEFT, pw, int(stats[i][2]), ACCENT if i == 0 else TEXT)
+	# 0.18: под числом фигур — «до 3 звёзд» (звёздочки и сколько фигур ещё можно)
+	var gy := sy + val + 2.0 + access.fs(24) + 12.0
+	var gh: float = StarGoal.draw(self, panel_x, gy, pw, access.fs(24))
 	# 0.17: герой в своём наряде — от последней строки до низа поля
-	var top := sy + val + 24.0
+	var top := sy + val + 24.0 + gh
 	var bottom := board_pos.y + ROWS * CELL
 	if bottom - top > 120.0:
 		var kind: String = meta.hero if meta.hero != "" else "owl"
 		play_hero.draw_on(self, kind, meta.outfit(), Rect2(panel_x - 8, top, pw + 16, bottom - top))
+		say.draw(self, Rect2(panel_x - 8, top - 4.0, pw + 16, bottom - top), board_pos.x + COLS * CELL + 10.0)  # 0.18: облачко героя
 
 
 func _draw_controls() -> void:
