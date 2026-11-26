@@ -682,9 +682,13 @@ func anvil_icon(c: Vector2, s: float) -> void:
 
 
 ## Кнопка «Кузница» на главном экране (справа под счётчиками). Метка «Можно выковать!» — когда готово.
+func home_button_rect() -> Rect2:
+	return Rect2(g.W - 128, 118, 108, 108)
+
+
 func draw_home_button() -> void:
 	var sc = _sc()
-	var r := Rect2(g.W - 128, 118, 108, 108)
+	var r := home_button_rect()
 	sc.rects["forge"] = r
 	var ready: bool = g.meta.forge_ready_any(g.max_level)
 	if ready:
