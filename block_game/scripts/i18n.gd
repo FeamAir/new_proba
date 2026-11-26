@@ -777,9 +777,9 @@ static func has(key: String) -> bool:
 	return has_in(DEFAULT, key)
 
 
-## Словари языка l: основной и блоки версий (0.15, 0.16)
+## Словари языка l: основной и блоки версий (0.15, 0.16, 0.17, 0.18)
 static func _dicts(l: String) -> Array:
-	return [STR.get(l, {}), STR_015.get(l, {}), STR_016.get(l, {}), STR_017_TOUR.get(l, {})]
+	return [STR.get(l, {}), STR_015.get(l, {}), STR_016.get(l, {}), STR_017_TOUR.get(l, {}), STR_018.get(l, {})]
 
 
 ## Есть ли ключ в языке l (в основном словаре или в блоках версий)
@@ -1292,5 +1292,34 @@ const STR_017_TOUR := {
 		"tour_next": "Нажми, чтобы продолжить",
 		"tour_end": "Нажми, чтобы закончить",
 		"tour_skip": "Пропустить",
+	},
+}
+
+
+# ---------- 0.18: «Родной окрас», снять вещь, полка кубков ----------
+## card_natural — карточка слота «Окраска» (вернуть прежний вид), card_bare — карточка «ничего» в других слотах;
+## shelf_* — кнопки и подсказка у полки кубков в 3D-доме и на полке 2D.
+const STR_018 := {
+	"en": {
+		"card_natural": "Natural look",
+		"card_bare": "Nothing",
+		"card_bare_on": "SELECTED",
+		"card_take_off": "Take off",
+		"card_restore": "Restore",
+		"natural_back": "Natural look is back",
+		"shelf_all": "Whole shelf",
+		"shelf_close": "Close",
+		"shelf_hint": "Swipe for the next trophy",
+	},
+	"ru": {
+		"card_natural": "Родной окрас",
+		"card_bare": "Без вещи",
+		"card_bare_on": "ВЫБРАНО",
+		"card_take_off": "Снять",
+		"card_restore": "Вернуть",
+		"natural_back": "Родной окрас вернулся",
+		"shelf_all": "Вся полка",
+		"shelf_close": "Закрыть",
+		"shelf_hint": "Листай пальцем — соседний кубок",
 	},
 }

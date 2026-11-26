@@ -4,9 +4,14 @@ extends Camera3D
 ##   два пальца (щипок) — ближе / дальше; одиночный тап — сигнал tapped, двойной — double_tapped.
 ## Касания передаёт экран «Дом» (scripts/home3d/home3d.gd): кнопки интерфейса камеру не крутят.
 ## Координаты касаний — в пикселях картинки 3D (SubViewport).
+## 0.18: «держать предмет» (hold_focus — камера у полки кубков): палец не уводит камеру к обзору —
+##   немного повернуться (до PAN_LIMIT от вида на предмет) можно, быстрый свайп по горизонтали — сигнал swiped
+##   (соседний кубок), конец щипка — сигнал pinched (во сколько раз изменилось расстояние).
 
 signal tapped(pos: Vector2)
 signal double_tapped(pos: Vector2)
+signal swiped(dir: int)
+signal pinched(ratio: float)
 
 ## Центр обзора и расстояние «по умолчанию»
 var home_pivot := Vector3(0, 0.95, 0)
@@ -44,6 +49,14 @@ const DOUBLE_TIME := 0.4
 ## Пиксели картинки на пиксель экрана 720 (картинка бывает уменьшена — простое качество)
 var px_scale := 1.0
 var focused := false
+## 0.18: камера «держит» предмет (полка кубков): касания не возвращают к обзору
+var hold_focus := false
+## Поворот вида на предмет (после fly_to); вокруг него — небольшая панорама пальцем
+var focus_yaw := 0.0
+const PAN_LIMIT := 0.38
+const PAN_TURN := 0.55       # панорама у предмета — медленнее обычного поворота
+const SWIPE_MIN := 70.0      # пикселей экрана 720 по горизонтали
+const SWIPE_TIME := 0.6
 ## Медленный «облёт» в покое (заставка, гардероб)
 var idle_sway := 0.0
 
@@ -56,6 +69,7 @@ var _moved := 0.0
 var _last_tap_time := -10.0
 var _last_tap_pos := Vector2.ZERO
 var _pinch_d := 0.0
+var _pinch_from := 0.0       # 0.18: goal_dist в начале щипка (0 — щипка не было)
 var _clock := 0.0
 var _sway_t := 0.0
 
@@ -109,13 +123,27 @@ func touch(idx: int, pos: Vector2, pressed: bool) -> void:
 			_moved = 0.0
 			_vel_yaw = 0.0
 			_vel_pitch = 0.0
+			_pinch_from = 0.0
 		elif _touches.size() == 2:
 			_pinch_d = _pinch_dist()
 			_moved = 999.0  # два пальца — уже не тап
+			if _pinch_from <= 0.0:
+				_pinch_from = goal_dist
 	else:
 		if not _touches.has(idx):
 			return
 		_touches.erase(idx)
+		if hold_focus and _touches.is_empty():
+			# 0.18: у предмета: конец щипка — pinched; быстрый свайп одним пальцем — swiped (не тап)
+			if _pinch_from > 0.0:
+				var ratio := goal_dist / _pinch_from
+				_pinch_from = 0.0
+				pinched.emit(ratio)
+				return
+			var sw := swipe_dir(pos - _press_pos, _clock - _press_time)
+			if sw != 0:
+				swiped.emit(sw)
+				return
 		if _touches.is_empty() and _moved < TAP_MOVE * px_scale and _clock - _press_time < TAP_TIME:
 			if _clock - _last_tap_time < DOUBLE_TIME and pos.distance_to(_last_tap_pos) < 80.0 * px_scale:
 				_last_tap_time = -10.0
@@ -134,6 +162,9 @@ func drag(idx: int, pos: Vector2, rel: Vector2) -> void:
 	if _touches.size() == 1:
 		if _moved < 10.0 * px_scale:
 			return
+		if hold_focus:
+			_pan(rel)
+			return
 		_user_turned()
 		var dy: float = -rel.x / px_scale * TURN
 		var dp: float = rel.y / px_scale * TILT
@@ -147,6 +178,28 @@ func drag(idx: int, pos: Vector2, rel: Vector2) -> void:
 		if _pinch_d > 1.0 and d > 1.0:
 			zoom(_pinch_d / d)
 		_pinch_d = d
+
+
+## 0.18: свайп по картинке (d — смещение пальца в пикселях картинки, dt — за сколько секунд):
+## +1 — палец влево (следующий), -1 — вправо (предыдущий), 0 — не свайп
+func swipe_dir(d: Vector2, dt: float) -> int:
+	var dx := d.x / maxf(0.01, px_scale)
+	if dt > SWIPE_TIME or absf(dx) < SWIPE_MIN or absf(d.x) < absf(d.y) * 1.3:
+		return 0
+	return 1 if dx < 0.0 else -1
+
+
+## 0.18: у предмета: небольшой поворот вокруг него, без инерции и без выхода к обзору
+func _pan(rel: Vector2) -> void:
+	_vel_yaw = 0.0
+	_vel_pitch = 0.0
+	var a0 := angle_difference(focus_yaw, yaw)
+	if absf(a0) > PAN_LIMIT:
+		return  # камера ещё разворачивается к предмету — не мешаем полёту
+	goal_yaw = null
+	goal_pitch = null
+	yaw = focus_yaw + clampf(a0 - rel.x / px_scale * TURN * PAN_TURN, -PAN_LIMIT, PAN_LIMIT)
+	pitch = clampf(pitch + rel.y / px_scale * TILT * PAN_TURN, pitch_min, pitch_max)
 
 
 func _pinch_dist() -> float:
@@ -180,6 +233,7 @@ func fly_to(at: Vector3, from_dir: Vector3, d: float, p := 0.22) -> void:
 		from_dir = Vector3(sin(yaw), 0, cos(yaw))
 	from_dir = from_dir.normalized()
 	goal_yaw = atan2(from_dir.x, from_dir.z)
+	focus_yaw = goal_yaw
 	goal_pitch = p
 	_vel_yaw = 0.0
 	_vel_pitch = 0.0

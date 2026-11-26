@@ -900,9 +900,14 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 				return  # 0.17: экскурсия забирает касания (кнопки и камера 3D-дома их не получают)
 			if decor_ui and decor_ui.active:
 				# 0.15: режим украшения: панель и полоса — свои касания, остальное — камера 3D-дома
+				# (0.18: по ленте карточек — тап при отпускании, свайп листает)
+				if decor_ui.strip_down(idx, pos):
+					return
 				if not decor_ui.tap(pos) and home3d:
 					home3d.touch(idx, pos, true)
 				return
+			if trophy_ui and trophy_ui.press(idx, pos):
+				return  # 0.18: полка 2D: тап при отпускании, свайп — соседний кубок
 			if trophy_ui and trophy_ui.tap_home(pos):
 				return
 			if not assist_ui.tap_home(pos) and not screens.tap_home(pos) and home3d:
@@ -913,7 +918,7 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 			return
 		State.WARDROBE:
 			tut.wardrobe_tap(self)
-			screens.tap_wardrobe(pos)
+			screens.wardrobe_down(idx, pos)  # 0.18: по сетке вещей — тап при отпускании, свайп листает
 			return
 		State.MAP:
 			screens.map_down(idx, pos)
@@ -990,8 +995,15 @@ func _pause_menu_tap(pos: Vector2) -> void:
 
 func _touch_drag(idx: int, pos: Vector2, rel := Vector2.ZERO) -> void:
 	if state == State.HOME:
+		if decor_ui:
+			decor_ui.strip.move(idx, pos)
+		if trophy_ui:
+			trophy_ui.strip.move(idx, pos)
 		if home3d and not tour.active():
 			home3d.drag(idx, pos, rel)
+		return
+	if state == State.WARDROBE:
+		screens.wardrobe_drag(idx, pos)
 		return
 	if state == State.MAP:
 		screens.map_drag(idx, pos)
@@ -1019,6 +1031,14 @@ func _touch_up(idx: int, pos: Vector2) -> void:
 	repeat_left.erase(idx)
 	if home3d:
 		home3d.touch(idx, pos, false)
+	if state == State.HOME:
+		if decor_ui:
+			decor_ui.strip_up(idx, pos)
+		if trophy_ui:
+			trophy_ui.release(idx, pos)
+	if state == State.WARDROBE:
+		screens.wardrobe_up(idx, pos)
+		return
 	if state == State.MAP:
 		screens.map_up(idx, pos)
 		return

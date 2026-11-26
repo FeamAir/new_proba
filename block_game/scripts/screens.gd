@@ -11,6 +11,9 @@ const TryOn := preload("res://scripts/tryon.gd")
 const Catalog := preload("res://scripts/decor_catalog.gd")
 ## 0.12: редкости (рамки и блеск карточек)
 const Rarity := preload("res://scripts/rarity.gd")
+const Swipe := preload("res://scripts/swipe.gd")
+## 0.18: первая карточка каждой вкладки вещей — «ничего» (у окраски — «Родной окрас»): снять вещь слота
+const BARE := "_bare"
 ## 0.12: вещей на странице гардероба (2 ряда по 3)
 const PAGE_SIZE := 6
 
@@ -45,6 +48,7 @@ var fx_t := 99.0            # секунд с покупки (короткий �
 var fx_at := Vector2.ZERO
 var focus := Vector2.ZERO   # где на сцене гардероба герой / место примерки
 var page := 0               # 0.12: страница вещей во вкладке гардероба
+var strip = Swipe.new()     # 0.18: свайп по сетке вещей листает страницы
 ## 0.14: гардероб открыт с экрана «Дом» по «+» у места (или по цели «Можно купить») — после покупки
 ## или размещения украшения игрок сразу возвращается домой, камера 3D-дома подлетает к новой вещи
 var from_home_spot := false
@@ -551,7 +555,7 @@ func open_wardrobe(t := "head", focus_id := "") -> void:
 	tab = t
 	page = 0
 	if focus_id != "" and t != "home":
-		var i := Meta.items_in(t, _kind()).map(func(it): return it.id).find(focus_id)
+		var i := _wr_items(_kind()).map(func(it): return it.id).find(focus_id)
 		page = maxi(0, i) / PAGE_SIZE
 	tryon.clear()
 	# 0.14: вкладку «Дом» с экрана «Дом» открывает только «+» у места (кнопка «Гардероб» — другие вкладки)
@@ -567,7 +571,10 @@ func wr_tabs() -> Array:
 
 
 func _wr_items(kind: String) -> Array:
-	return Meta.decor_for(kind, spot) if tab == "home" else Meta.items_in(tab, kind)
+	if tab == "home":
+		return Meta.decor_for(kind, spot)
+	# 0.18: «Родной окрас» / «Без вещи» — всегда первая, бесплатная
+	return [{"id": BARE, "slot": tab, "bare": true}] + Meta.items_in(tab, kind)
 
 
 func _kind() -> String:
@@ -873,6 +880,9 @@ func _star(c: Vector2, ro: float, ri: float, n: int) -> PackedVector2Array:
 
 
 func _card(it: Dictionary, r: Rect2, kind: String) -> void:
+	if it.get("bare", false):
+		_bare_card(it.slot, r, kind)
+		return
 	var is_decor := it.has("home")
 	var on: bool = g.meta.placed_at(kind, spot) == it.id if is_decor else g.meta.is_equipped(it.id)
 	var own: bool = g.meta.is_owned(it.id)
@@ -936,6 +946,45 @@ func _card(it: Dictionary, r: Rect2, kind: String) -> void:
 		var pw: float = g.font.get_string_size(price, HORIZONTAL_ALIGNMENT_LEFT, -1, 28).x
 		shard_icon(Vector2(cx - pw / 2.0 - 14, sy - 10), 13)
 		_text(Vector2(cx - pw / 2.0 + 6, sy), price, 28, g.CRYSTAL_COL if g.meta.shards >= it.price else BAD_COL)
+
+
+## 0.18: карточка «Родной окрас» (слот окраски) / «Без вещи» (другие слоты): выбрана, когда слот пуст
+func _bare_card(slot: String, r: Rect2, kind: String) -> void:
+	var on: bool = g.meta.equipped.get(slot, "") == ""
+	g._rbox(r, Color("#3A2468") if on else Color("#24173F"), 22)
+	if on:
+		g.draw_polyline(_rr_outline(r.grow(-7), 16), OK_COL, 3.0, true)
+	var ic := r.position + Vector2(r.size.x / 2.0, 66)
+	if slot == "skin":
+		# герой в своём настоящем цвете
+		hero.draw_item_icon(g, "", "skin", kind, ic, 120, g.t_total, g.meta.gender_of(kind))
+		g.draw_set_transform(Vector2.ZERO)
+	else:
+		g.draw_circle(ic, 44, Color(1, 1, 1, 0.06), true, -1.0, true)
+		_tab_icon(slot, ic, Color(g.TEXT, 0.45))
+		g.draw_arc(ic, 44, 0, TAU, 32, Color(g.TEXT, 0.55), 4.0, true)
+		g.draw_line(ic + Vector2(-31, 31), ic + Vector2(31, -31), Color(g.TEXT, 0.55), 4.0, true)
+	var nm := I18n.t("card_natural") if slot == "skin" else I18n.t("card_bare")
+	_text(Vector2(r.position.x, r.position.y + 154), nm, fit_size(nm, r.size.x - 10, 21), g.TEXT, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+	var sy := r.position.y + 186
+	if on:
+		_ctext(r.get_center().x, sy, I18n.t("card_bare_on"), 24, OK_COL, r.size.x)
+	else:
+		_ctext(r.get_center().x, sy, I18n.t("card_restore") if slot == "skin" else I18n.t("card_take_off"), 24, g.ACCENT, r.size.x)
+
+
+## 0.18: нажатие на «Родной окрас» / «Без вещи»: вещь слота снимается (остаётся купленной), примерка — тоже
+func tap_bare(slot: String) -> void:
+	tryon.clear()
+	var was: String = g.meta.equipped.get(slot, "")
+	if was == "":
+		g.play("click", 0.9)
+		return
+	g.meta.unequip(slot)
+	g.play("click")
+	poke_hero()
+	say(I18n.t("natural_back") if slot == "skin" else I18n.t("forge_took_off") % Meta.item_name(was, _kind(), g.meta.gender_of(_kind())))
+	g._save()
 
 
 func _rr_outline(r: Rect2, rad: float) -> PackedVector2Array:
@@ -1081,6 +1130,47 @@ func _confirm_try() -> void:
 			say(Meta.lock_reason(id, g.total_stars(), g.max_level))
 
 
+## 0.18: лента вещей (сетка карточек): касание здесь срабатывает при отпускании — свайп листает страницы
+func strip_rect() -> Rect2:
+	var L := _wr_layout()
+	return Rect2(0, L.grid_y - 7, g.W, g.H - L.grid_y + 7)
+
+
+## Касания гардероба от игры (scripts/game.gd): в ленте — через свайп, остальное — сразу
+func wardrobe_down(idx: int, pos: Vector2) -> void:
+	if strip_rect().has_point(pos):
+		strip.press(idx, pos)
+		return
+	tap_wardrobe(pos)
+
+
+func wardrobe_drag(idx: int, pos: Vector2) -> void:
+	strip.move(idx, pos)
+
+
+func wardrobe_up(idx: int, pos: Vector2) -> void:
+	if not strip.active():
+		return
+	match strip.release(idx, pos):
+		Swipe.TAP:
+			tap_wardrobe(strip.start)
+		Swipe.NEXT:
+			flip_page(1)
+		Swipe.PREV:
+			flip_page(-1)
+
+
+## Страница вещей вперёд (+1) / назад (-1); true — перелистнулась
+func flip_page(dir: int) -> bool:
+	var pages := page_count(_wr_items(_kind()).size())
+	var p := clampi(page + dir, 0, pages - 1)
+	if p == page:
+		return false
+	page = p
+	g.play("click")
+	return true
+
+
 func tap_wardrobe(pos: Vector2) -> void:
 	var on_card := false
 	for n in rects:
@@ -1182,6 +1272,9 @@ func return_home_to(sp: String) -> void:
 ## Нажатие на карточку вещи / украшения (для текущей вкладки и места).
 ## Купленное — надеть/снять сразу; некупленное — примерка (повторное нажатие — снять примерку).
 func tap_card(id: String, kind: String) -> void:
+	if id == BARE:
+		tap_bare(tab)
+		return
 	var res: String
 	if tab == "home":
 		res = g.meta.tap_decor(kind, spot, id)

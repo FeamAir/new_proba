@@ -14,6 +14,7 @@ const Meta := preload("res://scripts/meta.gd")
 const Catalog := preload("res://scripts/decor_catalog.gd")
 const I18n := preload("res://scripts/i18n.gd")
 const TryOn := preload("res://scripts/tryon.gd")
+const Swipe := preload("res://scripts/swipe.gd")
 
 const PANEL_H := 468.0
 const TOP_H := 150.0
@@ -40,6 +41,8 @@ var page := 0
 var tryon = TryOn.new()
 var rects := {}
 var _enter_t := 0.0
+## 0.18: свайп по ленте карточек листает страницы (тап по карточке — при отпускании пальца)
+var strip = Swipe.new()
 
 
 func _init(game) -> void:
@@ -273,6 +276,36 @@ func _name(id: String) -> String:
 
 
 # ---------- Касания ----------
+
+## 0.18: касание ленты карточек — ждём отпускания (тап или свайп). true — касание забрала лента
+func strip_down(idx: int, pos: Vector2) -> bool:
+	if not active or not rects.get("strip", Rect2()).has_point(pos):
+		return false
+	strip.press(idx, pos)
+	return true
+
+
+func strip_up(idx: int, pos: Vector2) -> void:
+	if not strip.active():
+		return
+	match strip.release(idx, pos):
+		Swipe.TAP:
+			tap(strip.start)
+		Swipe.NEXT:
+			flip_page(1)
+		Swipe.PREV:
+			flip_page(-1)
+
+
+## Страница ленты вперёд (+1) / назад (-1); true — перелистнулась
+func flip_page(dir: int) -> bool:
+	var p := clampi(page + dir, 0, pages() - 1)
+	if p == page:
+		return false
+	page = p
+	g.play("click")
+	return true
+
 
 ## true — касание забрала панель / верхняя полоса; false — оно для дома (3D-камера или 2D-места)
 func tap(pos: Vector2) -> bool:
@@ -576,6 +609,7 @@ func _bottom_row(y0: float) -> void:
 
 func _cards(list: Array, y: float, home: String, decor: bool) -> void:
 	var sc = _sc()
+	rects["strip"] = Rect2(0, y - 8, g.W, 172.0 + 16.0)  # 0.18: лента карточек (свайп)
 	if list.is_empty():
 		var msg := I18n.t("dec_no_fit")
 		sc._ctext(g.W / 2.0, y + 90, msg, sc.fit_size(msg, g.W - 60, 24), g.DIM, g.W - 60)

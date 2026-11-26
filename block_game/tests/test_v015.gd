@@ -396,6 +396,7 @@ func _test_decorate_ui_2d() -> void:
 	await _draw_once()
 	var id := _free_for("owl", "near")
 	g._touch_down(0, du.rects["card_" + id].get_center())
+	g._touch_up(0, du.rects["card_" + id].get_center())  # 0.18: карточка ленты срабатывает при отпускании
 	check(du.tryon.active() and du.tryon.id == id and g.meta.placed_at("owl", "near") == "" and g.meta.shards == 300, "тап по вещи — примерка на месте, ничего не потрачено")
 	await _draw_once()
 	check(du.rects.has("buy") and du.rects.has("cancel"), "при примерке — «Купить за N» и «Отмена»")
@@ -403,6 +404,7 @@ func _test_decorate_ui_2d() -> void:
 	check(not du.tryon.active() and du.active and du.spot == "near", "«Отмена» — примерки нет, место выбрано")
 	await _draw_once()
 	g._touch_down(0, du.rects["card_" + id].get_center())
+	g._touch_up(0, du.rects["card_" + id].get_center())  # 0.18: карточка ленты срабатывает при отпускании
 	await _draw_once()
 	g._touch_down(0, du.rects["buy"].get_center())
 	check(g.meta.placed_at("owl", "near") == id and g.meta.decor_owned.has(id) and g.meta.shards < 300 and du.active, "«Купить» — стоит, режим не закрылся")
@@ -418,6 +420,7 @@ func _test_decorate_ui_2d() -> void:
 	# вещь без выбранного места: место подбирается само
 	await _draw_once()
 	g._touch_down(0, du.rects["card_" + id].get_center())
+	g._touch_up(0, du.rects["card_" + id].get_center())  # 0.18: карточка ленты срабатывает при отпускании
 	check(du.spot == "near", "тап по поставленной вещи без места — выбирается её место")
 	du.deselect()
 	du.tap_item("owl_lantern")
@@ -430,12 +433,14 @@ func _test_decorate_ui_2d() -> void:
 	g._touch_down(0, du.rects["layer_light"].get_center())
 	await _draw_once()
 	g._touch_down(0, du.rects["card_owl_light_lamp"].get_center())
+	g._touch_up(0, du.rects["card_owl_light_lamp"].get_center())  # 0.18: карточка ленты срабатывает при отпускании
 	check(du.tryon.is_room() and du.tryon.room(g.meta, "owl").light == "owl_light_lamp" and g.meta.room_of("owl").light == "owl_light_moon", "свет: примерка до покупки")
 	await _draw_once()
 	g._touch_down(0, du.rects["buy"].get_center())
 	check(g.meta.room_of("owl").light == "owl_light_lamp" and g.meta.room_is_owned("owl_light_lamp"), "свет куплен и выбран")
 	await _draw_once()
 	g._touch_down(0, du.rects["card_owl_light_moon"].get_center())
+	g._touch_up(0, du.rects["card_owl_light_moon"].get_center())  # 0.18: карточка ленты срабатывает при отпускании
 	check(g.meta.room_of("owl").light == "owl_light_moon", "бесплатный свет — сразу")
 	# настроения
 	await _draw_once()

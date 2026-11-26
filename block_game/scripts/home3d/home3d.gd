@@ -71,6 +71,8 @@ var trophy_focus := 0
 var shelf_focus := false
 var reveal_halls: Array = []
 var reveal_t := -1.0
+## 0.18: последний кубок, у которого была камера (щипок «ближе» у всей полки — к нему)
+var last_trophy := 3
 
 
 func setup(game) -> void:
@@ -250,6 +252,8 @@ func _build(k: String, st: int) -> void:
 	room.build()
 	room.cam.tapped.connect(_on_tap)
 	room.cam.double_tapped.connect(_on_double_tap)
+	room.cam.swiped.connect(_on_swipe)
+	room.cam.pinched.connect(_on_pinch)
 	kind = k
 	stage = st
 	builds += 1
@@ -349,6 +353,8 @@ func _sync(delta: float) -> void:
 	room.set_trophies(Meta.trophies(g.max_level), hid)
 	trophy_focus = room.focused_trophy()
 	shelf_focus = room.focused_shelf()
+	# 0.18: у полки кубков касания не выводят к обзору (выход — «Закрыть», «Кубки» или «Назад»)
+	room.cam.hold_focus = mode == "home" and not decorating and (trophy_focus > 0 or shelf_focus)
 	if _pending_spot != "":
 		_pending_t -= delta
 		if _pending_t <= 0.0:
@@ -415,6 +421,14 @@ func _on_tap(p: Vector2) -> void:
 	if g.decor_ui and g.decor_ui.active:
 		g.decor_ui.tap_3d(c)  # 0.15: место — выбрать; мимо — снять выбор (из режима не выходим)
 		return
+	if in_shelf():
+		# 0.18: у полки: кубок — подлететь к нему; мимо — ничего (режим полки не закрывается)
+		if c.get("type", "") == "trophy":
+			focus_trophy(c.hall)
+		elif c.get("type", "") == "hero":
+			room.poke_hero()
+			g.play("crystal", randf_range(0.9, 1.15), -6.0)
+		return
 	if c.is_empty():
 		return
 	if c.type == "hero":
@@ -435,6 +449,9 @@ func _on_double_tap(p: Vector2) -> void:
 		return
 	if g.decor_ui and g.decor_ui.active:
 		_on_tap(p)
+		return
+	if in_shelf():
+		_on_tap(p)  # 0.18: у полки двойной тап — как тап (быстро листать кубки касаниями не выкидывает)
 		return
 	_pending_spot = ""
 	var c: Dictionary = room.pick(p, 130.0 * room.cam.px_scale)
@@ -463,8 +480,56 @@ func focus_shelf() -> void:
 func focus_trophy(n: int) -> void:
 	if room == null or room.shelf == null:
 		return
+	last_trophy = clampi(n, 1, 10)
 	room.focus_trophy(n)
 	g.play("crystal", 1.2 if room.shelf.has_trophy(n) else 0.8, -4.0)
+
+
+## 0.18: камера у полки кубков (у кубка или у всей полки)
+func in_shelf() -> bool:
+	return room != null and room.shelf != null and (room.focused_trophy() > 0 or room.focused_shelf())
+
+
+## 0.18: к соседнему кубку: dir +1 — следующий (1…10 по кругу), -1 — предыдущий; от всей полки — к первому / последнему
+func step_trophy(dir: int) -> void:
+	if room == null or room.shelf == null:
+		return
+	var n: int = room.focused_trophy()
+	if n == 0:
+		n = 0 if dir > 0 else 11
+	focus_trophy(wrapi(n + dir, 1, 11))
+
+
+## 0.18: кнопка «Вся полка» и щипок у кубка
+func show_whole_shelf() -> void:
+	if room == null or room.shelf == null:
+		return
+	room.focus_shelf()
+	g.play("click")
+
+
+## 0.18: кнопка «Закрыть» и «Назад» телефона: от полки — к обычному обзору дома
+func close_shelf() -> void:
+	if room == null:
+		return
+	room.cam.fly_home()
+	g.play("click", 0.9)
+
+
+func _on_swipe(dir: int) -> void:
+	if mode != "home" or not in_shelf() or (g.decor_ui and g.decor_ui.active):
+		return
+	step_trophy(dir)
+
+
+## Конец щипка у полки: свёл пальцы у кубка (отдалиться) — вся полка; развёл у всей полки (ближе) — к кубку
+func _on_pinch(ratio: float) -> void:
+	if mode != "home" or room == null or room.shelf == null:
+		return
+	if room.focused_trophy() > 0 and ratio > 1.3:
+		show_whole_shelf()
+	elif room.focused_shelf() and ratio < 0.8:
+		focus_trophy(last_trophy)
 
 
 ## Сдвиг картинки по вертикали: в обзоре — как раньше; у полки и кубка — меньше (плавно)

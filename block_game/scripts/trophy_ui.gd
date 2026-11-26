@@ -6,10 +6,14 @@ extends RefCounted
 ##     в запасном 2D-доме открывается полка славы с 2D-кубками; подпись, когда камера у кубка или у полки;
 ##   * запасной 2D-дом: при возвращении с новым кубком полка открывается сама (один раз).
 ## Рисунки кубков — scripts/trophies.gd; данные (какие кубки есть, даты) — scripts/meta.gd.
+## 0.18: у полки в 3D — стрелки ◀ ▶ (соседний кубок), «Вся полка», «Закрыть»; свайп пальцем — соседний кубок,
+##   щипок — вся полка / обратно к кубку; тап мимо кубков из режима полки не выводит.
+##   На полке 2D — стрелки в подписи и свайп по полке (тап — при отпускании пальца).
 
 const Meta := preload("res://scripts/meta.gd")
 const I18n := preload("res://scripts/i18n.gd")
 const Trophies := preload("res://scripts/trophies.gd")
+const Swipe := preload("res://scripts/swipe.gd")
 
 const GOLD := Color("#FFD36B")
 const PANEL := Color(0.09, 0.05, 0.18, 0.92)
@@ -28,6 +32,8 @@ var panel_t := 0.0
 var panel_new: Array = []
 var _skip := false
 var _auto_done := false
+## 0.18: свайп по полке 2D
+var strip = Swipe.new()
 
 
 func _init(game) -> void:
@@ -164,6 +170,8 @@ func draw_home() -> void:
 	_ctext(r.get_center().x, r.end.y - 9, "%d/%d" % [cnt, Meta.HALL_COUNT], 20, GOLD if cnt > 0 else g.TEXT, r.size.x)
 	if in3d:
 		_caption_3d(h)
+		if (h.trophy_focus > 0 or h.shelf_focus) and not h.revealing():
+			_shelf_controls(h)
 	if panel_open:
 		_draw_panel()
 
@@ -203,14 +211,114 @@ func _caption_3d(h) -> void:
 		_ctext(r.get_center().x, r.position.y + 90, sub, _fit(sub, r.size.x - 30, 25), g.TEXT, r.size.x)
 
 
+## 0.18: кнопки у полки в 3D: стрелки по бокам (у кубка), под подписью — «Вся полка» и «Закрыть»
+func _shelf_controls(h) -> void:
+	var at_trophy: bool = h.trophy_focus > 0
+	if at_trophy:
+		for k in 2:
+			var name: String = ["sh_prev", "sh_next"][k]
+			var r: Rect2 = shelf_rects()[name]
+			rects[name] = r
+			g._rbox(r, Color(0.1, 0.06, 0.2, 0.78), 26)
+			g.draw_polyline(_rr(r.grow(-1), 25), Color(GOLD, 0.5), 2.0, true)
+			var c := r.get_center()
+			var sx := -1.0 if k == 0 else 1.0
+			g.draw_colored_polygon(PackedVector2Array([c + Vector2(sx * 20, 0), c + Vector2(-sx * 12, -22), c + Vector2(-sx * 12, 22)]), GOLD)
+		var ar: Rect2 = shelf_rects()["sh_all"]
+		rects["sh_all"] = ar
+		_pill_button(ar, I18n.t("shelf_all"))
+		var hint := I18n.t("shelf_hint")
+		var hfs := _fit(hint, g.W - 120, 23)
+		var hw: float = g.font.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, hfs).x + 36.0
+		g._rbox(Rect2(g.W / 2.0 - hw / 2.0, 466, hw, 32), Color(PANEL, 0.7), 16)
+		_ctext(g.W / 2.0, 489, hint, hfs, Color(g.TEXT, 0.9), g.W)
+	var cr: Rect2 = shelf_rects()["sh_close" if at_trophy else "sh_close_c"]
+	rects["sh_close"] = cr
+	_pill_button(cr, "✕  " + I18n.t("shelf_close"))
+
+
+## Где кнопки полки 3D (для рисования, касаний и тестов)
+func shelf_rects() -> Dictionary:
+	var y: float = g.H * 0.5 - 70.0
+	return {
+		"sh_prev": Rect2(12, y, 92, 140),
+		"sh_next": Rect2(g.W - 104, y, 92, 140),
+		"sh_all": Rect2(84, 390, 320, 66),
+		"sh_close": Rect2(416, 390, 220, 66),
+		"sh_close_c": Rect2(g.W / 2.0 - 120, 390, 240, 66),
+	}
+
+
+func _pill_button(r: Rect2, label: String) -> void:
+	g._rbox(r, Color(0.1, 0.06, 0.2, 0.85), 24)
+	g.draw_polyline(_rr(r.grow(-1), 23), Color(GOLD, 0.55), 2.0, true)
+	g.draw_string(g.font, Vector2(r.position.x, r.position.y + r.size.y / 2.0 + 10), label, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, _fit(label, r.size.x - 24, 28), g.TEXT)
+
+
+## 0.18: касание кнопок полки 3D; true — обработано
+func _tap_shelf_3d(pos: Vector2) -> bool:
+	var h = g.home3d
+	if h == null or not h.showing() or not h.in_shelf() or h.revealing():
+		return false
+	var at_trophy: bool = h.room.focused_trophy() > 0
+	var R := shelf_rects()
+	if at_trophy and R.sh_prev.has_point(pos):
+		h.step_trophy(-1)
+		return true
+	if at_trophy and R.sh_next.has_point(pos):
+		h.step_trophy(1)
+		return true
+	if at_trophy and R.sh_all.has_point(pos):
+		h.show_whole_shelf()
+		return true
+	if (R.sh_close if at_trophy else R.sh_close_c).has_point(pos):
+		h.close_shelf()
+		return true
+	return false
+
+
 func _cap_box(r: Rect2, a: float, col: Color) -> void:
 	g._rbox(r, Color(PANEL, 0.9 * a), 26)
 	g.draw_polyline(_rr(r.grow(-2), 24), Color(col.lightened(0.3), 0.75 * a), 2.5, true)
 
 
+## 0.18: касание на экране «Дом» (от игры): полка 2D открыта — ждём отпускания (тап или свайп)
+func press(idx: int, pos: Vector2) -> bool:
+	if not panel_open:
+		return false
+	strip.press(idx, pos)
+	return true
+
+
+func release(idx: int, pos: Vector2) -> void:
+	if not strip.active():
+		return
+	var res: int = strip.release(idx, pos)
+	if not panel_open:
+		return
+	match res:
+		Swipe.TAP:
+			tap_home(strip.start)
+		Swipe.NEXT:
+			step_panel(1)
+		Swipe.PREV:
+			step_panel(-1)
+
+
+## 0.18: полка 2D: соседний кубок (+1 / -1, по кругу 1…10)
+func step_panel(dir: int) -> void:
+	var n := panel_sel
+	if n == 0:
+		n = 0 if dir > 0 else 11
+	panel_sel = wrapi(n + dir, 1, 11)
+	g.play("crystal", 1.2 if panel_sel <= Meta.trophy_count(g.max_level) else 0.8, -4.0)
+
+
 func tap_home(pos: Vector2) -> bool:
 	if panel_open:
 		_tap_panel(pos)
+		return true
+	if _tap_shelf_3d(pos):
 		return true
 	if rects.get("trophies", _button_rect()).has_point(pos):
 		var h = g.home3d
@@ -227,6 +335,10 @@ func tap_home(pos: Vector2) -> bool:
 func back() -> bool:
 	if panel_open:
 		panel_open = false
+		return true
+	var h = g.home3d
+	if h != null and h.showing() and h.in_shelf():
+		h.close_shelf()  # 0.18: у полки 3D — к обзору дома
 		return true
 	return false
 
@@ -305,6 +417,15 @@ func _draw_panel() -> void:
 		g.draw_string(g.font, Vector2(pl.position.x, pl.position.y + 20), str(n), HORIZONTAL_ALIGNMENT_CENTER, pl.size.x, 20, DARK if have else g.TEXT)
 	# подпись выбранного кубка
 	var cap := Rect2(pr.position.x + 24, pr.end.y - 200, pr.size.x - 48, 110)
+	# 0.18: стрелки ◀ ▶ — соседний кубок (и свайп по полке)
+	for k in 2:
+		var name: String = ["p_prev", "p_next"][k]
+		var ar := Rect2(cap.position.x - 14 if k == 0 else cap.end.x - 62, cap.position.y + 15, 76, 80)
+		rects[name] = ar
+		var c := ar.get_center()
+		var sx := -1.0 if k == 0 else 1.0
+		g.draw_colored_polygon(PackedVector2Array([c + Vector2(sx * 16, 0), c + Vector2(-sx * 10, -18), c + Vector2(-sx * 10, 18)]), Color(GOLD, 0.9))
+	cap = cap.grow_individual(-58, 0, -58, 0)
 	if panel_sel > 0:
 		var have := panel_sel <= cnt
 		_cap_box(cap, 1.0, Trophies.glow_color(panel_sel) if have else Color(0.6, 0.6, 0.8))
@@ -325,6 +446,12 @@ func _tap_panel(pos: Vector2) -> void:
 	if rects.get("close", Rect2()).has_point(pos) or not _panel_rect().has_point(pos):
 		g.play("click")
 		panel_open = false
+		return
+	if rects.get("p_prev", Rect2()).has_point(pos):
+		step_panel(-1)
+		return
+	if rects.get("p_next", Rect2()).has_point(pos):
+		step_panel(1)
 		return
 	for n in range(1, 11):
 		if rects.get("slot_%d" % n, Rect2()).has_point(pos):
