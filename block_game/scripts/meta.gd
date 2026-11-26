@@ -7,6 +7,7 @@ extends RefCounted
 ## загружаются со значениями по умолчанию.
 
 const I18n := preload("res://scripts/i18n.gd")
+const Catalog := preload("res://scripts/decor_catalog.gd")
 
 const HEROES := ["owl", "axolotl", "puppy", "kitten"]
 
@@ -177,52 +178,13 @@ const GENDERS := ["boy", "girl"]
 ## Имя: до 12 знаков, только буквы (любой алфавит), цифры, пробел и дефис.
 const NAME_MAX := 12
 
-## Украшения дома: у каждого героя свой дом и свой набор. spots — куда можно поставить:
-## floor (пол слева/справа), wall (стена или ветка слева/справа), hang (подвес сверху;
-## у котика — верхняя полка), near (рядом с героем).
+## Украшения дома: у каждого героя свой дом и свой набор. 0.15: каталог (места, стили, вещи, стили комнат)
+## вынесен в scripts/decor_catalog.gd и scripts/decor_data/<дом>.gd. SPOTS — шесть старых мест (они есть
+## в каждом доме); у домов есть и новые места — Catalog.spot_ids(дом).
 const SPOTS := ["floor_l", "floor_r", "wall_l", "wall_r", "hang", "near"]
-const DECOR := [
-	{"id": "owl_nest", "home": "owl", "price": 10, "spots": ["near", "floor"]},
-	{"id": "owl_lantern", "home": "owl", "price": 15, "spots": ["hang", "wall", "near"]},
-	{"id": "owl_garland", "home": "owl", "price": 20, "spots": ["hang"]},
-	{"id": "owl_mushrooms", "home": "owl", "price": 20, "spots": ["floor"]},
-	{"id": "owl_birdhouse", "home": "owl", "price": 25, "spots": ["wall"]},
-	{"id": "owl_books", "home": "owl", "price": 30, "spots": ["wall", "near"]},
-	{"id": "owl_swing", "home": "owl", "price": 30, "spots": ["hang"]},
-	{"id": "owl_hammock", "home": "owl", "price": 35, "spots": ["wall", "floor"]},
-	{"id": "owl_moon", "home": "owl", "price": 40, "spots": ["hang"], "stars": 25},
-	{"id": "owl_nightlight", "home": "owl", "price": 50, "spots": ["floor", "near"], "hall": 1},
-	{"id": "axo_starfish", "home": "axolotl", "price": 10, "spots": ["wall"]},
-	{"id": "axo_coral", "home": "axolotl", "price": 15, "spots": ["wall", "floor"]},
-	{"id": "axo_anchor", "home": "axolotl", "price": 20, "spots": ["floor", "wall"]},
-	{"id": "axo_shell", "home": "axolotl", "price": 25, "spots": ["floor", "near"]},
-	{"id": "axo_lily", "home": "axolotl", "price": 25, "spots": ["hang"]},
-	{"id": "axo_bubble", "home": "axolotl", "price": 30, "spots": ["hang", "near"]},
-	{"id": "axo_tree", "home": "axolotl", "price": 35, "spots": ["floor"]},
-	{"id": "axo_sofa", "home": "axolotl", "price": 40, "spots": ["near"]},
-	{"id": "axo_castle", "home": "axolotl", "price": 50, "spots": ["floor"], "hall": 2},
-	{"id": "axo_chest", "home": "axolotl", "price": 60, "spots": ["floor", "near"], "stars": 40},
-	{"id": "pup_ball", "home": "puppy", "price": 10, "spots": ["floor", "near"]},
-	{"id": "pup_bone", "home": "puppy", "price": 15, "spots": ["near"]},
-	{"id": "pup_bowl", "home": "puppy", "price": 20, "spots": ["near", "floor"]},
-	{"id": "pup_sign", "home": "puppy", "price": 20, "spots": ["wall"]},
-	{"id": "pup_flowerbed", "home": "puppy", "price": 25, "spots": ["floor"]},
-	{"id": "pup_pinwheel", "home": "puppy", "price": 30, "spots": ["wall", "floor"]},
-	{"id": "pup_lamp", "home": "puppy", "price": 35, "spots": ["hang", "wall", "floor"]},
-	{"id": "pup_bed", "home": "puppy", "price": 45, "spots": ["near"]},
-	{"id": "pup_kite", "home": "puppy", "price": 50, "spots": ["hang"], "stars": 25},
-	{"id": "pup_teddy", "home": "puppy", "price": 60, "spots": ["near", "floor"], "hall": 1},
-	{"id": "kit_yarn", "home": "kitten", "price": 10, "spots": ["floor", "near"]},
-	{"id": "kit_mouse", "home": "kitten", "price": 15, "spots": ["near"]},
-	{"id": "kit_pillow", "home": "kitten", "price": 20, "spots": ["near"]},
-	{"id": "kit_picture", "home": "kitten", "price": 20, "spots": ["wall"]},
-	{"id": "kit_catnip", "home": "kitten", "price": 25, "spots": ["hang", "wall", "floor"]},
-	{"id": "kit_box", "home": "kitten", "price": 30, "spots": ["floor", "near"]},
-	{"id": "kit_scratcher", "home": "kitten", "price": 35, "spots": ["floor"]},
-	{"id": "kit_lamp", "home": "kitten", "price": 40, "spots": ["floor"]},
-	{"id": "kit_aquarium", "home": "kitten", "price": 50, "spots": ["hang", "wall", "near"], "stars": 30},
-	{"id": "kit_tree", "home": "kitten", "price": 60, "spots": ["floor"], "hall": 2},
-]
+const DECOR := Catalog.DECOR
+## 0.15: сколько «настроений» (сохранённых расстановок) у дома
+const MOODS := 3
 
 # Начисление осколков за победу
 const WIN_FIRST := 10
