@@ -779,7 +779,7 @@ static func has(key: String) -> bool:
 
 ## Словари языка l: основной и блоки версий (0.15, 0.16)
 static func _dicts(l: String) -> Array:
-	return [STR.get(l, {}), STR_015.get(l, {}), STR_016.get(l, {})]
+	return [STR.get(l, {}), STR_015.get(l, {}), STR_016.get(l, {}), STR_017_TOUR.get(l, {})]
 
 
 ## Есть ли ключ в языке l (в основном словаре или в блоках версий)
@@ -1258,5 +1258,39 @@ const STR_016 := {
 	},
 	"ru": {
 		"switch_hint": "У каждого друга свой гардероб и свой дом — всё, что купишь, останется у него",
+	},
+}
+
+
+# ---------- 0.17: экскурсия ----------
+## Экскурсия по главному экрану (scripts/home_tour.gd): tour_<шаг> — фраза шага.
+const STR_017_TOUR := {
+	"en": {
+		"tour_shards": "Every win earns you shards",
+		"tour_wardrobe": "Dress up your buddy",
+		"tour_decorate": "Make your home cozy",
+		"tour_forge": "Collect a set and Master Hoot will forge a legendary item",
+		"tour_map": "Replay levels to earn more stars",
+		"tour_trophies": "Clear a hall to put its trophy in the Hall of Fame",
+		"tour_avatar": "There are four buddies, each with their own wardrobe and home. Switch buddies in the Wardrobe",
+		"tour_lang": "Change the game language",
+		"tour_play": "Let's go find some crystals!",
+		"tour_next": "Tap to continue",
+		"tour_end": "Tap to finish",
+		"tour_skip": "Skip",
+	},
+	"ru": {
+		"tour_shards": "За победы ты получаешь осколки",
+		"tour_wardrobe": "Наряжай своего друга",
+		"tour_decorate": "Обставь свой дом",
+		"tour_forge": "Собери набор — мастер Ух выкует легендарную вещь",
+		"tour_map": "Переигрывай уровни ради звёзд",
+		"tour_trophies": "За каждый зал — кубок на полку славы",
+		"tour_avatar": "Друзей четверо: у каждого свой гардероб и дом. Сменить друга можно в гардеробе",
+		"tour_lang": "Язык игры",
+		"tour_play": "Вперёд за кристаллами!",
+		"tour_next": "Нажми, чтобы продолжить",
+		"tour_end": "Нажми, чтобы закончить",
+		"tour_skip": "Пропустить",
 	},
 }

@@ -172,6 +172,7 @@ func _counters(right: float, y: float) -> void:
 	_pill(str_, Color(0.1, 0.06, 0.2, 0.78))
 	g._draw_star(str_.position + Vector2(32, 29), 18, true)
 	_text(str_.position + Vector2(58, 42), str(g.total_stars()), 34, g.ACCENT)
+	rects["shards"] = shr
 	_pill(shr, Color(0.1, 0.06, 0.2, 0.78))
 	shard_icon(shr.position + Vector2(32, 29), 17)
 	_text(shr.position + Vector2(58, 42), str(g.meta.shards), 34, g.CRYSTAL_COL)
@@ -410,8 +411,9 @@ func draw_home() -> void:
 	# верхняя полоса
 	g.draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(g.W, 0), Vector2(g.W, 250), Vector2(0, 250)]),
 		PackedColorArray([Color(0.04, 0.02, 0.1, 0.75), Color(0.04, 0.02, 0.1, 0.75), Color(0.04, 0.02, 0.1, 0), Color(0.04, 0.02, 0.1, 0)]))
+	var L := home_layout()  # 0.17: те же прямоугольники видит экскурсия (scripts/home_tour.gd)
 	avatar(Vector2(72, 72), 48)
-	rects["avatar"] = Rect2(20, 20, 104, 104)
+	rects["avatar"] = L.avatar_btn
 	# 0.13: имя друга (или Совёнок / Совушка...) под аватаркой
 	var dn: String = g.meta.display_name(kind)
 	var dfs := fit_size(dn, 136, 22)
@@ -422,7 +424,7 @@ func draw_home() -> void:
 	_pill(dr, Color(0.1, 0.06, 0.2, 0.85))
 	_text(Vector2(dr.position.x, dr.position.y + 25), dn, dfs, g.TEXT, dr.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 	_counters(g.W - 20, 44)
-	_lang_button(Rect2(140, 44, 116, 58))
+	_lang_button(L.lang)
 	g.forge_ui.draw_home_button()  # 0.12: вход в Кристальную кузницу
 	g._draw_title(Vector2(g.W / 2.0, 200), 80, 6.0)
 	# нижняя полоса с кнопками
@@ -436,7 +438,7 @@ func draw_home() -> void:
 	_pill(lr, Color(0.08, 0.04, 0.16, 0.85))
 	g.draw_circle(lr.position + Vector2(22, 22), 7, hall.col, true, -1.0, true)
 	_ctext(g.W / 2.0 + 8, by + 26, label, 26, g.TEXT, lw)
-	var pr := Rect2(100, by + 52, 520, 128)
+	var pr: Rect2 = L.play
 	var pulse := 1.0 + 0.03 * sin(g.t_total * 4.0)
 	var pb := Rect2(pr.get_center() - pr.size * pulse / 2.0, pr.size * pulse)
 	rects["play"] = pr
@@ -449,7 +451,7 @@ func draw_home() -> void:
 	var bw: float = (g.W - 40.0 - 2 * 12.0) / 3.0
 	var names := ["map", "decorate", "wardrobe"]
 	for i in 3:
-		var br := Rect2(20 + i * (bw + 12), H - 140, bw, 104)
+		var br: Rect2 = L[names[i]]
 		_button(names[i], br, "", false)
 		var ic := br.position + Vector2(bw / 2.0, 36)
 		match names[i]:
@@ -460,6 +462,27 @@ func draw_home() -> void:
 		_text(Vector2(br.position.x, br.position.y + 92), lbl, fit_size(lbl, bw - 12, 28), g.TEXT, bw, HORIZONTAL_ALIGNMENT_CENTER)
 	_toast(260)
 	_fade_over(Rect2(0, 0, g.W, H))
+
+
+## 0.17: где кнопки главного экрана (для рисования и для экскурсии по дому, scripts/home_tour.gd).
+## avatar — аватарка вместе с именем под ней; avatar_btn — только кружок (касание).
+func home_layout() -> Dictionary:
+	var H: float = g.H
+	var by := H - 410.0
+	var bw: float = (g.W - 40.0 - 2 * 12.0) / 3.0
+	var L := {
+		"avatar_btn": Rect2(20, 20, 104, 104),
+		"avatar": Rect2(8, 20, 136, 138),
+		"lang": Rect2(140, 44, 116, 58),
+		"shards": Rect2(g.W - 20 - 150, 44, 150, 58),
+		"play": Rect2(100, by + 52, 520, 128),
+		"forge": g.forge_ui.home_button_rect() if g.forge_ui else Rect2(),
+		"trophies": g.trophy_ui._button_rect() if g.trophy_ui else Rect2(),
+	}
+	var names := ["map", "decorate", "wardrobe"]
+	for i in 3:
+		L[names[i]] = Rect2(20 + i * (bw + 12), H - 140, bw, 104)
+	return L
 
 
 func _map_icon(c: Vector2) -> void:

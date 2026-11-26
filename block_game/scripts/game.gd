@@ -46,6 +46,7 @@ const Access := preload("res://scripts/access.gd")
 const AccessUI := preload("res://scripts/access_ui.gd")
 ## 0.17: после победы/поражения герой на панели празднует/грустит, затем появляется окно итога
 const RESULT_BEAT := 0.75
+const HomeTour := preload("res://scripts/home_tour.gd")  # 0.17: экскурсия по главному экрану
 ## true — после очистки падают все группы поля (и камень уровня над дырами ниже линии);
 ## false — только то, что выше нижней очищенной линии (ниже неё поле не трогается).
 const FALL_ALL := false
@@ -113,6 +114,7 @@ var last_reward := {}      # начисление осколков за посл
 var meta = Meta.new()
 var screens
 var tut = Tutorial.new()      # 0.9: обучение
+var tour = HomeTour.new()     # 0.17: экскурсия по главному экрану
 var assist = Assist.new()     # 0.9: помощь, попытки, подарок новичку
 var assist_ui
 var forge_ui                  # 0.12: Кристальная кузница
@@ -682,6 +684,7 @@ func _load() -> void:
 	meta.load_from(cfg)  # старое сохранение без [meta] — значения по умолчанию
 	# 0.9: [tutorial] и [stats]; в старом сохранении их нет — значения по умолчанию
 	tut.load_from(cfg, max_level)
+	tour.load_from(cfg)  # 0.17: [tour]; нет раздела — экскурсия впереди (и у старых игроков)
 	assist.load_from(cfg)
 	if not cfg.has_section("stats") and total_stars() > 0:
 		assist.gift_given = true  # игрок с прогрессом — не новичок
@@ -728,6 +731,7 @@ func _save() -> void:
 	I18n.save_to(cfg)
 	meta.save_to(cfg)
 	tut.save_to(cfg)
+	tour.save_to(cfg)
 	assist.save_to(cfg)
 	if home3d:
 		home3d.save_to(cfg)
@@ -787,6 +791,7 @@ func _process(delta: float) -> void:
 	_update_effects(delta)
 	screens.update(delta)
 	tut.update(delta)
+	tour.update(self, delta)
 	assist_ui.update(delta)
 	play_hero.update(delta, in_danger() and state in [State.PLAYING, State.CLEARING, State.SETTLE, State.PAUSED])
 	if forge_ui:
@@ -811,6 +816,8 @@ func _notification(what: int) -> void:
 		if notice_ui and notice_ui.active():
 			notice_ui.back()
 			return
+		if state == State.HOME and tour.back(self):
+			return  # 0.17: «Назад» — пропустить экскурсию
 		if state == State.HOME and decor_ui and decor_ui.back():
 			return
 		if state == State.HOME and trophy_ui and trophy_ui.back():
@@ -889,6 +896,8 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 			go_home()
 			return
 		State.HOME:
+			if tour.tap(self, pos):
+				return  # 0.17: экскурсия забирает касания (кнопки и камера 3D-дома их не получают)
 			if decor_ui and decor_ui.active:
 				# 0.15: режим украшения: панель и полоса — свои касания, остальное — камера 3D-дома
 				if not decor_ui.tap(pos) and home3d:
@@ -971,6 +980,7 @@ func _pause_menu_tap(pos: Vector2) -> void:
 						access_ui.show()
 				"tutorial":  # 0.9: повтор обучения — уровень 1 с первыми шагами
 					tut.replay()
+					tour.replay()  # 0.17: и экскурсия по дому — при следующем возвращении домой
 					_save()
 					start_level(1)
 				"restart": start_level(level)
@@ -980,7 +990,7 @@ func _pause_menu_tap(pos: Vector2) -> void:
 
 func _touch_drag(idx: int, pos: Vector2, rel := Vector2.ZERO) -> void:
 	if state == State.HOME:
-		if home3d:
+		if home3d and not tour.active():
 			home3d.drag(idx, pos, rel)
 		return
 	if state == State.MAP:
@@ -1052,6 +1062,7 @@ func _draw() -> void:
 			assist_ui.draw_home_goal()
 			if trophy_ui:
 				trophy_ui.draw_home()
+			tour.draw(self)  # 0.17: экскурсия по главному экрану — поверх всего
 			return
 		State.FORGE:
 			_draw_background()
