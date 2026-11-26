@@ -242,7 +242,7 @@ func _place_decor(kind: String, spot: String, id: String, t: float) -> void:
 		var sw := sin(t * 1.3) * 0.05
 		var end := p + Vector2(0, len).rotated(sw)
 		ci.draw_line(p, end, Color("#C9B88A"), 2.5, true)
-		draw_decor(id, end + Vector2(0, DECOR_H.get(id, 60.0) * k), k, t)
+		draw_decor(id, end + Vector2(0, _decor_h(id) * k), k, t)
 	else:
 		draw_decor(id, p, k, t)
 
@@ -1002,7 +1002,36 @@ func draw_decor(id: String, p: Vector2, k: float, t: float) -> void:
 		"kit_lamp": _kit_lamp(p, k, t)
 		"kit_aquarium": _kit_aquarium(p, k, t)
 		"kit_tree": _kit_tree(p, k, t)
-		_: _generic_decor(id, p, k, t)
+		_:
+			if not _ext_decor(id, p, k, t):
+				_generic_decor(id, p, k, t)
+
+
+## 0.15: значки новых вещей дома — в scripts/decor_icons/<дом>.gd (свой файл у каждого дома, дизайнеры
+## не мешают друг другу): static func draw(h, id, p, k, t) -> bool и const H (высоты значков). Нет файла /
+## вещи в нём — коробочка _generic_decor.
+static var _icon_mods := {}
+
+
+static func _icon_mod(id: String):
+	var home: String = Catalog.decor_item(id).get("home", "")
+	if not _icon_mods.has(home):
+		var path := "res://scripts/decor_icons/%s.gd" % home
+		_icon_mods[home] = load(path) if home != "" and ResourceLoader.exists(path) else null
+	return _icon_mods[home]
+
+
+func _ext_decor(id: String, p: Vector2, k: float, t: float) -> bool:
+	var m = _icon_mod(id)
+	return m != null and m.draw(self, id, p, k, t)
+
+
+## Высота предмета: старые — DECOR_H, новые — H в файле значков дома
+static func _decor_h(id: String) -> float:
+	if DECOR_H.has(id):
+		return DECOR_H[id]
+	var m = _icon_mod(id)
+	return float(m.H.get(id, 60.0)) if m != null else 60.0
 
 
 ## 0.15: новая вещь без своего 2D-рисунка (дизайнер добавил только 3D) — коробочка со звездой цвета её стиля
@@ -1017,7 +1046,7 @@ func _generic_decor(id: String, p: Vector2, k: float, t: float) -> void:
 ## Значок украшения для карточки гардероба (вписан в квадрат size вокруг c)
 func draw_decor_icon(target: CanvasItem, id: String, c: Vector2, size: float, t: float) -> void:
 	ci = target
-	var h: float = DECOR_H.get(id, 60.0)
+	var h: float = _decor_h(id)
 	var k := size / maxf(140.0, h * 1.25)
 	if id == "pup_kite":
 		k = size / 150.0

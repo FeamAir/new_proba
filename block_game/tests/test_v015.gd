@@ -159,7 +159,8 @@ func _test_catalog() -> void:
 		check(def.walls == Catalog.layer_items(h, "walls")[0].id and def.light == Catalog.layer_items(h, "light")[0].id, "%s: стиль комнаты по умолчанию — первые варианты" % h)
 	var by_style: Array = Catalog.decor_for("owl", "", "owl_stars")
 	check(not by_style.is_empty() and by_style.all(func(it): return it.style == "owl_stars"), "фильтр по стилю: только вещи этого стиля")
-	check(Catalog.decor_for("owl", "window").all(func(it): return it.spots.has("window")) and Catalog.decor_for("owl", "window", "owl_potions").is_empty(), "фильтр по месту и стилю вместе")
+	var win_pot: Array = Catalog.decor_for("owl", "window", "owl_potions")
+	check(Catalog.decor_for("owl", "window").all(func(it): return it.spots.has("window")) and not win_pot.is_empty() and win_pot.all(func(it): return it.style == "owl_potions" and it.spots.has("window")) and win_pot.size() < Catalog.decor_for("owl", "window").size(), "фильтр по месту и стилю вместе")
 	check(Catalog.room_item("owl_walls_moss").layer == "walls" and Catalog.room_item("owl_walls_moss").house == "owl" and not Catalog.room_item("owl_walls_moss").has("home"), "вариант слоя: дом и слой (не путается с украшением)")
 
 
@@ -566,16 +567,21 @@ func _test_rooms_3d() -> void:
 		var lights: Array = Catalog.layer_items(kind, "light")
 		r.set_style({"walls": walls[1].id, "light": lights[1].id})
 		var mat1 = _style_mat(r)
-		check(r.style.walls == walls[1].id and mat1 != mat0, "%s: apply_walls — стены перекрашены" % kind)
+		check(r.style.walls == walls[1].id and not _same(mat1, mat0), "%s: apply_walls — стены перекрашены" % kind)
 		check(r.env.ambient_light_color != amb0, "%s: apply_light — другой свет окружения" % kind)
 		r.set_style({})
-		check(r.style.walls == walls[0].id and _style_mat(r) == mat0 and r.env.ambient_light_color.is_equal_approx(amb0), "%s: стиль по умолчанию — как было" % kind)
+		check(r.style.walls == walls[0].id and _same(_style_mat(r), mat0) and r.env.ambient_light_color.is_equal_approx(amb0), "%s: стиль по умолчанию — как было" % kind)
 		# вещь без своего 3D (дизайнер добавил только данные) — коробочка-заготовка
 		var ph := Node3D.new()
 		r.add_child(ph)
 		r._placeholder(Catalog.decor(kind)[0].id, ph)
 		check(ph.get_child_count() >= 2, "%s: заготовка для вещи без 3D строится" % kind)
 		_drop(r)
+
+
+## Одно и то же ли (материал или [материал, параметр]; разные типы — разное)
+func _same(a, b) -> bool:
+	return typeof(a) == typeof(b) and a == b
 
 
 ## Материал (или его параметр) стен комнаты — чтобы увидеть смену стиля

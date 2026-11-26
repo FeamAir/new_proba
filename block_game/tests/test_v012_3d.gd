@@ -162,7 +162,7 @@ func _test_all_decor() -> void:
 	var ids := []
 	for it in Meta.DECOR:
 		ids.append(it.id)
-	check(ids.size() == 40, "в каталоге 40 украшений")
+	check(ids.size() >= 40, "в каталоге не меньше 40 украшений (старые на месте, 0.15 — новые)")
 
 
 func _test_quality_room() -> void:

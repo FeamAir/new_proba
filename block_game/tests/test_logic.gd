@@ -413,7 +413,7 @@ func _test_meta(g, _chain3: int) -> void:
 	check(m.buy_decor("axolotl", "floor_r", "axo_anchor", 0, 1) == "bought" and m.placed_at("axolotl", "floor_r") == "axo_anchor", "украшение в гроте")
 	m.place("owl", "near", "owl_lantern")
 	check(m.placed_at("owl", "near") == "owl_lantern" and m.placed_at("axolotl", "near") == "", "у каждого дома свои места")
-	check(m.decor_for("owl", "hang").size() == 4 and m.decor_for("axolotl", "floor_l").size() <= 6, "наборы украшений по местам помещаются в сетку")
+	check(m.decor_for("owl", "hang").size() >= 4 and m.decor_for("owl", "hang").all(func(d): return d.spots.has("hang")) and m.decor_for("axolotl", "floor_l").all(func(d): return d.spots.has("floor")), "наборы украшений по местам: только вещи для этого места")
 	check(Meta.home_stage(1) == 0 and Meta.home_stage(11) == 1 and Meta.home_stage(41) == 2 and Meta.home_stage(71) == 3 and Meta.home_stage(151) == 3, "ступени богатства дома")
 	check(Meta.hall_index(10) == 0 and Meta.hall_index(11) == 1 and Meta.hall_index(50) == 4 and Meta.hall_index(77) == 7 and Meta.hall_index(100) == 9 and Meta.hall_index(101) == 10 and Meta.depth(10) == 120, "залы и глубина")
 
@@ -591,7 +591,7 @@ func _test_i18n(g) -> void:
 	var names_ok := true
 	for l in I18n.LANGS:
 		for k in need:
-			if not I18n.STR[l].has(k):
+			if not I18n.has_in(l, k):  # 0.15: названия новых украшений — в блоке STR_015
 				names_ok = false
 				printerr("    нет перевода: ", l, ":", k)
 	check(names_ok, "названия всех вещей, украшений, залов, героев и мест переведены")
