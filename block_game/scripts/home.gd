@@ -36,8 +36,8 @@ const SPOTS := {
 		"hang": [Vector2(604, 456), 0.75], "near": [Vector2(530, 874), 0.68],
 	},
 }
-## В этих домах «сверху» — высокая полка: предмет стоит, а не висит на нитке
-const HANG_SHELF := ["kitten"]
+## В этих домах места типа hang — высокая полка (предмет стоит). 0.15: у котика «сверху» теперь тип shelf, а hang — балки (висит)
+const HANG_SHELF := []
 ## Положение и масштаб героя в сцене
 const HERO_AT := {"owl": [Vector2(338, 606), 0.8], "axolotl": [Vector2(340, 590), 0.95],
 	"puppy": [Vector2(340, 766), 0.82], "kitten": [Vector2(360, 752), 0.86]}
@@ -1007,11 +1007,25 @@ func draw_decor(id: String, p: Vector2, k: float, t: float) -> void:
 
 ## 0.15: новая вещь без своего 2D-рисунка (дизайнер добавил только 3D) — коробочка со звездой цвета её стиля
 func _generic_decor(id: String, p: Vector2, k: float, t: float) -> void:
+	# 0.15: свои значки новых вещей — в scripts/decor_data/<дом>_icons.gd (draw(h, id, p, k, t) -> bool), если файл есть
+	var icons = _decor_icons(Catalog.decor_item(id).get("home", ""))
+	if icons != null and icons.draw(self, id, p, k, t):
+		return
 	var col := Catalog.style_col(Catalog.decor_item(id).get("style", ""))
 	var r := Rect2(p + Vector2(-34, -60) * k, Vector2(68, 60) * k)
 	_fill(_rrect(r, 10 * k), col.darkened(0.15), OUT, 3.0 * k)
 	ci.draw_rect(Rect2(r.position + Vector2(r.size.x * 0.42, 0), Vector2(r.size.x * 0.16, r.size.y)), col.lightened(0.4))
 	_sparkle(p + Vector2(0, -78) * k, (14 + 3 * sin(t * 3.0)) * k, Color(1, 0.95, 0.7))
+
+
+static var _icons_cache := {}
+
+
+static func _decor_icons(home: String):
+	if not _icons_cache.has(home):
+		var path := "res://scripts/decor_data/%s_icons.gd" % home
+		_icons_cache[home] = load(path) if home != "" and ResourceLoader.exists(path) else null
+	return _icons_cache[home]
 
 
 ## Значок украшения для карточки гардероба (вписан в квадрат size вокруг c)

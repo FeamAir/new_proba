@@ -591,7 +591,7 @@ func _test_i18n(g) -> void:
 	var names_ok := true
 	for l in I18n.LANGS:
 		for k in need:
-			if not I18n.STR[l].has(k):
+			if not I18n.has_in(l, k):  # 0.15: названия новых украшений — в блоке STR_015
 				names_ok = false
 				printerr("    нет перевода: ", l, ":", k)
 	check(names_ok, "названия всех вещей, украшений, залов, героев и мест переведены")
@@ -637,6 +637,12 @@ func _test_i18n(g) -> void:
 
 # ---------- Щенок и котик (0.9) ----------
 
+## Украшения щенка и котика из 0.9 (в 0.15 к ним добавились новые — их проверяет tests/test_v015_pupkit.gd)
+const OLD_DECOR_09 := {
+	"puppy": ["pup_ball", "pup_bone", "pup_bowl", "pup_sign", "pup_flowerbed", "pup_pinwheel", "pup_lamp", "pup_bed", "pup_kite", "pup_teddy"],
+	"kitten": ["kit_yarn", "kit_mouse", "kit_pillow", "kit_picture", "kit_catnip", "kit_box", "kit_scratcher", "kit_lamp", "kit_aquarium", "kit_tree"],
+}
+
 func _test_new_heroes(g) -> void:
 	var Meta: Script = load("res://scripts/meta.gd")
 	var HomeS: Script = load("res://scripts/home.gd")
@@ -646,13 +652,14 @@ func _test_new_heroes(g) -> void:
 	check(m.set_hero("puppy") and m.hero == "puppy" and m.set_hero("kitten") and m.hero == "kitten", "выбор щенка и котика")
 	# Данные домов и окрасок
 	for h in ["puppy", "kitten"]:
-		var items: Array = Meta.DECOR.filter(func(it): return it.home == h)
+		# 0.15: в доме 30 украшений; здесь — прежние 10 (0.9), у них есть 2D-рисунок (home.gd DECOR_H)
+		var items: Array = Meta.DECOR.filter(func(it): return it.home == h and OLD_DECOR_09[h].has(it.id))
 		var prices_ok := items.all(func(it): return int(it.price) >= 10 and int(it.price) <= 60)
 		var cond := items.filter(func(it): return it.has("stars") or it.has("hall")).size()
 		check(items.size() == 10 and prices_ok and cond >= 1 and cond <= 2, "%s: 10 украшений, цены 10–60, 1–2 с условием" % h)
 		var spots_ok := true
 		for sp in Meta.SPOTS:
-			var n: int = Meta.decor_for(h, sp).size()
+			var n: int = Meta.decor_for(h, sp).filter(func(it): return OLD_DECOR_09[h].has(it.id)).size()
 			if n < 1 or n > 6 or not HomeS.SPOTS[h].has(sp):
 				spots_ok = false
 		check(spots_ok and HomeS.HERO_AT.has(h), "%s: на каждом из 6 мест есть что поставить (и не больше 6)" % h)
