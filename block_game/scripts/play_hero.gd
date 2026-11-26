@@ -7,6 +7,9 @@ extends RefCounted
 ##   победа — праздник (прыжки, искорки);  поражение — грустит (глаза-«полуопущены», слезинка);
 ##   касание героя — его обычная реакция.
 ## Рисует на узле игры (scripts/game.gd), правила игры не меняет.
+## Производительность: герой — много мелких деталей (~2–5 мс на кадр), поэтому он рисуется в свою
+## картинку (SubViewport) 20–30 раз в секунду, а в кадре уровня рисуется одна готовая картинка.
+## Без setup() (тесты без экрана) — рисуется прямо на узле игры.
 
 const Hero := preload("res://scripts/hero.gd")
 
@@ -17,6 +20,12 @@ const KIND_K := {"owl": 1.0, "axolotl": 0.92, "puppy": 1.0, "kitten": 1.0}
 const GOLD := Color("#FFB547")
 const ICE := Color("#9FF6FF")
 const DROP := Color("#7FD6FF")
+const FPS := 30.0           # как часто перерисовывается картинка героя во время реакции
+const FPS_CALM := 20.0      # ... и когда герой просто дышит (покачивание медленное)
+## Запас картинки вокруг места героя: прыжок и искорки — вверх, спутник — вбок
+const PAD_TOP := 90.0
+const PAD_SIDE := 14.0
+const PAD_BOTTOM := 26.0
 
 var hero = Hero.new()
 var t := 0.0
@@ -29,6 +38,77 @@ var mood_t := 0.0
 var rect := Rect2()    # место героя на панели (заполняется при рисовании; касание — по нему)
 var drawn := 0         # сколько раз нарисован (для тестов)
 var draw_us := 0.0     # сглаженное время рисования героя, мкс (замер производительности)
+# картинка героя (кэш)
+var vp: SubViewport
+var canvas: Node2D
+var renders := 0       # сколько раз картинка перерисована
+var _kind := "owl"
+var _outfit := {}
+var _area := Rect2()
+var _res := 1.0
+var _since := 99.0
+var _wanted := false
+
+
+## Создать картинку героя (SubViewport) — вызывается из game.gd _ready().
+func setup(parent: Node) -> void:
+	vp = SubViewport.new()
+	vp.name = "PlayHeroViewport"
+	vp.transparent_bg = true
+	vp.disable_3d = true
+	vp.gui_disable_input = true
+	vp.handle_input_locally = false
+	vp.audio_listener_enable_2d = false
+	vp.size = Vector2i(8, 8)
+	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	canvas = Node2D.new()
+	canvas.name = "HeroCanvas"
+	vp.add_child(canvas)
+	canvas.draw.connect(_on_canvas_draw)
+	parent.add_child(vp)
+
+
+## Нарисовать героя на панели уровня (из game.gd _draw_panel): готовая картинка или напрямую.
+func draw_on(ci: CanvasItem, kind: String, outfit: Dictionary, r: Rect2) -> void:
+	if vp == null:
+		draw(ci, kind, outfit, r)
+		return
+	rect = r
+	_wanted = true
+	if kind != _kind or outfit != _outfit:
+		_kind = kind
+		_outfit = outfit.duplicate()
+		_since = 99.0
+	var res := clampf(ci.get_viewport().get_final_transform().get_scale().x, 1.0, 3.0) if ci.is_inside_tree() else 1.0
+	var area := Rect2(r.position - Vector2(PAD_SIDE, PAD_TOP), r.size + Vector2(PAD_SIDE * 2.0, PAD_TOP + PAD_BOTTOM))
+	if area != _area or absf(res - _res) > 0.01:
+		_area = area
+		_res = res
+		vp.size = Vector2i(ceili(area.size.x * res), ceili(area.size.y * res))
+		canvas.scale = Vector2(res, res)
+		canvas.position = -area.position * res
+		_since = 99.0
+	if renders > 0:
+		draw_base(ci, kind, outfit, r)  # полупрозрачное свечение — прямо на экран (в картинке оно темнеет)
+		ci.draw_texture_rect(vp.get_texture(), _area, false)
+
+
+func _on_canvas_draw() -> void:
+	draw(canvas, _kind, _outfit, rect, false)
+	renders += 1
+
+
+## Перерисовать картинку героя (не чаще FPS, сразу — при событии); только пока панель на экране.
+func _refresh(delta: float) -> void:
+	if vp == null:
+		return
+	_since += delta
+	var fps := FPS_CALM if current() in ["idle", "lose"] else FPS
+	if _wanted and _since >= 1.0 / fps:
+		_since = 0.0
+		canvas.queue_redraw()
+		vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_wanted = false
 
 
 func reset() -> void:
@@ -46,11 +126,13 @@ func update(delta: float, danger: bool) -> void:
 	jump += delta
 	mood_t += delta
 	fear = move_toward(fear, 1.0 if danger and mood == "" else 0.0, delta * FEAR_IN)
+	_refresh(delta)
 
 
 func on_cascade(chain: int) -> void:
 	if mood != "":
 		return
+	_since = 99.0
 	if chain >= 3:
 		jump = 0.0
 		jump_chain = chain
@@ -60,12 +142,14 @@ func on_cascade(chain: int) -> void:
 
 
 func on_win() -> void:
+	_since = 99.0
 	mood = "win"
 	mood_t = 0.0
 	react = 0.0
 
 
 func on_lose() -> void:
+	_since = 99.0
 	mood = "lose"
 	mood_t = 0.0
 	react = 99.0
@@ -74,6 +158,7 @@ func on_lose() -> void:
 
 ## Касание героя: обычная реакция (повторное касание не сбивает уже идущую).
 func poke() -> void:
+	_since = 99.0
 	if mood == "lose":
 		react = 99.0
 		return
@@ -105,19 +190,37 @@ func eye_k() -> float:
 
 
 ## Нарисовать героя kind в наряде outfit в прямоугольнике r на ci.
-func draw(ci: CanvasItem, kind: String, outfit: Dictionary, r: Rect2) -> void:
+## Масштаб и точка под лапками героя в прямоугольнике r.
+## Спутник (книжка, мячик, клубок...) летает справа — тогда герой меньше и левее, чтобы всё влезло.
+static func place(kind: String, outfit: Dictionary, r: Rect2) -> Array:
+	var comp: bool = outfit.get("companion", "") != ""
+	var sc: float = minf(r.size.x / (275.0 if comp else 235.0), r.size.y / 285.0) * KIND_K.get(kind, 1.0)
+	var feet := Vector2(r.position.x + 108.0 * sc + 2.0 if comp else r.get_center().x, r.end.y - 10.0)
+	return [sc, feet]
+
+
+## Мягкий «пьедестал» — свечение и тень под лапками (цвет — по настроению).
+func draw_base(ci: CanvasItem, kind: String, outfit: Dictionary, r: Rect2) -> void:
+	var pl := place(kind, outfit, r)
+	var sc: float = pl[0]
+	var feet: Vector2 = pl[1]
+	var cur := current()
+	var glow := GOLD if cur in ["win", "jump"] else (Color("#FF6B8A") if cur == "fear" else Color("#B46CFF"))
+	_ellipse(ci, feet + Vector2(0, -2), 74.0 * sc / 0.75, 14.0 * sc / 0.75, Color(glow, 0.22))
+	_ellipse(ci, feet + Vector2(0, -2), 50.0 * sc / 0.75, 8.0 * sc / 0.75, Color(0, 0, 0, 0.28))
+
+
+## Нарисовать героя прямо на ci (with_base — и «пьедестал»).
+func draw(ci: CanvasItem, kind: String, outfit: Dictionary, r: Rect2, with_base := true) -> void:
 	rect = r
 	drawn += 1
 	var t0 := Time.get_ticks_usec()
 	var cur := current()
-	# спутник (книжка, мячик, клубок...) летает справа — тогда герой меньше и левее, чтобы всё влезло
-	var comp: bool = outfit.get("companion", "") != ""
-	var sc: float = minf(r.size.x / (275.0 if comp else 235.0), r.size.y / 285.0) * KIND_K.get(kind, 1.0)
-	var feet := Vector2(r.position.x + 108.0 * sc + 2.0 if comp else r.get_center().x, r.end.y - 10.0)
-	# мягкий «пьедестал» — свечение под лапками
-	var glow := GOLD if cur in ["win", "jump"] else (Color("#FF6B8A") if cur == "fear" else Color("#B46CFF"))
-	_ellipse(ci, feet + Vector2(0, -2), 74.0 * sc / 0.75, 14.0 * sc / 0.75, Color(glow, 0.22))
-	_ellipse(ci, feet + Vector2(0, -2), 50.0 * sc / 0.75, 8.0 * sc / 0.75, Color(0, 0, 0, 0.28))
+	var pl := place(kind, outfit, r)
+	var sc: float = pl[0]
+	var feet: Vector2 = pl[1]
+	if with_base:
+		draw_base(ci, kind, outfit, r)
 	var pos := feet - Vector2(0, 118.0 * sc)
 	var rv := 99.0
 	match cur:
@@ -142,7 +245,8 @@ func draw(ci: CanvasItem, kind: String, outfit: Dictionary, r: Rect2) -> void:
 		_sweat(ci, head + Vector2(84.0, -6.0) * sc, sc, fear)
 	if cur == "lose":
 		var k2 := fmod(mood_t, 1.6) / 1.6
-		_drop(ci, pos + Vector2(-40.0, -10.0 + k2 * 40.0) * sc, 7.0 * sc / 0.75, Color(DROP, 0.9 * (1.0 - k2)))
+		_drop(ci, pos + Vector2(-40.0, -10.0 + k2 * 40.0) * sc, 8.0 * sc / 0.75, Color(DROP, 0.95 * (1.0 - k2)))
+		_cloud(ci, pos + Vector2(sin(t * 1.3) * 6.0, -160.0) * sc, sc)
 	if cur == "jump":
 		_sparkles(ci, pos + Vector2(0, -10.0 * sc), sc, jump / JUMP_TIME, 6 + mini(jump_chain - 3, 3) * 2)
 	elif cur == "win":
@@ -187,6 +291,16 @@ func _sweat(ci: CanvasItem, c: Vector2, sc: float, k: float) -> void:
 		var ang := -PI / 2.0 + (i - 1) * 0.42
 		var p0 := c + Vector2(-84.0 * sc, -76.0 * sc) + Vector2(cos(ang), sin(ang)) * 16.0 * sc
 		ci.draw_line(p0, p0 + Vector2(cos(ang), sin(ang)) * 12.0 * sc, a, maxf(2.0, 3.0 * sc), true)
+
+
+## Грустная тучка с капельками над головой (поражение)
+func _cloud(ci: CanvasItem, c: Vector2, sc: float) -> void:
+	var col := Color("#8C86A8")
+	for b in [[Vector2(-26, 4), 18.0], [Vector2(0, -6), 24.0], [Vector2(26, 4), 17.0], [Vector2(0, 10), 18.0]]:
+		ci.draw_circle(c + b[0] * sc, b[1] * sc, col, true, -1.0, true)
+	for i in 3:
+		var k := fmod(t * 1.4 + i * 0.33, 1.0)
+		_drop(ci, c + Vector2(-20.0 + i * 20.0, 30.0 + k * 34.0) * sc, 4.5 * sc / 0.75, Color(DROP, 0.9 * (1.0 - k)))
 
 
 ## Искорки разлетаются кольцом; k — 0..1 фаза

@@ -390,7 +390,7 @@ const STR := {
 		"access_symbols": "Symbols on blocks",
 		"access_symbols_desc": "Each gem color gets its own sign",
 		"access_lefty": "Left-handed",
-		"access_lefty_desc": "Rotate and drop on the left, arrows on the right",
+		"access_lefty_desc": "Rotate & drop left, arrows right",
 		"access_slow": "Slow fall",
 		"access_slow_desc": "30% slower, stars stay the same",
 		"access_big": "Large text",

@@ -180,6 +180,7 @@ func _ready() -> void:
 	trophy_ui = TrophyUI.new(self)
 	decor_ui = DecorateUI.new(self)
 	access_ui = AccessUI.new(self)
+	play_hero.setup(self)  # 0.17: картинка героя панели (перерисовывается 20–30 раз в секунду)
 	home3d = Home3D.new()
 	home3d.name = "Home3D"
 	add_child(home3d)
@@ -1254,7 +1255,7 @@ func _draw_panel() -> void:
 	var bottom := board_pos.y + ROWS * CELL
 	if bottom - top > 120.0:
 		var kind: String = meta.hero if meta.hero != "" else "owl"
-		play_hero.draw(self, kind, meta.outfit(), Rect2(panel_x - 8, top, pw + 16, bottom - top))
+		play_hero.draw_on(self, kind, meta.outfit(), Rect2(panel_x - 8, top, pw + 16, bottom - top))
 
 
 func _draw_controls() -> void:
