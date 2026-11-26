@@ -28,6 +28,7 @@ var mood := ""         # "", "win", "lose"
 var mood_t := 0.0
 var rect := Rect2()    # место героя на панели (заполняется при рисовании; касание — по нему)
 var drawn := 0         # сколько раз нарисован (для тестов)
+var draw_us := 0.0     # сглаженное время рисования героя, мкс (замер производительности)
 
 
 func reset() -> void:
@@ -107,9 +108,12 @@ func eye_k() -> float:
 func draw(ci: CanvasItem, kind: String, outfit: Dictionary, r: Rect2) -> void:
 	rect = r
 	drawn += 1
+	var t0 := Time.get_ticks_usec()
 	var cur := current()
-	var sc: float = minf(r.size.x / 230.0, r.size.y / 285.0) * KIND_K.get(kind, 1.0)
-	var feet := Vector2(r.get_center().x, r.end.y - 10.0)
+	# спутник (книжка, мячик, клубок...) летает справа — тогда герой меньше и левее, чтобы всё влезло
+	var comp: bool = outfit.get("companion", "") != ""
+	var sc: float = minf(r.size.x / (275.0 if comp else 235.0), r.size.y / 285.0) * KIND_K.get(kind, 1.0)
+	var feet := Vector2(r.position.x + 108.0 * sc + 2.0 if comp else r.get_center().x, r.end.y - 10.0)
 	# мягкий «пьедестал» — свечение под лапками
 	var glow := GOLD if cur in ["win", "jump"] else (Color("#FF6B8A") if cur == "fear" else Color("#B46CFF"))
 	_ellipse(ci, feet + Vector2(0, -2), 74.0 * sc / 0.75, 14.0 * sc / 0.75, Color(glow, 0.22))
@@ -135,7 +139,7 @@ func draw(ci: CanvasItem, kind: String, outfit: Dictionary, r: Rect2) -> void:
 	hero.eye_k = 1.0
 	var head := pos + Vector2(0, -50.0 * sc)
 	if cur == "fear" or (fear > 0.3 and cur == "joy"):
-		_sweat(ci, head + Vector2(70.0, -42.0) * sc, sc, fear)
+		_sweat(ci, head + Vector2(84.0, -6.0) * sc, sc, fear)
 	if cur == "lose":
 		var k2 := fmod(mood_t, 1.6) / 1.6
 		_drop(ci, pos + Vector2(-40.0, -10.0 + k2 * 40.0) * sc, 7.0 * sc / 0.75, Color(DROP, 0.9 * (1.0 - k2)))
@@ -143,6 +147,8 @@ func draw(ci: CanvasItem, kind: String, outfit: Dictionary, r: Rect2) -> void:
 		_sparkles(ci, pos + Vector2(0, -10.0 * sc), sc, jump / JUMP_TIME, 6 + mini(jump_chain - 3, 3) * 2)
 	elif cur == "win":
 		_sparkles(ci, pos + Vector2(0, -10.0 * sc), sc, fmod(mood_t, 1.2) / 1.2, 8)
+	var us := float(Time.get_ticks_usec() - t0)
+	draw_us = us if drawn == 1 else lerpf(draw_us, us, 0.05)
 
 
 func hit(pos: Vector2) -> bool:
@@ -173,13 +179,13 @@ static func _drop(ci: CanvasItem, c: Vector2, r: float, col: Color) -> void:
 
 func _sweat(ci: CanvasItem, c: Vector2, sc: float, k: float) -> void:
 	var slide := fmod(t, 1.1) / 1.1
-	var s := 9.0 * sc / 0.75
+	var s := 11.0 * sc / 0.75
 	_drop(ci, c + Vector2(0, slide * 16.0 * sc), s, Color(DROP, 0.95 * k * (1.0 - slide * 0.6)))
 	# «нервные» чёрточки над головой
 	var a := Color(1, 1, 1, 0.55 * k)
 	for i in 3:
 		var ang := -PI / 2.0 + (i - 1) * 0.42
-		var p0 := c + Vector2(-58.0 * sc, -40.0 * sc) + Vector2(cos(ang), sin(ang)) * 16.0 * sc
+		var p0 := c + Vector2(-84.0 * sc, -76.0 * sc) + Vector2(cos(ang), sin(ang)) * 16.0 * sc
 		ci.draw_line(p0, p0 + Vector2(cos(ang), sin(ang)) * 12.0 * sc, a, maxf(2.0, 3.0 * sc), true)
 
 

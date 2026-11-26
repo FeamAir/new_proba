@@ -56,7 +56,7 @@ func draw() -> void:
 		return
 	_layout()
 	var a = g.access
-	g.draw_rect(Rect2(0, 0, g.W, g.H), Color(0.04, 0.02, 0.09, 0.96))
+	g.draw_rect(Rect2(0, 0, g.W, g.H), Color(0.04, 0.02, 0.09, 0.99))
 	var first: Rect2 = rects["opt_" + a.KEYS[0]]
 	g._center_text(I18n.t("access_title"), first.position.y - 44, a.fs(54), g.TEXT)
 	for k in a.KEYS:
@@ -94,14 +94,14 @@ func _icon(k: String, c: Vector2, on: bool) -> void:
 			g._draw_block(c - Vector2(28, 28), 56, 1)
 			g.Access.draw_sign(g, c, 56, 1)
 		"lefty":
-			# ладонь-«стрелка поворота» слева
-			g.draw_arc(c, 18, deg_to_rad(-60), deg_to_rad(220), 20, col, 5.0, true)
-			var ang := deg_to_rad(220)
-			var p := c + Vector2(cos(ang), sin(ang)) * 18.0
-			var tg := Vector2(-sin(ang), cos(ang))
-			var nn := Vector2(cos(ang), sin(ang))
-			g.draw_colored_polygon(PackedVector2Array([p + tg * 11, p + nn * 9, p - nn * 9]), col)
-			g.draw_string(g.font, c + Vector2(-34, 36), "L", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, g.ACCENT)
+			# мини-ряд кнопок: поворот слева, стрелка справа
+			for i in 2:
+				var bc := c + Vector2(-17 + i * 34, 0)
+				g._rbox(Rect2(bc - Vector2(15, 17), Vector2(30, 34)), Color(col, 0.22), 8)
+			var rc := c + Vector2(-17, 0)
+			g.draw_arc(rc, 8, deg_to_rad(-60), deg_to_rad(220), 14, col, 3.0, true)
+			var ac := c + Vector2(17, 0)
+			g.draw_colored_polygon(PackedVector2Array([ac + Vector2(8, 0), ac + Vector2(-5, -8), ac + Vector2(-5, 8)]), col)
 		"slow":
 			# часы-«черепашка»: циферблат и стрелки
 			g.draw_arc(c, 22, 0, TAU, 28, col, 4.0, true)
