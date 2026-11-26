@@ -9,6 +9,8 @@ extends RefCounted
 ## Цвет вершины считается по «нормали» как у шара: свет сверху-слева, тень снизу-справа,
 ## подсветка контура справа-снизу и мягкий блик. Сетки считаются один раз и кэшируются (_cache),
 ## в кадре только сдвигаются — поэтому рисование дешёвое.
+## 0.16: щенок и котик пушистые — мех (кайма из прядок, прядки-штрихи, щёчки, «жабо», кисточки в ушках,
+## пушистый хвост) — тоже кэшированные сетки; детализация по масштабу (_fur_lod), раздел «пушистая шерсть».
 
 const OUT := Color("#1E1236")
 const AMBER := Color("#FFB547")
@@ -83,6 +85,10 @@ var _tail_mid := PackedVector2Array()    # ось хвоста котика (16 
 var _tail_w: Array = []                  # толщина хвоста котика по точкам
 ## 0.13: рисуется девочка (реснички, заколка) или мальчик (бровки, хохолок) — ключ "gender" наряда
 var _girl := false
+## 0.16: мех щенка и котика — детализация (0 — нет, 1 — только кайма, 2 — всё), время и «распушение» при касании
+var _fur_lod := 2
+var _fur_t := 0.0
+var _fur_env := 0.0
 
 
 # ---------- Объёмные сетки ----------
@@ -400,6 +406,9 @@ func draw(target: CanvasItem, kind: String, pos: Vector2, sc: float, outfit: Dic
 	_react = react
 	_head_only = head_only
 	_girl = is_girl(outfit)
+	_fur_t = t
+	_fur_env = react_env(react)
+	_fur_lod = 2 if sc >= 0.55 else (1 if sc >= 0.26 else 0)
 	var breath := 1.0 + 0.018 * sin(t * 2.2)
 	var sway := 0.025 * sin(t * 1.25)
 	if kind == "puppy" and not head_only:
@@ -892,27 +901,45 @@ func _puppy(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only
 		_pup_tail(p, t, env, react)
 		# Задние лапки (пухлые бёдрышки) и туловище
 		for sx in [-1.0, 1.0]:
-			_ball(Vector2(sx * 52, 96), 34, 27, body.darkened(0.04), sx * 0.3, 1.1)
+			_ball(Vector2(sx * 52, 96), 34, 27, body.darkened(0.04), sx * 0.3, 1.1, 0.4, _fur_edge())
+			# 0.16: мех на бёдрышках — сверху и снаружи
+			_fur_ball(["fur_pthigh", sx, body], Vector2(sx * 52, 96), 34, 27, sx * 0.3, body.darkened(0.04), 7.0,
+				func(v: Vector2) -> float: return clampf(v.x * sx / 30.0 + 0.2, 0.0, 1.0) * (1.0 - smoothstep(4.0, 16.0, v.y)), Vector2(sx * 0.2, 0.5), 3)
 			_ball(Vector2(sx * 70, 116), 19, 11, belly if spots else body.lerp(belly, 0.45), 0.0, 1.0, 0.3, 1.0)
-		_ball(Vector2(0, 70), 64, 54, body, 0.0, 1.15)
-		# пушистая светлая грудка
-		_glow(Vector2(0, 66), 44, 40, Color(belly, 0.95))
-		_ball(Vector2(0, 62), 30, 26, belly, 0.0, 2.6, 0.12, 0.0)
+		_ball(Vector2(0, 70), 64, 54, body, 0.0, 1.15, 0.4, _fur_edge())
+		_fur_ball(["fur_pbody", body], Vector2(0, 70), 64, 54, 0.0, body, 8.0,
+			func(v: Vector2) -> float: return 1.0 - smoothstep(18.0, 34.0, v.y), Vector2(0, 0.45), 4)
+		_fur_strands(["str_pbody", body], func() -> Array: return _strand_list(Vector2(0, 70), 64, 54, 12,
+			[[Vector2(0, -20), 78.0], [Vector2(0, 62), 40.0], [Vector2(-25, 96), 20.0], [Vector2(25, 96), 20.0]], 5, body, 13.0, 0.9, 0.55), Vector2(0, 70))
 		if spots:
 			for s in PUP_SPOTS_BODY:
 				_ball(s[0], s[1], s[2], p.spots, s[3], 2.4, 0.15, 0.0)
+		# пушистая светлая грудка-«жабо»
+		_glow(Vector2(0, 66), 44, 40, Color(belly, 0.95))
+		_ball(Vector2(0, 60), 32, 29, belly, 0.0, 2.6, 0.12, 0.0)
+		_fur_ball(["fur_pbelly", belly], Vector2(0, 60), 32, 29, 0.0, belly, 6.0,
+			func(v: Vector2) -> float: return smoothstep(-20.0, 0.0, v.y), Vector2(0, 0.9), 6, Color(0, 0, 0, 0), 2.6)
 		# Передние лапки с подушечками-пальчиками
 		for sx in [-1.0, 1.0]:
-			_ball(Vector2(sx * 25, 90), 17, 24, body, 0.0, 1.1, 0.35)
+			_ball(Vector2(sx * 25, 90), 17, 24, body, 0.0, 1.1, 0.35, _fur_edge())
+			_fur_ball(["fur_pleg", sx, body], Vector2(sx * 25, 90), 17, 24, 0.0, body, 5.0,
+				func(v: Vector2) -> float: return clampf(v.x * sx / 12.0, 0.0, 1.0) * (1.0 - smoothstep(0.0, 12.0, v.y)), Vector2(0, 0.8), 7)
 			var pc := Vector2(sx * 27, 110)
 			var pawc := body.lerp(belly, 0.55)
 			_ball(pc, 21, 13.5, pawc, 0.0, 1.1, 0.4)
 			for k in 3:
 				_ball(pc + Vector2((k - 1) * 10.0, 7.5 - absf(k - 1) * 1.5), 5.6, 4.6, pawc.lerp(Color.WHITE, 0.25), 0.0, 1.0, 0.3, 1.0)
+		# 0.16: пушистое «жабо» — светлые пряди с грудки свисают на лапки
+		_fur_ball(["fur_pjabot", belly], Vector2(0, 52), 30, 22, 0.0, belly, 14.0,
+			func(v: Vector2) -> float: return smoothstep(-2.0, 10.0, v.y) * (1.0 - 0.3 * absf(v.x) / 30.0), Vector2(0, 1.3), 12, Color(0, 0, 0, 0), 2.4)
 
 	_T = TH
-	# Голова: круглая, с пухлыми щёчками
-	_shape(["pup_head", body], _pup_head(), Vector2(-8, -48), body, 1.15, 0.45)
+	# 0.16: пушистые щёчки (за головой, видны пряди)
+	for sx in [-1.0, 1.0]:
+		_cheek_tufts(sx, Vector2(sx * 82, 2), body, 0.72, t)
+	# Голова: круглая, с пухлыми щёчками и меховой каймой
+	_shape(["pup_head", body], _pup_head(), Vector2(-8, -48), body, 1.15, 0.45, _fur_edge())
+	_fur_shape(["fur_phead", body], _pup_head, Vector2(0, -38), body, 8.5, _w_head, 6.0, Vector2(0, 0.3), 2)
 	if spots:
 		for s in PUP_SPOTS_HEAD:
 			_ball(s[0], s[1], s[2], p.spots, s[3], 2.4, 0.15, 0.0)
@@ -920,6 +947,9 @@ func _puppy(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only
 		# белая проточина корги: от носа по лбу
 		_glow(Vector2(0, -56), 22, 42, Color(belly, 0.9))
 		_ball(Vector2(0, -50), 12, 36, belly, 0.0, 3.0, 0.1, 0.0)
+	# 0.16: прядки шерсти на лбу и макушке
+	_fur_strands(["str_phead", body], func() -> Array: return _strand_list(Vector2(0, -40), 92, 76, 18,
+		[[Vector2(-38, -44), 30.0], [Vector2(38, -44), 30.0], [Vector2(0, -8), 48.0]], 11, body, 14.0, -0.15, 0.4), Vector2(0, -38))
 	# 0.13: вихор на макушке — у мальчика (под шапками не виден)
 	if not _girl and not hat_on(outfit):
 		_tuft("puppy", Vector2(0, -110), body.lerp(p.dark, 0.3), t)
@@ -935,7 +965,10 @@ func _puppy(p: Dictionary, outfit: Dictionary, t: float, react: float, head_only
 	for sx in [-1.0, 1.0]:
 		var ang: float = sx * (0.1 + 0.05 * sin(t * 1.7 + sx)) - sx * 0.6 * bounce
 		_T = TH * Transform2D(ang, Vector2(sx * 68, -96))
-		_shape(["pup_ear", sx, dark], _pup_ear(sx), Vector2(sx * 10, 40), dark, 1.3, 0.35)
+		_shape(["pup_ear", sx, dark], _pup_ear(sx), Vector2(sx * 10, 40), dark, 1.3, 0.35, _fur_edge())
+		# 0.16: пушистые ушки — длинная бахрома внизу и снаружи
+		_fur_shape(["fur_pear", sx, dark], _pup_ear.bind(sx), Vector2(sx * 12, 46), dark, 9.0,
+			func(v: Vector2) -> float: return 0.3 + 1.3 * smoothstep(20.0, 80.0, v.y) + 0.4 * clampf(v.x * sx / 30.0, 0.0, 1.0), 5.5, Vector2(0, 0.9), 8)
 	_T = TH
 
 	# Румянец
@@ -1082,9 +1115,13 @@ func _pup_tail(p: Dictionary, t: float, env: float, react: float) -> void:
 		l.append_array(r)
 		pts = l
 		_store(key, pts)
-	_shape(["pup_tail", p.body], pts, Vector2(30, -18), p.body, 1.2, 0.4)
+	_shape(["pup_tail", p.body], pts, Vector2(30, -18), p.body, 1.2, 0.4, _fur_edge())
+	# 0.16: пушистый хвостик — пёрышки снизу-снаружи и пушистый кончик
+	_fur_shape(["fur_ptail", p.body], func() -> PackedVector2Array: return pts, Vector2(30, -18), p.body, 9.0,
+		func(v: Vector2) -> float: return 0.4 + 1.0 * smoothstep(10.0, 40.0, v.x + v.y * -0.2), 5.0, Vector2(0.3, 0.4), 9)
 	var tipc: Color = p.dark if p.has("spots") else p.body.lerp(p.belly, 0.5)
 	_ball(Vector2(46, -48), 10, 10, tipc, 0.0, 1.3, 0.35, 0.0)
+	_fur_ball(["fur_ptip", tipc], Vector2(46, -48), 10, 10, 0.0, tipc, 9.0, func(v: Vector2) -> float: return 1.0 if v.y < 4.0 else 0.5, Vector2(0.2, -0.3), 10)
 	_T = Transform2D.IDENTITY
 
 
@@ -1113,15 +1150,24 @@ func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_onl
 		_kit_tail(p, t, env, react)
 		_part(outfit, "tail", a, t)  # 0.12b: бантик на хвосте, хвост из звёздной пыли
 		# Задние лапки и туловище
+		var tick := Color(dark, 1.0) if stripes else Color(0, 0, 0, 0)
 		for sx in [-1.0, 1.0]:
-			_ball(Vector2(sx * 48, 96), 30, 25, body.darkened(0.04), sx * 0.3, 1.1)
+			_ball(Vector2(sx * 48, 96), 30, 25, body.darkened(0.04), sx * 0.3, 1.1, 0.4, _fur_edge())
+			_fur_ball(["fur_kthigh", sx, body, stripes], Vector2(sx * 48, 96), 30, 25, sx * 0.3, body.darkened(0.04), 6.5,
+				func(v: Vector2) -> float: return clampf(v.x * sx / 26.0 + 0.2, 0.0, 1.0) * (1.0 - smoothstep(4.0, 15.0, v.y)), Vector2(sx * 0.2, 0.5), 3, tick)
 			_ball(Vector2(sx * 64, 116), 17, 10, socks, 0.0, 1.0, 0.3, 1.0)
 			if stripes:
 				for k in 2:
 					_arc(Vector2(sx * 48, 96), 22 - k * 9, 17 - k * 7, -PI * 0.9, -PI * 0.35, Color(dark, 0.55), 4.0, 8)
-		_ball(Vector2(0, 70), 58, 52, body, 0.0, 1.15)
+		_ball(Vector2(0, 70), 58, 52, body, 0.0, 1.15, 0.4, _fur_edge())
+		_fur_ball(["fur_kbody", body, stripes], Vector2(0, 70), 58, 52, 0.0, body, 7.5,
+			func(v: Vector2) -> float: return 1.0 - smoothstep(18.0, 34.0, v.y), Vector2(0, 0.45), 4, tick)
+		_fur_strands(["str_kbody", body], func() -> Array: return _strand_list(Vector2(0, 70), 58, 52, 10,
+			[[Vector2(0, -20), 76.0], [Vector2(0, 64), 36.0], [Vector2(-22, 96), 18.0], [Vector2(22, 96), 18.0]], 5, body, 12.0, 0.9, 0.55), Vector2(0, 70))
 		_glow(Vector2(0, 66), 38, 40, Color(belly, 0.95))
 		_ball(Vector2(0, 64), 26, 28, belly, 0.0, 2.6, 0.12, 0.0)
+		_fur_ball(["fur_kbelly", belly], Vector2(0, 64), 26, 28, 0.0, belly, 5.0,
+			func(v: Vector2) -> float: return smoothstep(-20.0, 0.0, v.y), Vector2(0, 0.9), 6, Color(0, 0, 0, 0), 2.6)
 		if stripes:
 			for sx in [-1.0, 1.0]:
 				for k in 3:
@@ -1130,11 +1176,17 @@ func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_onl
 		_part(outfit, "body", a, t)  # 0.12b: вязаный свитер — на туловище, под лапками
 		# Передние лапки с пальчиками
 		for sx in [-1.0, 1.0]:
-			_ball(Vector2(sx * 22, 90), 15, 24, body, 0.0, 1.1, 0.35)
+			_ball(Vector2(sx * 22, 90), 15, 24, body, 0.0, 1.1, 0.35, _fur_edge())
+			_fur_ball(["fur_kleg", sx, body], Vector2(sx * 22, 90), 15, 24, 0.0, body, 4.5,
+				func(v: Vector2) -> float: return clampf(v.x * sx / 11.0, 0.0, 1.0) * (1.0 - smoothstep(0.0, 12.0, v.y)), Vector2(0, 0.8), 7)
 			var pc := Vector2(sx * 23, 110)
 			_ball(pc, 18, 12.5, socks, 0.0, 1.1, 0.4)
 			for k in 3:
 				_ball(pc + Vector2((k - 1) * 8.5, 7.0 - absf(k - 1) * 1.5), 4.8, 4.2, socks.lerp(Color.WHITE, 0.25), 0.0, 1.0, 0.3, 1.0)
+		# 0.16: пушистое «жабо» на грудке (под свитером не рисуется — свитер закрывает грудку)
+		if outfit.get("back", "") != "ki_sweater":
+			_fur_ball(["fur_kjabot", belly], Vector2(0, 54), 26, 22, 0.0, belly, 13.0,
+				func(v: Vector2) -> float: return smoothstep(-2.0, 10.0, v.y) * (1.0 - 0.3 * absf(v.x) / 26.0), Vector2(0, 1.3), 12, Color(0, 0, 0, 0), 2.4)
 
 	_T = TH
 	# Треугольные ушки с розовой серединкой (за головой); иногда дёргаются
@@ -1146,15 +1198,24 @@ func _kitten(p: Dictionary, outfit: Dictionary, t: float, react: float, head_onl
 	for sx in [-1.0, 1.0]:
 		var ang: float = sx * (0.02 + perk) + (twitch if sx > 0 else 0.0)
 		_T = TH * Transform2D(ang, Vector2(sx * 58, -96))
-		_shape(["kit_ear", sx, dark if points else body], _kit_ear(sx, 1.0), Vector2(sx * 4, -24), dark if points else body, 1.2, 0.4)
+		var earc: Color = dark if points else body
+		_shape(["kit_ear", sx, earc], _kit_ear(sx, 1.0), Vector2(sx * 4, -24), earc, 1.2, 0.4, _fur_edge())
+		# 0.16: пух по краю ушка, на кончике — кисточка
+		_fur_shape(["fur_kear", sx, earc], _kit_ear.bind(sx, 1.0), Vector2(sx * 2, -20), earc, 6.0,
+			func(v: Vector2) -> float: return 0.25 + 1.5 * smoothstep(-38.0, -56.0, v.y) if v.y < 6.0 else 0.0, 5.0, Vector2(0, -0.2), 13)
 		_shape(["kit_ear_in", sx, p.inner], _kit_ear(sx, 0.62), Vector2(sx * 4, -18), p.inner, 2.0, 0.25, 0.0)
+		# кисточки внутри ушка — светлые пряди от основания вверх
+		_fur_strands(["str_kear_in", sx, belly], _kit_ear_tufts.bind(sx, belly), Vector2.ZERO)
 	_T = TH
-	# Голова: круглая, с пушистыми щёчками
-	_shape(["kit_head", body], _kit_head(), Vector2(-8, -48), body, 1.15, 0.45)
-	# пушистые щёчки: маленькие прядки по бокам
+	# 0.16: пушистые бакенбарды — пряди за щёчками
 	for sx in [-1.0, 1.0]:
-		for k in 2:
-			_ball(Vector2(sx * (86 - k * 5), -10 + k * 14), 10, 6, body, sx * (0.35 + k * 0.4), 1.3, 0.3, 0.0)
+		_cheek_tufts(sx, Vector2(sx * 80, -2), body, 0.88, t)
+	# Голова: круглая, с меховой каймой
+	_shape(["kit_head", body], _kit_head(), Vector2(-8, -48), body, 1.15, 0.45, _fur_edge())
+	_fur_shape(["fur_khead", body, stripes], _kit_head, Vector2(0, -38), body, 7.5, _w_head, 6.0, Vector2(0, 0.3), 2,
+		Color(dark, 1.0) if stripes else Color(0, 0, 0, 0))
+	_fur_strands(["str_khead", body], func() -> Array: return _strand_list(Vector2(0, -40), 90, 74, 14,
+		[[Vector2(-38, -42), 32.0], [Vector2(38, -42), 32.0], [Vector2(0, -8), 48.0], [Vector2(0, -100), 22.0]], 17, body, 12.0, -0.15, 0.4), Vector2(0, -38))
 	# 0.13: у мальчика — пучок шерсти на макушке (под шапками не виден)
 	if not _girl and not hat_on(outfit):
 		_tuft("kitten", Vector2(0, -108), dark if points else body.lerp(dark, 0.45 if stripes else 0.3), t)
@@ -1313,7 +1374,7 @@ func _kit_tail(p: Dictionary, t: float, env: float, react: float) -> void:
 		if nv.x < 0.0:
 			nv = -nv  # нормаль — в сторону света справа налево одинаково для обеих поз
 		nrm.append(nv)
-		ws.append(lerpf(13.0, 13.5, s) + sin(s * PI) * 2.5)
+		ws.append(lerpf(13.0, 15.0, s) + sin(s * PI) * 3.0)
 	# Цвета трубки (зависят от палитры): по 5 полос поперёк, кольца у полосатого, тёмный конец у сиамского
 	var key := ["kit_tail_cols", body, p.dark, p.has("stripes"), p.has("points")]
 	var cc = _cache.get(key)
@@ -1344,10 +1405,285 @@ func _kit_tail(p: Dictionary, t: float, env: float, react: float) -> void:
 	RenderingServer.canvas_item_add_triangle_array(_rid, tidx, _T * tpts, cc)
 	_tail_mid = mid
 	_tail_w = ws
+	# 0.16: пушистый хвост — пряди по обоим краям, клонятся к кончику
+	if _fur_lod > 0:
+		_kit_tail_fur(mid, nrm, ws, cc, n)
 	# пушистый круглый кончик
 	var tg2 := (mid[n - 1] - mid[n - 2]).normalized()
-	_ball(mid[n - 1] + tg2 * 3.0, 15, 15, tipc, 0.0, 1.2, 0.35)
+	_ball(mid[n - 1] + tg2 * 3.0, 15, 15, tipc, 0.0, 1.2, 0.35, _fur_edge())
+	_fur_ball(["fur_ktip", tipc], mid[n - 1] + tg2 * 3.0, 15, 15, 0.0, tipc, 10.0, func(_v: Vector2) -> float: return 1.0, Vector2(0, 0.1), 14)
 	_ball(p0, 14, 14, body, 0.0, 1.2, 0.35, 0.0)
+
+
+# ---------- 0.16: пушистая шерсть (щенок и котик) ----------
+## Мех — это готовые сетки с цветом в вершинах (кэш), как и само тело:
+##  - кайма по контуру: множество клинышков-прядок наружу (у основания — цвет края тела,
+##    к кончику — прозрачнее), в два слоя: нижний темнее (глубина между прядками), верхний — основной;
+##  - прядки-штрихи на поверхности (светлые и тёмные, по форме тела);
+##  - пушистые щёчки, «жабо», кисточки в ушках — из тех же клинышков.
+## В кадре мех только чуть «дышит» (масштаб вокруг середины детали) и распушается при касании.
+## Детализация зависит от масштаба (_fur_lod): на крошечных значках меха нет, на аватарках — реже и крупнее.
+
+## Псевдослучайное 0..1 (одинаковое от запуска к запуску)
+static func _hh(i: int, s: int) -> float:
+	var v := sin(float(i) * 12.9898 + float(s) * 78.233) * 43758.5453
+	return v - floorf(v)
+
+
+## Кайма-мех по замкнутому контуру. ctr — середина (для направления «наружу»), ln — длина прядки,
+## wfn(точка контура) -> множитель длины (0 — без меха), step — шаг по контуру, flow — куда клонится мех,
+## ticks — цвет «тиканья» части прядок (полосатик), a — непрозрачность у основания.
+static func _build_fur(outline: PackedVector2Array, ctr: Vector2, base: Color, ln: float, wfn: Callable,
+		step: float, flow: Vector2, seed: int, lod: int, ticks := Color(0, 0, 0, 0), tip_light := 0.0, flat := 1.0) -> Array:
+	var m := _mat(base, 0.3)
+	var n := outline.size()
+	var seg: Array[float] = []
+	var per := 0.0
+	for i in n:
+		var d := outline[i].distance_to(outline[(i + 1) % n])
+		seg.append(d)
+		per += d
+	if lod < 2:
+		step *= 1.8
+		ln *= 1.1
+	var cnt := maxi(int(per / step), 6)
+	var pts := PackedVector2Array()
+	var cols := PackedColorArray()
+	var idx := PackedInt32Array()
+	for layer in 2:
+		if lod < 2 and layer == 0:
+			continue
+		var k := 0
+		var acc := 0.0
+		for j in cnt:
+			var target := (j + 0.5 * (1 - layer)) * per / cnt
+			while k < n - 1 and acc + seg[k] < target:
+				acc += seg[k]
+				k += 1
+			var u := clampf((target - acc) / maxf(seg[k], 0.001), 0.0, 1.0)
+			var pa := outline[k]
+			var pb := outline[(k + 1) % n]
+			var P := pa.lerp(pb, u)
+			var N := (pb - pa).normalized().orthogonal()
+			if N.dot(P - ctr) < 0.0:
+				N = -N
+			var w: float = wfn.call(P)
+			if w <= 0.01:
+				continue
+			var sd := layer * 11 + seed
+			var L := ln * w * (0.75 + 0.5 * _hh(j, sd)) * (1.15 if layer == 0 else 1.0)
+			if L < 1.2:
+				continue
+			var hw := per / cnt * (0.95 if layer == 0 else 0.8) * clampf(0.8 + 0.2 * w, 0.8, 1.3)
+			var side := N.orthogonal()
+			if side.dot(flow) < 0.0:
+				side = -side  # завиток — по «причёске» (в сторону flow)
+			var dir := (N + flow).normalized().rotated((_hh(j, sd + 3) - 0.5) * 0.5)
+			var bend := 0.12 + 0.3 * _hh(j, sd + 5)
+			var inset := minf(L * 0.5, 6.0) + 2.0
+			var c0 := _shade(Vector3(N.x * 0.94, N.y * 0.94, 0.34 * flat).normalized(), m)
+			var c1 := _shade(Vector3(N.x * 0.8, N.y * 0.8, 0.6 * flat).normalized(), m)
+			c1 = c1.lerp(m.hi, 0.12 + tip_light)
+			if layer == 0:
+				c1 = c1.lerp(base.darkened(0.25), 0.6)
+			elif ticks.a > 0.0 and _hh(j, sd + 9) < 0.34:
+				c1 = c1.lerp(ticks, 0.7)
+			var o := pts.size()
+			# ряды прядки: основание внутри тела (прозрачное), край тела, середина, у кончика, кончик
+			var e0 := P - N * 1.5
+			var q1 := P + dir * L * 0.45 + side * L * bend * 0.12
+			var q2 := P + dir * L * 0.78 + side * L * bend * 0.45
+			pts.append_array([P - side * hw - N * inset, P + side * hw - N * inset, e0 - side * hw, e0 + side * hw,
+				q1 - side * hw * 0.92, q1 + side * hw * 0.92, q2 - side * hw * 0.62, q2 + side * hw * 0.62,
+				P + dir * L + side * L * bend])
+			var ce := c0.lerp(c1, 0.35) if layer == 1 else c0
+			cols.append_array([Color(c0, 0.0), Color(c0, 0.0), ce, ce, c1, c1, Color(c1, 0.75), Color(c1, 0.75), Color(c1, 0.0)])
+			idx.append_array([o, o + 1, o + 3, o, o + 3, o + 2, o + 2, o + 3, o + 5, o + 2, o + 5, o + 4,
+				o + 4, o + 5, o + 7, o + 4, o + 7, o + 6, o + 6, o + 7, o + 8])
+	return [pts, cols, idx]
+
+
+## Прядки-штрихи на поверхности: список [начало, направление (ед.), длина, ширина, цвет]
+static func _build_strands(list: Array) -> Array:
+	var pts := PackedVector2Array()
+	var cols := PackedColorArray()
+	var idx := PackedInt32Array()
+	for s in list:
+		var c: Vector2 = s[0]
+		var d: Vector2 = s[1]
+		var L: float = s[2]
+		var w: float = s[3]
+		var col: Color = s[4]
+		var sd := d.orthogonal()
+		var mid := c + d * L * 0.5 + sd * L * 0.1
+		var tip := c + d * L + sd * L * 0.06
+		var o := pts.size()
+		pts.append_array([c - sd * w * 0.5, c + sd * w * 0.5, mid - sd * w * 0.5, mid + sd * w * 0.5, tip])
+		cols.append_array([Color(col, 0.0), Color(col, 0.0), col, col, Color(col, 0.0)])
+		idx.append_array([o, o + 1, o + 3, o, o + 3, o + 2, o + 2, o + 3, o + 4])
+	return [pts, cols, idx]
+
+
+## Прядки в области эллипса (c, rx, ry) кроме кругов excl [[центр, радиус]...]: светлые и тёмные,
+## направлены наружу от середины и чуть вниз (droop)
+static func _strand_list(c: Vector2, rx: float, ry: float, cnt: int, excl: Array, seed: int, base: Color, ln: float, droop: float, fmin := 0.45) -> Array:
+	var m := _mat(base, 0.3)
+	var out: Array = []
+	var tries := 0
+	var i := 0
+	while out.size() < cnt and tries < cnt * 6:
+		tries += 1
+		i += 1
+		var a := _hh(i, seed) * TAU
+		var f := lerpf(fmin, 0.9, sqrt(_hh(i, seed + 1)))
+		var p := c + Vector2(cos(a) * rx, sin(a) * ry) * f
+		var bad := false
+		for e in excl:
+			if p.distance_to(e[0]) < e[1]:
+				bad = true
+				break
+		if bad:
+			continue
+		var rad := Vector2(cos(a) / rx, sin(a) / ry).normalized()
+		var d := (rad + Vector2(0, droop)).normalized().rotated((_hh(i, seed + 2) - 0.5) * 0.5)
+		var light := out.size() % 3 != 2
+		var col: Color = Color(m.hi, 0.5) if light else Color(base.darkened(0.2), 0.3)
+		out.append([p, d, ln * (0.7 + 0.6 * _hh(i, seed + 3)), (3.4 if light else 2.8), col])
+	return out
+
+
+## Нарисовать мех-сетку; мех чуть «дышит» вокруг pivot и распушается при касании
+func _put_fur(ms: Array, pivot: Vector2, ph := 0.0) -> void:
+	var s := 1.0 + 0.012 * sin(_fur_t * 2.2 + ph) + 0.04 * _fur_env
+	var r := 0.007 * sin(_fur_t * 1.5 + ph)
+	var t := _T * Transform2D(r, Vector2(s, s), 0.0, pivot) * Transform2D(0.0, -pivot)
+	RenderingServer.canvas_item_add_triangle_array(_rid, ms[2], t * (ms[0] as PackedVector2Array), ms[1])
+
+
+## Мех-кайма по эллипсу детали-шарика (кэш). wfn — по точке в координатах шарика (без сдвига c)
+func _fur_ball(key: Array, c: Vector2, rx: float, ry: float, rot: float, base: Color, ln: float, wfn: Callable, flow := Vector2(0, 0.3), seed := 1, ticks := Color(0, 0, 0, 0), flat := 1.0) -> void:
+	if _fur_lod == 0:
+		return
+	key.append(_fur_lod)
+	var ms = _cache.get(key)
+	if ms == null:
+		ms = _build_fur(_ell(Vector2.ZERO, rx, ry, rot, 48), Vector2.ZERO, base, ln, wfn, 6.0, flow, seed, _fur_lod, ticks, 0.0, flat)
+		_store(key, ms)
+	var T0 := _T
+	_T = _T * Transform2D(0.0, c)
+	_put_fur(ms, Vector2.ZERO, c.x * 0.03)
+	_T = T0
+
+
+## Мех-кайма по контуру фигуры (кэш)
+func _fur_shape(key: Array, outline_fn: Callable, ctr: Vector2, base: Color, ln: float, wfn: Callable, step := 6.0, flow := Vector2(0, 0.3), seed := 1, ticks := Color(0, 0, 0, 0), tip_light := 0.0) -> void:
+	if _fur_lod == 0:
+		return
+	key.append(_fur_lod)
+	var ms = _cache.get(key)
+	if ms == null:
+		ms = _build_fur(outline_fn.call(), ctr, base, ln, wfn, step, flow, seed, _fur_lod, ticks, tip_light)
+		_store(key, ms)
+	_put_fur(ms, ctr, seed * 0.7)
+
+
+## Прядки-штрихи (кэш; только на полной детализации)
+func _fur_strands(key: Array, list_fn: Callable, pivot: Vector2) -> void:
+	if _fur_lod < 2:
+		return
+	var ms = _cache.get(key)
+	if ms == null:
+		ms = _build_strands(list_fn.call())
+		_store(key, ms)
+	_put_fur(ms, pivot, 0.3)
+
+
+## Кисточки внутри ушка котика (координаты ушка): светлые пряди от основания вверх-наружу
+static func _kit_ear_tufts(sx: float, col: Color) -> Array:
+	var l: Array = []
+	for i in 5:
+		var d := Vector2(sx * (0.5 - i * 0.16), -1.0).normalized()
+		l.append([Vector2(sx * (-6.0 + i * 3.5), -2.0 - absf(i - 2) * 2.0), d, 30.0 - absf(i - 2) * 5.0, 6.5, Color(col, 0.95)])
+	return l
+
+
+## Край-обводка (сглаживание) детали, покрытой мехом: под мехом не нужна — иначе видна «шовная» линия
+func _fur_edge() -> float:
+	return 0.0 if _fur_lod > 0 else 1.4
+
+
+## Длина меха по контуру головы щенка и котика: короче на макушке, длиннее на щёчках и подбородке
+static func _w_head(v: Vector2) -> float:
+	var ry := v.y + 38.0
+	return 0.7 + 0.9 * smoothstep(-25.0, 15.0, ry) * smoothstep(40.0, 80.0, absf(v.x)) + 0.25 * smoothstep(40.0, 70.0, ry)
+
+
+## Пушистые щёчки / бакенбарды: несколько заострённых прядок от точки base наружу-вниз (сторона sx)
+func _cheek_tufts(sx: float, base: Vector2, col: Color, big: float, t: float) -> void:
+	var T0 := _T
+	var locks := [[1.85, 22.0, 11.0, -0.25], [2.2, 26.0, 12.0, -0.3], [2.55, 24.0, 11.5, -0.3], [2.9, 18.0, 10.0, -0.3]]
+	var sw := 0.04 * sin(t * 2.2 + sx) + 0.08 * _fur_env
+	for i in locks.size():
+		var lk: Array = locks[i]
+		var ln: float = lk[1] * big
+		var key := ["cheek_tuft", i, sx, col, big]
+		var pts := PackedVector2Array()
+		if not _cache.has(key):
+			for v in _lock_pts(ln, lk[2] * big, lk[3]):
+				pts.append(Vector2(v.x * sx, v.y))
+		var ang: float = (lk[0] + sw) * sx
+		_T = T0 * Transform2D(ang, base + Vector2(0, (i - 1.5) * 10.0 * big))
+		_shape(key, pts, Vector2(sx * lk[3] * ln * 0.2, -ln * 0.35), col, 1.4, 0.3, 0.0)
+	_T = T0
+
+
+## Мех хвоста котика (хвост гнётся каждый кадр): пряди по краям трубки. Узор прядок (длины, наклоны,
+## цвета — по цветам трубки, с полосками полосатика и тёмным концом сиамского) считается один раз.
+func _kit_tail_fur(mid: PackedVector2Array, nrm: Array[Vector2], ws: Array[float], cc: PackedColorArray, n: int) -> void:
+	var key := ["kit_tail_fur", cc[0], cc[cc.size() - 1], _fur_lod]
+	var pat = _cache.get(key)
+	if pat == null:
+		pat = []
+		var stp := 1 if _fur_lod == 2 else 2
+		for layer in 2:
+			for i in range(1, n - 1, stp):
+				for sd in [1.0, -1.0]:
+					var j := i * 2 + (0 if sd > 0 else 1) + layer * 50
+					var c0: Color = cc[i * 5 + (1 if sd > 0 else 3)]
+					var c1: Color = c0.lerp(cc[i * 5 + (0 if sd > 0 else 4)], 0.55)
+					if layer == 0:
+						c1 = c1.darkened(0.18)
+					var ln := (9.5 + 5.5 * _hh(j, 21)) * (1.15 if layer == 0 else 1.0) + 4.0 * sin(i / float(n - 1) * PI)
+					pat.append([i + (0.5 if layer == 0 and i < n - 2 else 0.0), sd, ln, (_hh(j, 22) - 0.5) * 0.4, c0, c1])
+		_store(key, pat)
+	var pts := PackedVector2Array()
+	var cols := PackedColorArray()
+	var idx := PackedInt32Array()
+	var puff := 1.0 + 0.25 * _fur_env
+	var hw := 7.5 if _fur_lod == 2 else 10.0
+	for f in pat:
+		var fi: float = f[0]
+		var i := int(fi)
+		var u := fi - i
+		var sd: float = f[1]
+		var tg := (mid[mini(i + 1, n - 1)] - mid[i - 1]).normalized()
+		var N: Vector2 = (nrm[i] as Vector2).lerp(nrm[mini(i + 1, n - 1)], u) * sd
+		var w: float = lerpf(ws[i], ws[mini(i + 1, n - 1)], u)
+		var P: Vector2 = mid[i].lerp(mid[mini(i + 1, n - 1)], u) + N * w
+		var L: float = f[2] * puff
+		var dir := (N + tg * 0.7).normalized().rotated(f[3])
+		var o := pts.size()
+		var e0 := P - N * 1.5
+		var q1 := P + dir * L * 0.45
+		var q2 := P + dir * L * 0.78
+		pts.append_array([P - tg * hw - N * 7.0, P + tg * hw - N * 7.0, e0 - tg * hw, e0 + tg * hw,
+			q1 - tg * hw * 0.9, q1 + tg * hw * 0.9, q2 - tg * hw * 0.6, q2 + tg * hw * 0.6, P + dir * L])
+		var c0: Color = f[4]
+		var c1: Color = f[5]
+		cols.append_array([Color(c0, 0.0), Color(c0, 0.0), c0, c0, c1, c1, Color(c1, 0.75), Color(c1, 0.75), Color(c1, 0.0)])
+		idx.append_array([o, o + 1, o + 3, o, o + 3, o + 2, o + 2, o + 3, o + 5, o + 2, o + 5, o + 4,
+			o + 4, o + 5, o + 7, o + 4, o + 7, o + 6, o + 6, o + 7, o + 8])
+	RenderingServer.canvas_item_add_triangle_array(_rid, idx, _T * pts, cols)
 
 
 # ---------- 0.13: мальчик / девочка ----------
@@ -1461,7 +1797,7 @@ func _tuft(kind: String, base: Vector2, col: Color, t: float) -> void:
 		"owl":
 			locks = [[-0.55, 26.0, 7.0, -0.3], [0.1, 44.0, 10.0, 0.45]]
 		"puppy":
-			locks = [[-0.4, 22.0, 8.0, -0.55], [0.35, 30.0, 9.0, 0.8], [-0.02, 27.0, 9.0, 0.4]]
+			locks = [[-0.75, 17.0, 7.0, -0.5], [0.7, 18.0, 7.0, 0.6], [-0.4, 22.0, 8.0, -0.55], [0.35, 30.0, 9.0, 0.8], [-0.02, 27.0, 9.0, 0.4]]
 		_:
 			locks = [[-0.5, 20.0, 7.5, -0.4], [0.45, 20.0, 7.5, 0.4], [0.0, 28.0, 8.5, 0.15]]
 	var T0 := _T
@@ -1471,7 +1807,11 @@ func _tuft(kind: String, base: Vector2, col: Color, t: float) -> void:
 		var key := ["tuft", kind, i, col]
 		var pts := PackedVector2Array() if _cache.has(key) else _lock_pts(lk[1], lk[2], lk[3])
 		_T = T0 * Transform2D(lk[0] + sw * (1.0 + i * 0.3), base)
-		_shape(key, pts, Vector2(lk[3] * lk[1] * 0.2, -lk[1] * 0.35), col, 1.3, 0.35, 1.2)
+		_shape(key, pts, Vector2(lk[3] * lk[1] * 0.2, -lk[1] * 0.35), col, 1.3, 0.35, 1.2 if kind == "owl" else _fur_edge())
+		if kind != "owl":
+			# 0.16: пушистый хохолок щенка и котика — мех по краю прядей
+			_fur_shape(["fur_tuft", kind, i, col], _lock_pts.bind(lk[1], lk[2], lk[3]), Vector2(lk[3] * lk[1] * 0.2, -lk[1] * 0.35), col, 4.5,
+				func(v: Vector2) -> float: return 1.0, 4.0, Vector2(0, -0.2), 20 + i)
 		if kind == "owl" and i == 0:
 			# стержень пёрышка
 			var sp := PackedVector2Array()

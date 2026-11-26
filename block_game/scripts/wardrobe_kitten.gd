@@ -325,7 +325,7 @@ static func star_tail(h, t: float) -> void:
 		var s := float(i) / (n - 1)
 		var col := Sets.hsv(fposmod(0.55 + s * 0.4 - t * 0.12, 1.0), 0.5, 1.0)
 		var wd: float = h._tail_w[i] if h._tail_w.size() > i else 13.0
-		h._glow(mid[i], wd * 1.3, wd * 1.3, Color(col, snappedf(0.2 + 0.35 * s, 0.05)))
+		h._glow(mid[i], wd * 1.3 + 10.0, wd * 1.3 + 10.0, Color(col, snappedf(0.2 + 0.35 * s, 0.05)))
 	for i in range(3, n, 2):
 		var tw := 0.5 + 0.5 * sin(t * 4.0 + i * 1.3)
 		var wd: float = h._tail_w[i] if h._tail_w.size() > i else 13.0
