@@ -1,6 +1,6 @@
 <!--
 INTERNAL NOTE (not shown on the published page):
-- Written for version 0.2: no ads, purchases, analytics, network or sign-in.
+- Written for version 0.17: no ads, purchases, analytics, network or sign-in.
 - MUST be updated BEFORE releasing a version with AdMob, in-app purchases,
   Google Play Games or Firebase Analytics, together with data_safety.md.
 - Replace maryking.textile@gmail.com with the contact address used in Play Console before publishing.
@@ -9,7 +9,7 @@ INTERNAL NOTE (not shown on the published page):
 # Cascado Privacy Policy
 
 Effective date: November 25, 2026
-Game version: 0.2
+Game version: 0.17
 
 Cascado (the "Game") for Android is published by OWLIGHT Games ("we", "us").
 This policy explains what data the Game handles.
