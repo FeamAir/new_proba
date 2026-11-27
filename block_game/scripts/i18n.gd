@@ -781,7 +781,7 @@ static func has(key: String) -> bool:
 
 ## Словари языка l: основной и блоки версий (0.15, 0.16, 0.17, 0.18, 0.18 «праздник каскада»)
 static func _dicts(l: String) -> Array:
-	return [STR.get(l, {}), STR_015.get(l, {}), STR_016.get(l, {}), STR_017_TOUR.get(l, {}), STR_018.get(l, {}), STR_018_FUN.get(l, {}), STR_018_GOALS.get(l, {})]
+	return [STR.get(l, {}), STR_015.get(l, {}), STR_016.get(l, {}), STR_017_TOUR.get(l, {}), STR_018.get(l, {}), STR_018_FUN.get(l, {}), STR_018_GOALS.get(l, {}), STR_PRIVACY.get(l, {})]
 
 
 ## Есть ли ключ в языке l (в основном словаре или в блоках версий)
@@ -1471,5 +1471,17 @@ const STR_018_GOALS := {
 		"tut_bomb": "Огненный кристалл: очисти его ряд — взрыв 3×3!",
 		"tut_pet": "Спаси кротёнка: доведи его до самого дна",
 		"tut_chest": "Очисти оба ряда тайника — внутри осколки",
+	},
+}
+
+
+# ---------- Политика конфиденциальности (scripts/privacy.gd) ----------
+## Ссылка в меню паузы; адрес — Privacy.URL.
+const STR_PRIVACY := {
+	"en": {
+		"privacy_link": "Privacy Policy",
+	},
+	"ru": {
+		"privacy_link": "Конфиденциальность",
 	},
 }
