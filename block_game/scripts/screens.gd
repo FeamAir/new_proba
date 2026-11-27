@@ -14,6 +14,7 @@ const Rarity := preload("res://scripts/rarity.gd")
 const Swipe := preload("res://scripts/swipe.gd")
 const SpecialsDraw := preload("res://scripts/specials_draw.gd")  # 0.18: значки новых целей на карте
 const Levels := preload("res://scripts/levels.gd")
+const StarGoal := preload("res://scripts/star_goal.gd")  # 0.19: строка «★★★ — за N фигур» на экране победы
 ## 0.18: первая карточка каждой вкладки вещей — «ничего» (у окраски — «Родной окрас»): снять вещь слота
 const BARE := "_bare"
 ## 0.12: вещей на странице гардероба (2 ряда по 3)
@@ -1506,13 +1507,16 @@ func draw_win() -> void:
 		var appear := clampf((st - 0.2 - i * 0.25) / 0.2, 0.0, 1.0)
 		var r := 44.0 * (0.5 + 0.5 * appear) if i < g.last_stars else 44.0
 		g._draw_star(Vector2(g.W / 2.0 + (i - 1) * 120, y0 + 340), r, i < g.last_stars and appear > 0.0)
-	_ctext(g.W / 2.0, y0 + 430, I18n.t("win_stats") % [g.score, g.pieces_used], 30, g.DIM)
+	# 0.19: под звёздами — за сколько фигур дают 3 звезды и сколько поставлено (при 3 звёздах — похвала)
+	if st > 0.2:
+		StarGoal.draw_win_line(g, g.W / 2.0, y0 + 412, g.W - 60.0, 28)
+	_ctext(g.W / 2.0, y0 + 452, I18n.t("win_stats") % [g.score, g.pieces_used], 26, g.DIM)
 	# осколки
 	var rw: Dictionary = g.last_reward
 	var total: int = rw.get("total", 0)
 	var k := clampf((st - 0.9) / 0.9, 0.0, 1.0)
 	var shown := int(round(total * k))
-	var box := Rect2(110, y0 + 470, 500, 170)
+	var box := Rect2(110, y0 + 480, 500, 170)
 	g._rbox(box, Color(0.16, 0.1, 0.3, 0.95), 30)
 	if st > 0.9:
 		var bump := 1.0 + 0.25 * maxf(0.0, 1.0 - absf(st - 1.85) / 0.2)
@@ -1539,8 +1543,8 @@ func draw_win() -> void:
 				var p := Vector2(box.position.x + 90, box.position.y + 64) + Vector2(cos(a), sin(a)) * rr
 				g.draw_circle(p, 4, Color(g.CRYSTAL_COL, clampf(2.0 - st, 0.0, 1.0)), true, -1.0, true)
 	if st > 0.8:
-		_button("next", Rect2(110, y0 + 690, 500, 120), I18n.t("next"), true, 46)
-		_button("home", Rect2(110, y0 + 830, 500, 96), I18n.t("home"), false, 36)
+		_button("next", Rect2(110, y0 + 700, 500, 120), I18n.t("next"), true, 46)
+		_button("home", Rect2(110, y0 + 840, 500, 96), I18n.t("home"), false, 36)
 
 
 static func shards_word(n: int) -> String:

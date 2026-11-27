@@ -398,7 +398,7 @@ func _test_pet() -> void:
 	check(g.board[idx(4, 13)] == g.PET, "кротёнок упал на самое дно")
 	check(g.state == g.State.WIN, "кротёнок на дне — победа (кристалл не нужен)")
 	check(g.last_stars == 3 and g.pieces_used == g.par, "звёзды за победу как обычно (par фигур — 3 звезды)")
-	check(StarGoal.goal(g.par, g.par - 1) == [3, 1], "строка «до 3 звёзд» на уровне с кротёнком")
+	check(StarGoal.goal(g.par, StarGoal.limit(g.par, 3) - 1) == [3, 1], "строка «до 3 звёзд» на уровне с кротёнком")
 	# кротёнок во взрыве цел, падает дальше
 	_blank("pet", 1)
 	_row(13)

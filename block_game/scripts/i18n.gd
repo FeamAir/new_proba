@@ -779,9 +779,9 @@ static func has(key: String) -> bool:
 	return has_in(DEFAULT, key)
 
 
-## Словари языка l: основной и блоки версий (0.15, 0.16, 0.17, 0.18, 0.18 «праздник каскада»)
+## Словари языка l: основной и блоки версий (0.15, 0.16, 0.17, 0.18, 0.18 «праздник каскада», 0.19 «звёзды»)
 static func _dicts(l: String) -> Array:
-	return [STR.get(l, {}), STR_015.get(l, {}), STR_016.get(l, {}), STR_017_TOUR.get(l, {}), STR_018.get(l, {}), STR_018_FUN.get(l, {}), STR_018_GOALS.get(l, {}), STR_PRIVACY.get(l, {})]
+	return [STR.get(l, {}), STR_015.get(l, {}), STR_016.get(l, {}), STR_017_TOUR.get(l, {}), STR_018.get(l, {}), STR_018_FUN.get(l, {}), STR_018_GOALS.get(l, {}), STR_PRIVACY.get(l, {}), STR_019_STARS.get(l, {})]
 
 
 ## Есть ли ключ в языке l (в основном словаре или в блоках версий)
@@ -1483,5 +1483,25 @@ const STR_PRIVACY := {
 	},
 	"ru": {
 		"privacy_link": "Конфиденциальность",
+	},
+}
+
+
+# ---------- 0.19: понятные звёзды ----------
+## win_need3 — строка под звёздами на экране победы (scripts/screens.gd draw_win), перед ней рисуются
+## три звёздочки: «★★★ — за 12 фигур и меньше · у тебя 15»; win_perfect — вместо неё при 3 звёздах;
+## win_pieces_forms — «фигуру|фигуры|фигур» после «за N»; tut_stars — подсказка обучения (scripts/tutorial.gd).
+const STR_019_STARS := {
+	"en": {
+		"win_need3": "— %d %s or fewer · you used %d",
+		"win_pieces_forms": "piece|pieces|pieces",
+		"win_perfect": "Perfect! All three stars!",
+		"tut_stars": "Fewer pieces — more stars! Watch the counter on the right",
+	},
+	"ru": {
+		"win_need3": "— за %d %s и меньше · у тебя %d",
+		"win_pieces_forms": "фигуру|фигуры|фигур",
+		"win_perfect": "Отлично! Все три звезды!",
+		"tut_stars": "Меньше фигур — больше звёзд! Смотри счётчик справа",
 	},
 }

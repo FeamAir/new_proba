@@ -8,11 +8,13 @@ extends RefCounted
 ## Повтор — пункт «Обучение» в паузе (replay()).
 
 const I18n := preload("res://scripts/i18n.gd")
+const StarGoal := preload("res://scripts/star_goal.gd")
 
 ## Шаги. level — на каком уровне; after — после какого шага; on — особое событие
 ## (иначе шаг ждёт появления фигуры); close — какие действия его закрывают;
 ## hole — что открыто в затемнении; hand — как двигается рука; info — шаг-пояснение
 ## (пока он на экране, стоит и очистка линий — каскад «замирает»); then — сразу следом.
+const STARS := "stars"  # 0.19: подсказка про звёзды (id шага)
 const ALL := ["move", "rotate", "soft", "lock", "tap"]
 const STEPS := [
 	{"id": "l1_move", "level": 1, "text": "tut_move", "close": ["move"], "hole": ["piece", "move_btns"], "hand": "swipe"},
@@ -27,6 +29,9 @@ const STEPS := [
 	{"id": "sp_bomb", "special": "bomb", "text": "tut_bomb", "close": ALL, "hole": ["sp_bomb"], "hand": "tap_special", "info": true},
 	{"id": "sp_pet", "special": "pet", "text": "tut_pet", "close": ALL, "hole": ["sp_pet", "crystals"], "hand": "tap_special", "info": true},
 	{"id": "sp_chest", "special": "chest", "text": "tut_chest", "close": ALL, "hole": ["sp_chest"], "hand": "tap_special", "info": true},
+	# 0.19: один раз — «Меньше фигур — больше звёзд!» на счётчике справа. min_level — на любом уровне
+	# от 2-го (у тех, кто уже прошёл дальше, — на ближайшем), pieces — со второй фигуры уровня
+	{"id": STARS, "min_level": 2, "pieces": 1, "text": "tut_stars", "close": ALL, "hole": ["star_goal"], "hand": "", "info": true},
 ]
 const WARDROBE := "wardrobe"
 const UNDO_HINT := "undo"  # 0.18: подсказка «Совиного времени» (scripts/owl_time.gd), один раз
@@ -129,6 +134,9 @@ func _next(g) -> void:
 			continue
 		if s.has("special"):
 			if not has_special(g, s.special):
+				continue
+		elif s.has("min_level"):
+			if g.level < s.min_level or g.pieces_used < s.get("pieces", 0) or StarGoal.goal(g.par, g.pieces_used)[0] == 0:
 				continue
 		elif s.level != g.level:
 			continue
@@ -261,6 +269,8 @@ func target(g, name: String) -> Rect2:
 			return special_rect(g, g.PET)
 		"sp_chest":
 			return special_rect(g, g.CHEST)
+		"star_goal":
+			return g.star_goal_rect
 		"crystals":
 			var y: float = g.board_pos.y + 4.0 + 220.0
 			return Rect2(g.panel_x - 12, y - 30, g.W - g.panel_x - 8, 100)

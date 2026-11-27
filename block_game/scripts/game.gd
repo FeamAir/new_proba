@@ -128,6 +128,7 @@ var speed_base := 1       # 0.18: ступень на старте уровня 
 var speed_ramp := 15.0    # 0.18: секунд на одну ступень разгона (Levels.ramp_sec / поле ramp)
 var level_override := {}  # для инструментов (робот-тестер): заменяет поля строки таблицы
 var last_stars := 0
+var star_goal_rect := Rect2()  # 0.19: где на панели счётчик фигур и «★★★ ещё N» (для обучения)
 var score := 0
 var shown_score := 0.0
 var chain := 0
@@ -842,7 +843,7 @@ func _after_chain() -> void:
 
 func _win() -> void:
 	has_piece = false
-	last_stars = 3 if pieces_used <= par else (2 if pieces_used <= int(par * 1.4) else 1)
+	last_stars = StarGoal.stars(par, pieces_used)  # 0.19: общая формула (scripts/star_goal.gd)
 	last_reward = Meta.win_reward(not stars.has(level), stars.get(level, 0), last_stars, big_chains, level)
 	# 0.9: «Подарок новичку» за самую первую победу в игре
 	var gift: int = assist.take_gift(total_stars())
@@ -1627,6 +1628,8 @@ func _draw_panel() -> void:
 	# 0.18: под числом фигур — «до 3 звёзд» (звёздочки и сколько фигур ещё можно)
 	var gy := sy + val + 2.0 + access.fs(24) + 12.0
 	var gh: float = StarGoal.draw(self, panel_x, gy, pw, access.fs(24))
+	# 0.19: окно для подсказки обучения «Меньше фигур — больше звёзд» — счётчик фигур и строка звёзд
+	star_goal_rect = Rect2(panel_x - 10, sy - lab - 8, pw + 20, gy + 10 - (sy - lab - 8))
 	# 0.17: герой в своём наряде — от последней строки до низа поля
 	var top := sy + val + 24.0 + gh
 	var bottom := board_pos.y + ROWS * CELL

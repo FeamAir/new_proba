@@ -30,6 +30,11 @@ extends SceneTree
 ##                  что успевают долететь до места (обычно ниже по полю); не успевает и так — фигура падает почти там, где появилась
 ##                  (сдвиг до 1 колонки). Время в уровне тогда — сколько фигура падала. Так быстрый
 ##                  разгон наказывает медленного игрока. --rush=0 — прежняя модель (время = фигур × pace)
+##   --fuzz=F       0.19: «оценка на глаз»: к оценке каждого хода добавляется случайный шум (нормальный,
+##                  сигма F; для сравнения: кристалл = 1000, линия = 40). Человек не просчитывает каскады
+##                  и не всегда видит лучший ход — с --err/--rush робот всё ещё играет почти идеально
+##                  (3 звезды по старым нормам в ~50% побед при любом --err), а живые тестировщики почти
+##                  всегда получали 1 звезду. Нормы звёзд 0.19 (scripts/star_goal.gd) подобраны с --fuzz
 ## Версия 0.18: зёрна подобраны с --tuck=1 --err=0.05 --pace=3 (режим «человек», со «спешкой») и
 ## проверены --pace=6 («медленный»), par — по «хорошей игре» (--tuck=1 без ошибок) вместе с «человеком». В таблице есть столбцы стартовой заполненности: клеток% и высота%
 ## (самая верхняя занятая клетка, считая островки и висячие блоки).
@@ -71,6 +76,8 @@ var tuck := false
 var err := 0.0
 var pace := 3.0
 var rush := false
+var fuzz := 0.0       # 0.19: --fuzz, шум в оценке хода
+var seek := 1.0       # 0.19: --seek, насколько робот «охотится» за целью уровня
 var hurry := 0.6
 var spent := 0.0      # модельное время, потраченное на последнюю фигуру (секунды)
 var rushed_n := 0     # фигур, положенных в спешке (за прогон)
@@ -81,7 +88,7 @@ var mismatches := 0
 
 
 func _initialize() -> void:
-	var args := {"levels": "1-100", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0", "dump": "0", "set": "", "k0": "0", "tuck": "0", "err": "0", "pace": "3.0", "rush": "", "hurry": "0.6"}
+	var args := {"levels": "1-100", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0", "dump": "0", "set": "", "k0": "0", "tuck": "0", "err": "0", "pace": "3.0", "rush": "", "hurry": "0.6", "fuzz": "0", "seek": "1"}
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--") and a.contains("="):
 			var kv := a.substr(2).split("=", true, 1)
@@ -96,6 +103,8 @@ func _initialize() -> void:
 	tuck = args.tuck == "1"
 	err = float(args.err)
 	pace = float(args.pace)
+	fuzz = float(args.fuzz)
+	seek = float(args.seek)
 	rush = (args.rush == "1") if args.rush != "" else err > 0.0
 	hurry = float(args.hurry)
 	for kv in String(args.set).split(",", false):
@@ -402,7 +411,7 @@ func _features(b: PackedInt32Array) -> float:
 func _score(p: Dictionary) -> float:
 	if p.top_out:
 		return -1e9
-	return _gain(p) + W_LINE * p.lines + _features(p.board)
+	return seek * _gain(p) + W_LINE * p.lines + _features(p.board)
 
 
 ## 0.18: польза хода для цели уровня: кристаллы, ряды, на которые опустился кротёнок, клетки тайника.
@@ -440,9 +449,11 @@ func _choose() -> Dictionary:
 			var bn := -1e9
 			for q in nexts:
 				bn = maxf(bn, _score(q))
-			s = _gain(p) + W_LINE * p.lines + bn
+			s = seek * _gain(p) + W_LINE * p.lines + bn
 		elif _wins(p) and not p.top_out:
 			s += 1e6
+		if fuzz > 0.0 and s > -1e8:
+			s += randfn(0.0, fuzz)  # 0.19: человек оценивает ходы «на глаз»
 		scores.append(s)
 		if s > best_s:
 			best_s = s

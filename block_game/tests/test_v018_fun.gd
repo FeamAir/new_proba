@@ -422,18 +422,19 @@ func _test_undo_hint() -> void:
 
 func _test_star_goal() -> void:
 	print("— счётчик «до 3 звёзд»")
-	check(StarGoal.goal(10, 0) == [3, 10], "par 10, ещё ни одной фигуры — 3★: ещё 10")
-	check(StarGoal.goal(10, 9) == [3, 1], "9 фигур — 3★: ещё 1")
-	check(StarGoal.goal(10, 10) == [2, 4], "10 фигур — 3★ уже нельзя, 2★: ещё 4 (предел 14)")
-	check(StarGoal.goal(10, 13) == [2, 1], "13 фигур — 2★: ещё 1")
-	check(StarGoal.goal(10, 14) == [0, 0], "14 фигур — строка прячется")
+	# 0.19: нормы мягче — 3★ до ceil(par × 1,5), 2★ до ceil(par × 3) (scripts/star_goal.gd)
+	check(StarGoal.goal(10, 0) == [3, 15], "par 10, ещё ни одной фигуры — 3★: ещё 15")
+	check(StarGoal.goal(10, 14) == [3, 1], "14 фигур — 3★: ещё 1")
+	check(StarGoal.goal(10, 15) == [2, 15], "15 фигур — 3★ уже нельзя, 2★: ещё 15 (предел 30)")
+	check(StarGoal.goal(10, 29) == [2, 1], "29 фигур — 2★: ещё 1")
+	check(StarGoal.goal(10, 30) == [0, 0], "30 фигур — строка прячется")
 	# совпадает со звёздами за победу (game.gd _win) для разных par
 	var bad := []
 	for par in [3, 5, 7, 8, 11, 16, 22]:
 		for used in 40:
 			var gl: Array = StarGoal.goal(par, used)
 			var fin := used + 1  # следующая (падающая) фигура завершает уровень
-			var win := 3 if fin <= par else (2 if fin <= int(par * 1.4) else 1)
+			var win := 3 if fin <= StarGoal.limit(par, 3) else (2 if fin <= StarGoal.limit(par, 2) else 1)
 			var shown: int = gl[0] if gl[0] > 0 else 1
 			if shown != win:
 				bad.append("%d/%d" % [par, used])
