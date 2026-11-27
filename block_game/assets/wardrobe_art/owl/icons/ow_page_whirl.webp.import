@@ -15,9 +15,9 @@ dest_files=["res://.godot/imported/ow_page_whirl.webp-b0a054936a5c8f9d3ee84a4728
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.85
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1

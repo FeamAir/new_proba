@@ -15,9 +15,9 @@ dest_files=["res://.godot/imported/ow_skin_snowy.webp-9941fa3b4f9c5194b058bea850
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.85
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
