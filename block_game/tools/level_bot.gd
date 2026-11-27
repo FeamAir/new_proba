@@ -22,7 +22,14 @@ extends SceneTree
 ##                  влияет скорость: при E=0.05 на ступени 1 промах в 5% фигур, на ступени 21 — в ~17%
 ##   --pace=S       секунд на фигуру у модели игрока (по умолчанию 3.0): время в уровне = фигур × S,
 ##                  от него разгон скорости (Levels.speed_at: база зала + ступень за каждые ramp секунд).
-##                  Время каскадов не считается, как и в игре. Скорость влияет на робота только через --err
+##                  Время каскадов не считается, как и в игре. Скорость влияет на робота через --err и --rush
+##   --rush=1       0.18 (финальная подстройка, по умолчанию включено при --err > 0): «спешка». Игроку
+##                  нужно pace×(0,6…1,4) с на решение, а фигура сама падает: до приземления в выбранном
+##                  месте у него (рядов падения × интервал + 0,5 с задержки) секунд. Не успевает —
+##                  торопится (решает за время × --hurry, по умолчанию 0.6) и кладёт лучшую из фигур,
+##                  что успевают долететь до места (обычно ниже по полю); не успевает и так — фигура падает почти там, где появилась
+##                  (сдвиг до 1 колонки). Время в уровне тогда — сколько фигура падала. Так быстрый
+##                  разгон наказывает медленного игрока. --rush=0 — прежняя модель (время = фигур × pace)
 ## Версия 0.18: зёрна подобраны с --tuck=1 --err=0.05 --pace=3 (режим «человек»), par — с --tuck=1
 ## без ошибок («хорошая игра»). В таблице есть столбцы стартовой заполненности: клеток% и высота%
 ## (самая верхняя занятая клетка, считая островки и висячие блоки).
@@ -63,12 +70,18 @@ var look := false
 var tuck := false
 var err := 0.0
 var pace := 3.0
+var rush := false
+var hurry := 0.6
+var spent := 0.0      # модельное время, потраченное на последнюю фигуру (секунды)
+var rushed_n := 0     # фигур, положенных в спешке (за прогон)
+var panic_n := 0      # фигур, упавших почти на месте появления (за прогон)
+var placed_n := 0
 var set_fields := {}
 var mismatches := 0
 
 
 func _initialize() -> void:
-	var args := {"levels": "1-100", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0", "dump": "0", "set": "", "k0": "0", "tuck": "0", "err": "0", "pace": "3.0"}
+	var args := {"levels": "1-100", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0", "dump": "0", "set": "", "k0": "0", "tuck": "0", "err": "0", "pace": "3.0", "rush": "", "hurry": "0.6"}
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--") and a.contains("="):
 			var kv := a.substr(2).split("=", true, 1)
@@ -83,6 +96,8 @@ func _initialize() -> void:
 	tuck = args.tuck == "1"
 	err = float(args.err)
 	pace = float(args.pace)
+	rush = (args.rush == "1") if args.rush != "" else err > 0.0
+	hurry = float(args.hurry)
 	for kv in String(args.set).split(",", false):
 		var pr: PackedStringArray = kv.split(":")
 		var val = (float(pr[1]) if pr[1].contains(".") else int(pr[1])) if pr[1].is_valid_float() else pr[1]  # 0.18: и строки (goal:pet)
@@ -179,6 +194,8 @@ func _initialize() -> void:
 	print("партий с цепочкой ×3 и больше: %d из %d (%.1f%%), ×4 и больше: %d, самая длинная цепочка: ×%d" % [
 		c3_total, games_total, 100.0 * c3_total / maxi(games_total, 1), c4_total, top_chain])
 	print("время: %.1f с, несовпадений хода: %d" % [(Time.get_ticks_msec() - t0) / 1000.0, mismatches])
+	if rush:
+		print("спешка: %.1f%% фигур, упали на месте: %.1f%%" % [100.0 * rushed_n / maxi(placed_n, 1), 100.0 * panic_n / maxi(placed_n, 1)])
 	if args.csv != "":
 		var f := FileAccess.open(args.csv, FileAccess.WRITE)
 		if f:
@@ -230,10 +247,14 @@ func _play(max_pieces: int) -> Dictionary:
 	var res := {"win": false, "pieces": 0, "stars": 0, "clears": 0, "chain_sum": 0, "cascades": 0, "max_chain": 0}
 	var lp: Dictionary = Levels.params(G.level)
 	lp.merge(G.level_override, true)
+	var t_model := 0.0
 	while G.state == G.State.PLAYING and G.has_piece and G.pieces_used < max_pieces:
-		# разгон внутри уровня: модельное время = уже поставленные фигуры × pace
-		G.speed_step = Levels.speed_at(int(lp.base), float(lp.ramp), G.pieces_used * pace)
+		# разгон внутри уровня: модельное время (без --rush — уже поставленные фигуры × pace)
+		G.speed_step = Levels.speed_at(int(lp.base), float(lp.ramp), t_model if rush else G.pieces_used * pace)
+		spent = pace
 		var best := _choose()
+		t_model += spent
+		placed_n += 1
 		if best.is_empty():
 			G.hard_drop()
 		else:
@@ -411,6 +432,7 @@ func _choose() -> Dictionary:
 	var cands := _placements(b, ids, G.piece_type, G.piece_pos.y, SIM_ID)
 	var best := {}
 	var best_s := -INF
+	var scores: Array = []
 	for p in cands:
 		var s := _score(p)
 		if look and s > -1e8 and not _wins(p):
@@ -421,9 +443,15 @@ func _choose() -> Dictionary:
 			s = _gain(p) + W_LINE * p.lines + bn
 		elif _wins(p) and not p.top_out:
 			s += 1e6
+		scores.append(s)
 		if s > best_s:
 			best_s = s
 			best = p
+	if rush and not best.is_empty():
+		var r := _rushed(cands, scores, best)
+		if r.get("panic", false):
+			return r.p
+		best = r.p
 	if err > 0.0 and not best.is_empty() and randf() < err * 0.9 / G.fall_interval():
 		# промах: та же фигура и поворот, на колонку в сторону, простой бросок сверху
 		var miss: Array = []
@@ -433,6 +461,48 @@ func _choose() -> Dictionary:
 		if miss.size() > 0:
 			return miss[randi() % miss.size()]
 	return best
+
+
+## 0.18: «спешка» (--rush). Успевает ли игрок положить фигуру туда, куда решил, пока она падает.
+func _rushed(cands: Array, scores: Array, best: Dictionary) -> Dictionary:
+	var iv: float = G.fall_interval()
+	var need := pace * randf_range(0.6, 1.4)
+	var sy: int = G.piece_pos.y
+	var avail := func(p: Dictionary) -> float: return (p.ty - sy) * iv + G.LOCK_DELAY
+	var a_best: float = avail.call(best)
+	if a_best >= need:
+		spent = need
+		return {"p": best}
+	# не успевает обдумать спокойно — торопится: решает быстрее (need × hurry), но выбирает
+	# только из мест, куда фигура успеет долететь
+	rushed_n += 1
+	need *= hurry
+	var pick := {}
+	var pick_s := -INF
+	for i in cands.size():
+		var p: Dictionary = cands[i]
+		if p.top_out or avail.call(p) < need:
+			continue
+		if scores[i] > pick_s:
+			pick_s = scores[i]
+			pick = p
+	if not pick.is_empty():
+		spent = need
+		return {"p": pick}
+	# не успел никуда: фигура падает почти там, где появилась (сдвиг до 1 колонки, без подсовывания)
+	panic_n += 1
+	var sx: int = G.piece_pos.x
+	for i in cands.size():
+		var p: Dictionary = cands[i]
+		if p.top_out or p.tx != p.x or absi(p.x - sx) > 1:
+			continue
+		if scores[i] > pick_s:
+			pick_s = scores[i]
+			pick = p
+	if pick.is_empty():
+		pick = best
+	spent = avail.call(pick)
+	return {"p": pick, "panic": true}
 
 
 func _execute(p: Dictionary) -> void:

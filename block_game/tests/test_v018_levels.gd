@@ -94,7 +94,13 @@ func _test_speed_formula() -> void:
 	print("— формула скорости")
 	check(Levels.base_speed(1) == 1 and Levels.base_speed(20) == 1 and Levels.base_speed(21) == 2, "база: ступень 1 на уровнях 1–20, дальше +1 каждые 20")
 	check(Levels.base_speed(100) == Levels.BASE_MAX and Levels.base_speed(1000) == Levels.BASE_MAX, "база ограничена: уровень 1000 стартует как 100-й")
-	check(Levels.ramp_sec(1) == Levels.RAMP_START and Levels.ramp_sec(1000) == Levels.RAMP_MIN, "темп разгона: 15 с на ступень в начале, не меньше 10 с дальше")
+	check(Levels.ramp_sec(1) == Levels.RAMP_START and Levels.ramp_sec(1000) == Levels.RAMP_MIN, "темп разгона: %.0f с на ступень в начале, не меньше %.0f с дальше" % [Levels.RAMP_START, Levels.RAMP_MIN])
+	var faster := true
+	for n in range(21, 101, 20):
+		if Levels.ramp_sec(n) >= Levels.ramp_sec(n - 20) and Levels.ramp_sec(n - 20) > Levels.RAMP_MIN:
+			faster = false
+	check(faster and Levels.ramp_sec(81) == Levels.RAMP_MIN and Levels.RAMP_MIN >= 6.0, "финальная подстройка: разгон быстрее с каждой парой залов, с 81-го — RAMP_MIN, не быстрее 6 с на ступень")
+	check(Levels.BASE_MAX <= 3 and Levels.SPEED_CAP <= Levels.MAX_SPEED, "база зала не выше ступени 3 (0,80 с), потолок разгона не выше предела скорости")
 	var p1000: Dictionary = Levels.params(1000)
 	var p100: Dictionary = Levels.params(100)
 	check(p1000.base == p100.base and p1000.ramp == Levels.RAMP_MIN and p1000.speed == p1000.base, "уровень 1000: та же база, speed = стартовая ступень")
