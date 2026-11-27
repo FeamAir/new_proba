@@ -9,9 +9,10 @@ const I18n := preload("res://scripts/i18n.gd")
 const Meta := preload("res://scripts/meta.gd")
 const Levels := preload("res://scripts/levels.gd")
 const SAVE := "user://save.cfg"
-## Отпечаток раскладок уровней 1–50 (версия 0.9). Новые приёмы генератора не должны
-## их менять: игроки уже прошли эти уровни с этими раскладками.
-const GOLDEN_1_50 := "93a332fe79f5ab7409f0f92242295183"
+## Отпечаток раскладок уровней 1–50. Случайная правка генератора не должна их менять.
+## 0.18: раскладки пересобраны намеренно (свободный старт: меньше рядов камня, новые зёрна) —
+## отпечаток обновлён; менять его только вместе с осознанной правкой таблицы уровней.
+const GOLDEN_1_50 := "ee4044042784f8d50053618ee87548a6"
 
 
 func check(cond: bool, msg: String) -> void:
@@ -176,13 +177,14 @@ func _test_layouts(g) -> void:
 	check(isl_levels >= 20 and isl_ok, "островки камня висят над полем не выше ряда ISLAND_TOP (%d уровней)" % isl_levels)
 	check(ic_ok, "кристаллы на островках — сколько задано в поле ic")
 	check(well_levels >= 15 and well_ok, "узкий колодец открыт сверху на всю глубину (%d уровней)" % well_levels)
-	# уровни 1–50 новых приёмов не используют
+	# уровни 1–50 без колодцев и островков; 0.18: лишних дыр h3 до 1,5 (вторая лишняя дыра
+	# в ряду — вместо снятых рядов камня)
 	var old_ok := true
 	for n in range(1, 51):
 		var p: Dictionary = Levels.params(n)
-		if p.has("well") or p.has("isl") or p.has("ic") or float(p.get("h3", 0.0)) > 1.0:
+		if p.has("well") or p.has("isl") or p.has("ic") or float(p.get("h3", 0.0)) > 1.5:
 			old_ok = false
-	check(old_ok, "уровни 1–50 без новых приёмов")
+	check(old_ok, "уровни 1–50 без колодцев и островков, h3 не больше 1,5")
 
 
 func _test_endless(g) -> void:

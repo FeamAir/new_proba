@@ -16,11 +16,21 @@ extends SceneTree
 ##   --tuck=1       кроме бросков сверху пробовать «подсунуть» фигуру: опустить до упора
 ##                  и сдвинуть вбок на 1–3 клетки (под островок камня, уровни 51+);
 ##                  так играет человек, в ~2 раза медленнее. Уровни 51–100 настроены с --tuck=1
-## Робот ставит фигуры мгновенно: скорость падения на него не влияет.
+##   --err=E        «человек с ошибками»: с вероятностью E×(0,9 с / интервал падения) фигура
+##                  ложится на колонку левее или правее лучшей (промах пальцем). Так на робота
+##                  влияет скорость: при E=0.05 на ступени 1 промах в 5% фигур, на ступени 21 — в ~17%
+##   --pace=S       секунд на фигуру у модели игрока (по умолчанию 3.0): время в уровне = фигур × S,
+##                  от него разгон скорости (Levels.speed_at: база зала + ступень за каждые ramp секунд).
+##                  Время каскадов не считается, как и в игре. Скорость влияет на робота только через --err
+## Версия 0.18: зёрна подобраны с --tuck=1 --err=0.05 --pace=3 (режим «человек»), par — с --tuck=1
+## без ошибок («хорошая игра»). В таблице есть столбцы стартовой заполненности: клеток% и высота%
+## (самая верхняя занятая клетка, считая островки и висячие блоки).
+## Без --err робот ставит фигуры мгновенно и без ошибок: скорость падения на него не влияет.
 ## Прогресс игрока (user://save.cfg) сохраняется до прогона и возвращается после.
 
 const SAVE := "user://save.cfg"
 const Gravity := preload("res://scripts/gravity.gd")
+const Levels := preload("res://scripts/levels.gd")
 # Номера фигур в расчётах робота — заведомо больше игровых, чтобы не совпасть.
 const SIM_ID := 1000000
 
@@ -42,12 +52,14 @@ const W_CROW := 2.0      # бонус за заполненность рядов
 
 var look := false
 var tuck := false
+var err := 0.0
+var pace := 3.0
 var set_fields := {}
 var mismatches := 0
 
 
 func _initialize() -> void:
-	var args := {"levels": "1-100", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0", "dump": "0", "set": "", "k0": "0", "tuck": "0"}
+	var args := {"levels": "1-100", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0", "dump": "0", "set": "", "k0": "0", "tuck": "0", "err": "0", "pace": "3.0"}
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--") and a.contains("="):
 			var kv := a.substr(2).split("=", true, 1)
@@ -60,6 +72,8 @@ func _initialize() -> void:
 	var max_pieces := int(args.max)
 	look = args.look == "1"
 	tuck = args.tuck == "1"
+	err = float(args.err)
+	pace = float(args.pace)
 	for kv in String(args.set).split(",", false):
 		var pr: PackedStringArray = kv.split(":")
 		var val = float(pr[1]) if pr[1].contains(".") else int(pr[1])
@@ -85,9 +99,9 @@ func _initialize() -> void:
 		_seed_search(l_from, l_to, games, base_seed, max_pieces, int(args.seeds), args.csv, int(args.k0))
 		_restore(had_save, save_bytes)
 		return
-	var header := "lvl | ряды крист par | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь | медиана | par~40% | партий с каскадом% | партий с ×3+% | самая длинная"
+	var header := "lvl | ряды крист par | клеток% высота% | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь | медиана | par~40% | партий с каскадом% | партий с ×3+% | самая длинная"
 	print(header)
-	lines.append("level,rows,crystals,par,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain,median_pieces,suggested_par,cascade_games_pct,chain3_games_pct,top_chain")
+	lines.append("level,rows,crystals,par,fill_cells_pct,fill_height_pct,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain,median_pieces,suggested_par,cascade_games_pct,chain3_games_pct,top_chain")
 	var t0 := Time.get_ticks_msec()
 	var c3_total := 0
 	var c4_total := 0
@@ -107,12 +121,14 @@ func _initialize() -> void:
 		var maxchain_sum := 0
 		var lvl_top := 0
 		var rows_n := 0
+		var fill := [0.0, 0.0]
 		var plist: Array = []
 		for gi in games:
 			seed(base_seed * 100003 + n * 1009 + gi)
 			G.start_level(n)
 			if gi == 0:
 				rows_n = _stone_rows()
+				fill = _fill()
 			var r := _play(max_pieces)
 			pieces_all += r.pieces
 			chain_sum += r.chain_sum
@@ -139,16 +155,16 @@ func _initialize() -> void:
 		var med: int = plist[plist.size() / 2] if plist.size() > 0 else 0
 		# предложение par: 3 звезды примерно в 40% побед робота
 		var sug: int = plist[int(plist.size() * 0.4)] if plist.size() > 0 else 0
-		var row := [n, rows_n, G.crystals_total, G.par, G.fall_interval(),
+		var row := [n, rows_n, G.crystals_total, G.par, fill[0], fill[1], G.fall_interval(),
 			100.0 * wins / games, float(pieces_win) / w, float(pieces_all) / games,
 			100.0 * st[1] / w, 100.0 * st[2] / w, 100.0 * st[3] / w,
 			float(chain_sum) / maxi(clears, 1), 100.0 * cascades / maxi(clears, 1), float(maxchain_sum) / games, med, sug,
 			100.0 * casc_games / games, 100.0 * c3_games / games, lvl_top]
-		print("%3d | %2d %2d %3d | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f | %3d | %3d | %3.0f | %3.0f | ×%d" % [
-			row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15], row[16], row[17], row[18]])
+		print("%3d | %2d %2d %3d | %3.0f %3.0f | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f | %3d | %3d | %3.0f | %3.0f | ×%d" % [
+			row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[10], row[11], row[12], row[13], row[14], row[15], row[16], row[17], row[18], row[19], row[20]])
 		if args.get("dump", "") == "1":
 			print("PIECES %d %s" % [n, ",".join(plist.map(func(v): return str(v)))])
-		lines.append("%d,%d,%d,%d,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f,%d,%d,%.1f,%.1f,%d" % row)
+		lines.append("%d,%d,%d,%d,%.1f,%.1f,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f,%d,%d,%.1f,%.1f,%d" % row)
 	print("партий с цепочкой ×3 и больше: %d из %d (%.1f%%), ×4 и больше: %d, самая длинная цепочка: ×%d" % [
 		c3_total, games_total, 100.0 * c3_total / maxi(games_total, 1), c4_total, top_chain])
 	print("время: %.1f с, несовпадений хода: %d" % [(Time.get_ticks_msec() - t0) / 1000.0, mismatches])
@@ -173,6 +189,18 @@ func _restore(had_save: bool, save_bytes: PackedByteArray) -> void:
 	quit(0)
 
 
+## Стартовая заполненность поля: [доля занятых клеток %, высота самой верхней занятой клетки %].
+## Считается до помощи «Подсказка кристалла» (робот её не берёт).
+func _fill() -> Array:
+	var filled := 0
+	var top := ROWS
+	for i in G.board.size():
+		if G.board[i] != EMPTY:
+			filled += 1
+			top = mini(top, i / COLS)
+	return [100.0 * filled / (COLS * ROWS), 100.0 * (ROWS - top) / ROWS]
+
+
 func _stone_rows() -> int:
 	# ряды камня: в них не больше двух дыр (висячие блоки над камнем не считаются)
 	var n := 0
@@ -189,7 +217,11 @@ func _stone_rows() -> int:
 # Одна партия. Возвращает итог.
 func _play(max_pieces: int) -> Dictionary:
 	var res := {"win": false, "pieces": 0, "stars": 0, "clears": 0, "chain_sum": 0, "cascades": 0, "max_chain": 0}
+	var lp: Dictionary = Levels.params(G.level)
+	lp.merge(G.level_override, true)
 	while G.state == G.State.PLAYING and G.has_piece and G.pieces_used < max_pieces:
+		# разгон внутри уровня: модельное время = уже поставленные фигуры × pace
+		G.speed_step = Levels.speed_at(int(lp.base), float(lp.ramp), G.pieces_used * pace)
 		var best := _choose()
 		if best.is_empty():
 			G.hard_drop()
@@ -357,6 +389,14 @@ func _choose() -> Dictionary:
 		if s > best_s:
 			best_s = s
 			best = p
+	if err > 0.0 and not best.is_empty() and randf() < err * 0.9 / G.fall_interval():
+		# промах: та же фигура и поворот, на колонку в сторону, простой бросок сверху
+		var miss: Array = []
+		for p in cands:
+			if p.rot == best.rot and p.tx == p.x and absi(p.x - best.x) == 1 and not p.top_out:
+				miss.append(p)
+		if miss.size() > 0:
+			return miss[randi() % miss.size()]
 	return best
 
 
