@@ -1,0 +1,186 @@
+time,model,file,est_usd,note
+2026-11-27 01:17:17,fal-ai/nano-banana/edit,owl_ow_mortarboard.png,0.0398,item
+2026-11-27 01:17:17,fal-ai/nano-banana/edit,axolotl_ax_coral_beads.png,0.0398,item
+2026-11-27 01:17:17,fal-ai/nano-banana/edit,kitten_ki_trench.png,0.0398,item
+2026-11-27 01:17:20,fal-ai/birefnet,axolotl_ax_coral_beads.png,0.002,bg removal
+2026-11-27 01:17:20,fal-ai/birefnet,kitten_ki_trench.png,0.002,bg removal
+2026-11-27 01:17:20,fal-ai/birefnet,owl_ow_mortarboard.png,0.002,bg removal
+2026-11-27 01:18:13,fal-ai/nano-banana/edit,owl_ow_quill.png,0.0398,item
+2026-11-27 01:18:13,fal-ai/nano-banana/edit,owl_ow_lantern.png,0.0398,item
+2026-11-27 01:18:13,fal-ai/nano-banana/edit,owl_ow_scholar_scarf.png,0.0398,item
+2026-11-27 01:18:13,fal-ai/nano-banana/edit,owl_ow_book.png,0.0398,item
+2026-11-27 01:18:13,fal-ai/nano-banana/edit,owl_ow_halfglasses.png,0.0398,item
+2026-11-27 01:18:14,fal-ai/nano-banana/edit,owl_ow_star_scarf.png,0.0398,item
+2026-11-27 01:18:16,fal-ai/birefnet,owl_ow_quill.png,0.002,bg removal
+2026-11-27 01:18:16,fal-ai/birefnet,owl_ow_scholar_scarf.png,0.002,bg removal
+2026-11-27 01:18:17,fal-ai/birefnet,owl_ow_lantern.png,0.002,bg removal
+2026-11-27 01:18:17,fal-ai/birefnet,owl_ow_star_scarf.png,0.002,bg removal
+2026-11-27 01:18:17,fal-ai/birefnet,owl_ow_book.png,0.002,bg removal
+2026-11-27 01:18:17,fal-ai/birefnet,owl_ow_halfglasses.png,0.002,bg removal
+2026-11-27 01:18:27,fal-ai/nano-banana/edit,owl_ow_moth.png,0.0398,item
+2026-11-27 01:18:28,fal-ai/nano-banana/edit,owl_ow_night_goggles.png,0.0398,item
+2026-11-27 01:18:28,fal-ai/nano-banana/edit,owl_ow_astrolabe.png,0.0398,item
+2026-11-27 01:18:28,fal-ai/nano-banana/edit,owl_ow_lorgnette.png,0.0398,item
+2026-11-27 01:18:28,fal-ai/nano-banana/edit,owl_ow_dome_hat.png,0.0398,item
+2026-11-27 01:18:28,fal-ai/nano-banana/edit,owl_ow_planet.png,0.0398,item
+2026-11-27 01:18:30,fal-ai/birefnet,owl_ow_moth.png,0.002,bg removal
+2026-11-27 01:18:31,fal-ai/birefnet,owl_ow_night_goggles.png,0.002,bg removal
+2026-11-27 01:18:31,fal-ai/birefnet,owl_ow_astrolabe.png,0.002,bg removal
+2026-11-27 01:18:32,fal-ai/birefnet,owl_ow_lorgnette.png,0.002,bg removal
+2026-11-27 01:18:32,fal-ai/birefnet,owl_ow_dome_hat.png,0.002,bg removal
+2026-11-27 01:18:32,fal-ai/birefnet,owl_ow_planet.png,0.002,bg removal
+2026-11-27 01:18:41,fal-ai/nano-banana/edit,owl_ow_comet.png,0.0398,item
+2026-11-27 01:18:43,fal-ai/nano-banana/edit,owl_ow_stargazer_mantle.png,0.0398,item
+2026-11-27 01:18:43,fal-ai/nano-banana/edit,owl_ow_stargazer_hat.png,0.0398,item
+2026-11-27 01:18:43,fal-ai/nano-banana/edit,axolotl_ax_starfish.png,0.0398,item
+2026-11-27 01:18:43,fal-ai/nano-banana/edit,axolotl_ax_dive_mask.png,0.0398,item
+2026-11-27 01:18:43,fal-ai/nano-banana/edit,axolotl_ax_bubble_pet.png,0.0398,item
+2026-11-27 01:18:44,fal-ai/birefnet,owl_ow_comet.png,0.002,bg removal
+2026-11-27 01:18:45,fal-ai/birefnet,axolotl_ax_starfish.png,0.002,bg removal
+2026-11-27 01:18:46,fal-ai/birefnet,owl_ow_stargazer_mantle.png,0.002,bg removal
+2026-11-27 01:18:46,fal-ai/birefnet,axolotl_ax_dive_mask.png,0.002,bg removal
+2026-11-27 01:18:46,fal-ai/birefnet,axolotl_ax_bubble_pet.png,0.002,bg removal
+2026-11-27 01:18:47,fal-ai/birefnet,owl_ow_stargazer_hat.png,0.002,bg removal
+2026-11-27 01:18:55,fal-ai/nano-banana/edit,axolotl_ax_coral_tiara.png,0.0398,item
+2026-11-27 01:18:56,fal-ai/nano-banana/edit,axolotl_ax_gill_pearl.png,0.0398,item
+2026-11-27 01:18:56,fal-ai/nano-banana/edit,axolotl_ax_shell_straps.png,0.0398,item
+2026-11-27 01:18:57,fal-ai/nano-banana/edit,axolotl_ax_pearls.png,0.0398,item
+2026-11-27 01:18:58,fal-ai/nano-banana/edit,axolotl_ax_shell_pack.png,0.0398,item
+2026-11-27 01:18:58,fal-ai/nano-banana/edit,axolotl_ax_black_pearl.png,0.0398,item
+2026-11-27 01:18:58,fal-ai/birefnet,axolotl_ax_coral_tiara.png,0.002,bg removal
+2026-11-27 01:18:58,fal-ai/birefnet,axolotl_ax_gill_pearl.png,0.002,bg removal
+2026-11-27 01:18:59,fal-ai/birefnet,axolotl_ax_shell_straps.png,0.002,bg removal
+2026-11-27 01:19:00,fal-ai/birefnet,axolotl_ax_pearls.png,0.002,bg removal
+2026-11-27 01:19:00,fal-ai/birefnet,axolotl_ax_shell_pack.png,0.002,bg removal
+2026-11-27 01:19:01,fal-ai/birefnet,axolotl_ax_black_pearl.png,0.002,bg removal
+2026-11-27 01:19:10,fal-ai/nano-banana/edit,axolotl_ax_porthole.png,0.0398,item
+2026-11-27 01:19:10,fal-ai/nano-banana/edit,axolotl_ax_angler.png,0.0398,item
+2026-11-27 01:19:10,fal-ai/nano-banana/edit,axolotl_ax_squid.png,0.0398,item
+2026-11-27 01:19:10,fal-ai/nano-banana/edit,axolotl_ax_wave_clasp.png,0.0398,item
+2026-11-27 01:19:11,fal-ai/nano-banana/edit,axolotl_ax_seahorse.png,0.0398,item
+2026-11-27 01:19:12,fal-ai/nano-banana/edit,axolotl_ax_wave_cape.png,0.0398,item
+2026-11-27 01:19:13,fal-ai/birefnet,axolotl_ax_angler.png,0.002,bg removal
+2026-11-27 01:19:13,fal-ai/birefnet,axolotl_ax_wave_clasp.png,0.002,bg removal
+2026-11-27 01:19:13,fal-ai/birefnet,axolotl_ax_squid.png,0.002,bg removal
+2026-11-27 01:19:13,fal-ai/birefnet,axolotl_ax_porthole.png,0.002,bg removal
+2026-11-27 01:19:15,fal-ai/birefnet,axolotl_ax_seahorse.png,0.002,bg removal
+2026-11-27 01:19:15,fal-ai/birefnet,axolotl_ax_wave_cape.png,0.002,bg removal
+2026-11-27 01:19:24,fal-ai/nano-banana/edit,puppy_pu_daisy_wreath.png,0.0398,item
+2026-11-27 01:19:24,fal-ai/nano-banana/edit,axolotl_ax_abyssal_crown.png,0.0398,item
+2026-11-27 01:19:24,fal-ai/nano-banana/edit,puppy_pu_cap.png,0.0398,item
+2026-11-27 01:19:24,fal-ai/nano-banana/edit,puppy_pu_whistle.png,0.0398,item
+2026-11-27 01:19:25,fal-ai/nano-banana/edit,puppy_pu_visor.png,0.0398,item
+2026-11-27 01:19:26,fal-ai/nano-banana/edit,puppy_pu_ball.png,0.0398,item
+2026-11-27 01:19:27,fal-ai/birefnet,puppy_pu_daisy_wreath.png,0.002,bg removal
+2026-11-27 01:19:27,fal-ai/birefnet,puppy_pu_cap.png,0.002,bg removal
+2026-11-27 01:19:27,fal-ai/birefnet,axolotl_ax_abyssal_crown.png,0.002,bg removal
+2026-11-27 01:19:28,fal-ai/birefnet,puppy_pu_whistle.png,0.002,bg removal
+2026-11-27 01:19:28,fal-ai/birefnet,puppy_pu_visor.png,0.002,bg removal
+2026-11-27 01:19:29,fal-ai/birefnet,puppy_pu_ball.png,0.002,bg removal
+2026-11-27 01:19:38,fal-ai/nano-banana/edit,puppy_pu_flower_scarf.png,0.0398,item
+2026-11-27 01:19:39,fal-ai/nano-banana/edit,puppy_pu_daisy_specs.png,0.0398,item
+2026-11-27 01:19:39,fal-ai/nano-banana/edit,puppy_pu_bolt_band.png,0.0398,item
+2026-11-27 01:19:39,fal-ai/nano-banana/edit,puppy_pu_basket.png,0.0398,item
+2026-11-27 01:19:39,fal-ai/nano-banana/edit,puppy_pu_hero_bandana.png,0.0398,item
+2026-11-27 01:19:40,fal-ai/nano-banana/edit,puppy_pu_jetpack.png,0.0398,item
+2026-11-27 01:19:42,fal-ai/birefnet,puppy_pu_flower_scarf.png,0.002,bg removal
+2026-11-27 01:19:42,fal-ai/birefnet,puppy_pu_bolt_band.png,0.002,bg removal
+2026-11-27 01:19:42,fal-ai/birefnet,puppy_pu_daisy_specs.png,0.002,bg removal
+2026-11-27 01:19:43,fal-ai/birefnet,puppy_pu_basket.png,0.002,bg removal
+2026-11-27 01:19:43,fal-ai/birefnet,puppy_pu_hero_bandana.png,0.002,bg removal
+2026-11-27 01:19:43,fal-ai/birefnet,puppy_pu_jetpack.png,0.002,bg removal
+2026-11-27 01:19:51,fal-ai/nano-banana/edit,puppy_pu_jetpack_straps.png,0.0398,item
+2026-11-27 01:19:52,fal-ai/nano-banana/edit,puppy_pu_hero_medal.png,0.0398,item
+2026-11-27 01:19:52,fal-ai/nano-banana/edit,puppy_pu_hero_cape.png,0.0398,item
+2026-11-27 01:19:53,fal-ai/nano-banana/edit,puppy_pu_robo.png,0.0398,item
+2026-11-27 01:19:53,fal-ai/nano-banana/edit,puppy_pu_frisbee.png,0.0398,item
+2026-11-27 01:19:54,fal-ai/nano-banana/edit,puppy_pu_hero_mask.png,0.0398,item
+2026-11-27 01:19:54,fal-ai/birefnet,puppy_pu_jetpack_straps.png,0.002,bg removal
+2026-11-27 01:19:55,fal-ai/birefnet,puppy_pu_hero_medal.png,0.002,bg removal
+2026-11-27 01:19:55,fal-ai/birefnet,puppy_pu_hero_cape.png,0.002,bg removal
+2026-11-27 01:19:56,fal-ai/birefnet,puppy_pu_robo.png,0.002,bg removal
+2026-11-27 01:19:56,fal-ai/birefnet,puppy_pu_frisbee.png,0.002,bg removal
+2026-11-27 01:19:57,fal-ai/birefnet,puppy_pu_hero_mask.png,0.002,bg removal
+2026-11-27 01:20:06,fal-ai/nano-banana/edit,kitten_ki_pompom_hat.png,0.0398,item
+2026-11-27 01:20:06,fal-ai/nano-banana/edit,kitten_ki_bell_bow.png,0.0398,item
+2026-11-27 01:20:07,fal-ai/nano-banana/edit,kitten_ki_yarn.png,0.0398,item
+2026-11-27 01:20:07,fal-ai/nano-banana/edit,kitten_ki_sweater.png,0.0398,item
+2026-11-27 01:20:08,fal-ai/nano-banana/edit,kitten_ki_sleuth_hat.png,0.0398,item
+2026-11-27 01:20:08,fal-ai/nano-banana/edit,kitten_ki_moustache.png,0.0398,item
+2026-11-27 01:20:09,fal-ai/birefnet,kitten_ki_pompom_hat.png,0.002,bg removal
+2026-11-27 01:20:09,fal-ai/birefnet,kitten_ki_bell_bow.png,0.002,bg removal
+2026-11-27 01:20:10,fal-ai/birefnet,kitten_ki_yarn.png,0.002,bg removal
+2026-11-27 01:20:11,fal-ai/birefnet,kitten_ki_sweater.png,0.002,bg removal
+2026-11-27 01:20:11,fal-ai/birefnet,kitten_ki_sleuth_hat.png,0.002,bg removal
+2026-11-27 01:20:12,fal-ai/birefnet,kitten_ki_moustache.png,0.002,bg removal
+2026-11-27 01:20:18,fal-ai/nano-banana/edit,kitten_ki_trench_collar.png,0.0398,item
+2026-11-27 01:20:21,fal-ai/nano-banana/edit,kitten_ki_sleuth_badge.png,0.0398,item
+2026-11-27 01:20:21,fal-ai/nano-banana/edit,kitten_ki_magnifier.png,0.0398,item
+2026-11-27 01:20:21,fal-ai/birefnet,kitten_ki_trench_collar.png,0.002,bg removal
+2026-11-27 01:20:23,fal-ai/nano-banana/edit,kitten_ki_feather_hat.png,0.0398,item
+2026-11-27 01:20:23,fal-ai/birefnet,kitten_ki_sleuth_badge.png,0.002,bg removal
+2026-11-27 01:20:24,fal-ai/nano-banana/edit,kitten_ki_masquerade.png,0.0398,item
+2026-11-27 01:20:24,fal-ai/birefnet,kitten_ki_magnifier.png,0.002,bg removal
+2026-11-27 01:20:26,fal-ai/birefnet,kitten_ki_feather_hat.png,0.002,bg removal
+2026-11-27 01:20:27,fal-ai/birefnet,kitten_ki_masquerade.png,0.002,bg removal
+2026-11-27 01:20:29,fal-ai/nano-banana/edit,kitten_ki_cameo.png,0.0398,item
+2026-11-27 01:20:32,fal-ai/birefnet,kitten_ki_cameo.png,0.002,bg removal
+2026-11-27 01:20:33,fal-ai/nano-banana/edit,kitten_ki_ball_clasp.png,0.0398,item
+2026-11-27 01:20:33,fal-ai/nano-banana/edit,kitten_ki_ball_cloak.png,0.0398,item
+2026-11-27 01:20:35,fal-ai/nano-banana/edit,kitten_ki_teacup.png,0.0398,item
+2026-11-27 01:20:36,fal-ai/birefnet,kitten_ki_ball_clasp.png,0.002,bg removal
+2026-11-27 01:20:36,fal-ai/birefnet,kitten_ki_ball_cloak.png,0.002,bg removal
+2026-11-27 01:20:39,fal-ai/birefnet,kitten_ki_teacup.png,0.002,bg removal
+2026-11-27 01:20:39,fal-ai/nano-banana/edit,kitten_ki_starry_tiara.png,0.0398,item
+2026-11-27 01:20:40,fal-ai/nano-banana/edit,kitten_ki_starry_crown.png,0.0398,item
+2026-11-27 01:20:42,fal-ai/birefnet,kitten_ki_starry_tiara.png,0.002,bg removal
+2026-11-27 01:20:43,fal-ai/nano-banana/edit,owl_ow_aura_starfall.png,0.0398,aura icon
+2026-11-27 01:20:43,fal-ai/birefnet,kitten_ki_starry_crown.png,0.002,bg removal
+2026-11-27 01:20:45,fal-ai/nano-banana/edit,owl_ow_stargazer.png,0.0398,aura icon
+2026-11-27 01:20:47,fal-ai/nano-banana/edit,owl_ow_page_whirl.png,0.0398,aura icon
+2026-11-27 01:20:48,fal-ai/nano-banana/edit,axolotl_ax_aura_bubbles.png,0.0398,aura icon
+2026-11-27 01:20:52,fal-ai/nano-banana/edit,axolotl_ax_abyssal.png,0.0398,aura icon
+2026-11-27 01:20:52,fal-ai/nano-banana/edit,puppy_pu_petal_rainbow.png,0.0398,aura icon
+2026-11-27 01:20:53,fal-ai/nano-banana/edit,axolotl_ax_plankton.png,0.0398,aura icon
+2026-11-27 01:20:57,fal-ai/nano-banana/edit,puppy_pu_aura_bolts.png,0.0398,aura icon
+2026-11-27 01:20:59,fal-ai/nano-banana/edit,puppy_pu_hero.png,0.0398,aura icon
+2026-11-27 01:20:59,fal-ai/nano-banana/edit,kitten_ki_clue_trail.png,0.0398,aura icon
+2026-11-27 01:21:02,fal-ai/nano-banana/edit,kitten_ki_aura_fireworks.png,0.0398,aura icon
+2026-11-27 01:21:02,fal-ai/nano-banana/edit,kitten_ki_starry.png,0.0398,aura icon
+2026-11-27 01:21:47,fal-ai/nano-banana/edit,owl_ow_page_whirl_v2.png,0.0398,aura icon
+2026-11-27 01:21:48,fal-ai/nano-banana/edit,owl_ow_star_scarf_v2.png,0.0398,item
+2026-11-27 01:21:48,fal-ai/nano-banana/edit,owl_ow_aura_starfall_v2.png,0.0398,aura icon
+2026-11-27 01:21:48,fal-ai/nano-banana/edit,owl_ow_stargazer_v2.png,0.0398,aura icon
+2026-11-27 01:21:48,fal-ai/nano-banana/edit,axolotl_ax_plankton_v2.png,0.0398,aura icon
+2026-11-27 01:21:50,fal-ai/nano-banana/edit,axolotl_ax_aura_bubbles_v2.png,0.0398,aura icon
+2026-11-27 01:21:51,fal-ai/birefnet,owl_ow_page_whirl_v2.png,0.002,bg removal
+2026-11-27 01:21:51,fal-ai/birefnet,owl_ow_star_scarf_v2.png,0.002,bg removal
+2026-11-27 01:21:51,fal-ai/birefnet,owl_ow_stargazer_v2.png,0.002,bg removal
+2026-11-27 01:21:51,fal-ai/birefnet,axolotl_ax_plankton_v2.png,0.002,bg removal
+2026-11-27 01:21:52,fal-ai/birefnet,owl_ow_aura_starfall_v2.png,0.002,bg removal
+2026-11-27 01:21:53,fal-ai/birefnet,axolotl_ax_aura_bubbles_v2.png,0.002,bg removal
+2026-11-27 01:22:00,fal-ai/nano-banana/edit,axolotl_ax_abyssal_v2.png,0.0398,aura icon
+2026-11-27 01:22:00,fal-ai/nano-banana/edit,puppy_pu_petal_rainbow_v2.png,0.0398,aura icon
+2026-11-27 01:22:01,fal-ai/nano-banana/edit,puppy_pu_aura_bolts_v2.png,0.0398,aura icon
+2026-11-27 01:22:01,fal-ai/nano-banana/edit,puppy_pu_hero_v2.png,0.0398,aura icon
+2026-11-27 01:22:01,fal-ai/nano-banana/edit,kitten_ki_clue_trail_v2.png,0.0398,aura icon
+2026-11-27 01:22:03,fal-ai/birefnet,axolotl_ax_abyssal_v2.png,0.002,bg removal
+2026-11-27 01:22:04,fal-ai/birefnet,puppy_pu_petal_rainbow_v2.png,0.002,bg removal
+2026-11-27 01:22:04,fal-ai/birefnet,puppy_pu_aura_bolts_v2.png,0.002,bg removal
+2026-11-27 01:22:04,fal-ai/nano-banana/edit,kitten_ki_aura_fireworks_v2.png,0.0398,aura icon
+2026-11-27 01:22:04,fal-ai/birefnet,puppy_pu_hero_v2.png,0.002,bg removal
+2026-11-27 01:22:04,fal-ai/birefnet,kitten_ki_clue_trail_v2.png,0.002,bg removal
+2026-11-27 01:22:07,fal-ai/birefnet,kitten_ki_aura_fireworks_v2.png,0.002,bg removal
+2026-11-27 01:22:12,fal-ai/nano-banana/edit,kitten_ki_starry_v2.png,0.0398,aura icon
+2026-11-27 01:22:15,fal-ai/birefnet,kitten_ki_starry_v2.png,0.002,bg removal
+2026-11-27 01:22:42,fal-ai/nano-banana/edit,owl_ow_page_whirl_v3.png,0.0398,aura icon
+2026-11-27 01:22:42,fal-ai/nano-banana/edit,axolotl_ax_abyssal_v3.png,0.0398,aura icon
+2026-11-27 01:22:42,fal-ai/nano-banana/edit,kitten_ki_clue_trail_v3.png,0.0398,aura icon
+2026-11-27 01:22:45,fal-ai/birefnet,owl_ow_page_whirl_v3.png,0.002,bg removal
+2026-11-27 01:22:45,fal-ai/birefnet,kitten_ki_clue_trail_v3.png,0.002,bg removal
+2026-11-27 01:22:46,fal-ai/birefnet,axolotl_ax_abyssal_v3.png,0.002,bg removal
+2026-11-27 01:23:59,fal-ai/birefnet,axolotl_ax_shell_straps.png,0.002,bg removal (redo)
+2026-11-27 01:35:39,fal-ai/nano-banana/edit,owl_ow_star_scarf_v3.png,0.0398,item
+2026-11-27 01:35:42,fal-ai/birefnet,owl_ow_star_scarf_v3.png,0.002,bg removal
+2026-11-27 01:36:02,fal-ai/nano-banana/edit,owl_ow_star_scarf_v4.png,0.0398,item
+2026-11-27 01:36:05,fal-ai/birefnet,owl_ow_star_scarf_v4.png,0.002,bg removal

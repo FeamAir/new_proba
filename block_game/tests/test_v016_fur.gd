@@ -2,11 +2,14 @@ extends SceneTree
 ## Тесты 0.16 — пушистые щенок и котик (scripts/hero.gd, мех): все окраски, оба пола, все вещи,
 ## касание, аватарки и маленькие значки рисуются без ошибок; мех считается один раз (кэш) и
 ## в следующих кадрах не перестраивается; на крошечных значках меха нет; совёнок и аксолотль без меха.
+## 0.18: герои по умолчанию — картинки (scripts/hero_art.gd); мех есть только у рисунка кодом,
+## поэтому здесь переключатель HeroArt.enabled выключен (проверяется запасной рисунок кодом).
 ## Запуск: godot --headless --path block_game -s tests/test_v016_fur.gd
 
 var failed := 0
 const Meta := preload("res://scripts/meta.gd")
 const Hero := preload("res://scripts/hero.gd")
+const HeroArt := preload("res://scripts/hero_art.gd")
 const FURRY := ["puppy", "kitten"]
 var frame := 0
 var started := false
@@ -75,6 +78,7 @@ func _draw_pass(node: Node2D, step: int) -> Callable:
 
 func _run() -> void:
 	print("— пушистые щенок и котик")
+	HeroArt.enabled = false  # мех — только у рисунка кодом
 	Hero._cache.clear()
 	var node := Node2D.new()
 	root.add_child(node)

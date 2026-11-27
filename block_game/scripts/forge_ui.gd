@@ -1,5 +1,5 @@
 extends RefCounted
-## Cascado 0.12: экран «Кристальная кузница». Ведёт мастер-филин Ух (рисунок — hero.gd, draw_master).
+## Cascado 0.12: экран «Кристальная кузница». Ведёт мастер-филин Ух (рисунок — hero.gd, draw_master; 0.18 — картинка master_*).
 ## 0.12b: всё — для ТЕКУЩЕГО героя. Вверху — главная цель: его супер-эксклюзив и три гнезда для
 ## легендарных вещей. Ниже — 3 карточки его наборов:
 ## тёмный силуэт награды с «?», ячейки вещей рецепта (силуэт → цвет, когда вещь куплена),
@@ -171,7 +171,8 @@ func _draw_goal() -> void:
 	# кузнечный отсвет
 	Rarity.soft_disc(g, Vector2(500, 300), 190, Color(0.7, 0.45, 1.0, 0.22))
 	# мастер Ух
-	sc.hero.draw_master(g, Vector2(104, 362), 0.56, t, react)
+	# 0.18: нарисованный Мастер Ух — то говорит, то стучит молоточком (master_talk / master_forge)
+	sc.hero.draw_master(g, Vector2(104, 362), 0.56, t, react, "forge" if fmod(t, 8.0) > 5.5 else "talk")
 	rects["master"] = Rect2(30, 260, 150, 170)
 	# реплика
 	var line := _master_line()
@@ -631,7 +632,7 @@ func _draw_result() -> void:
 	var y0 := H * 0.5 - 520.0
 	Rarity.soft_disc(g, Vector2(360, y0 + 450), 330, Color(rcol, 0.4))
 	var hero_sc := 1.2 if not Meta.item(rid).has("covers") else 1.0
-	sc.hero.draw(g, kind(), Vector2(360, y0 + 480), hero_sc, g.meta.outfit(), g.t_total, react)
+	sc.hero.draw(g, kind(), Vector2(360, y0 + 480), hero_sc, g.meta.outfit(), g.t_total, react, false, "happy")
 	var title := I18n.t("forge_got") % Meta.item_name(rid, kind(), _gen())
 	sc._shadow_text(g.W / 2.0, y0 + 140, title, sc.fit_size(title, 660, 44), g.TEXT, 700)
 	var rn := Meta.rarity_name(rar)
@@ -657,7 +658,7 @@ func _draw_try() -> void:
 	var rar := Meta.rarity(try_id)
 	var rcol := Rarity.col(rar)
 	Rarity.soft_disc(g, Vector2(360, y0 + 450), 330, Color(rcol, 0.35))
-	sc.hero.draw(g, kind(), Vector2(360, y0 + 470), 1.2 if not it.has("covers") else 1.0, o, g.t_total, react)
+	sc.hero.draw(g, kind(), Vector2(360, y0 + 470), 1.2 if not it.has("covers") else 1.0, o, g.t_total, react, false, "wow")
 	var nm := Meta.item_name(try_id, kind(), _gen())
 	sc._shadow_text(g.W / 2.0, y0 + 110, nm, sc.fit_size(nm, 660, 46), rcol.lerp(Color.WHITE, 0.3), 700)
 	var left := ceili(TRY_TIME - try_t)

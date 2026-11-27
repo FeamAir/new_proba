@@ -45,6 +45,10 @@ godot --headless --path block_game -s tests/test_logic.gd
 - Код: `scripts/meta.gd` — данные и правила (вещи, осколки, украшения, сохранение),
   `scripts/hero.gd` — герои и вещи, `scripts/home.gd` — дома и украшения,
   `scripts/screens.gd` — экраны; правила уровня остались в `scripts/game.gd`.
+- 0.18 (перерисовка): герои, Мастер Ух, вещи и значки карточек — нарисованные картинки
+  (`assets/heroes_art`, `assets/wardrobe_art`), сборка наряда — `scripts/hero_art.gd` (повторяет
+  `art_src/wardrobe/compose.py`, посадка — `assets/wardrobe_art/fit.json`, точки — `assets/heroes_art/anchors.json`).
+  Переключатель `HeroArt.enabled`; рисунок кодом в `scripts/hero.gd` остался запасным вариантом.
 
 ## Версия 0.9: обучение и помощь (удержание новичков)
 - **Обучение на уровнях 1–3** прямо в игре, по одному шагу: затемнение с «окном», рука-указатель
