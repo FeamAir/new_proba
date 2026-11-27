@@ -34,6 +34,8 @@ const FIT_PATH := "res://assets/wardrobe_art/fit.json"
 const POSES := ["idle", "happy", "wow", "worried", "sad"]
 const MASTER_POSES := ["talk", "happy", "forge"]
 const SLOTS := ["head", "eyes", "neck", "back", "companion", "aura"]
+## Покачивание слоя спутника (draw_layers), единиц «героя кодом» в каждую сторону
+const COMP_SWAY := Vector2(6.0, 5.0)
 
 ## Ноги и макушка героя кодом (hero.gd: ноги на ~115, макушка — _anchors_base top)
 const FEET_Y := 115.0
@@ -383,9 +385,32 @@ static func draw_layers(target: CanvasItem, p: Dictionary, which: String, base: 
 		if e[3] == "companion":
 			if skip_comp:
 				continue
-			M = Transform2D(0.0, Vector2(sin(t * 0.9) * 6.0, sin(t * 1.7) * 5.0)) * M
+			M = Transform2D(0.0, Vector2(sin(t * 0.9) * COMP_SWAY.x, sin(t * 1.7) * COMP_SWAY.y)) * M
 		target.draw_set_transform_matrix(base * M)
 		target.draw_texture(e[0], Vector2.ZERO, e[2])
+
+
+## Прямоугольник картинки tex под матрицей M (в координатах target)
+static func tex_rect(tex: Texture2D, M: Transform2D) -> Rect2:
+	var sz := tex.get_size()
+	var r := Rect2(M * Vector2.ZERO, Vector2.ZERO)
+	for v in [Vector2(sz.x, 0), sz, Vector2(0, sz.y)]:
+		r = r.expand(M * v)
+	return r
+
+
+## Границы всего, что рисует план (герой и все слои наряда, спутник — с покачиванием), в координатах «героя кодом».
+## По ним 3D-дом подбирает размер «картонки» (scripts/home3d/hero_card.gd), чтобы ничего не обрезалось.
+static func bounds(p: Dictionary) -> Rect2:
+	if p.is_empty():
+		return Rect2()
+	var r := tex_rect(p.hero, p.X)
+	for e in p.behind + p.front:
+		var lr := tex_rect(e[0], e[1])
+		if e[3] == "companion":
+			lr = lr.grow_individual(COMP_SWAY.x, COMP_SWAY.y, COMP_SWAY.x, COMP_SWAY.y)
+		r = r.merge(lr)
+	return r
 
 
 static func draw_hero_tex(target: CanvasItem, p: Dictionary, base: Transform2D, mod := Color.WHITE) -> void:

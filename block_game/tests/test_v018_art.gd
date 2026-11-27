@@ -6,7 +6,8 @@ extends SceneTree
 ##   посадка совпадает с эталонной сборкой art_src/wardrobe/compose.py (tests/data/fit_ref_*.png,
 ##   делает art_src/wardrobe/make_test_refs.py) с допуском;
 ##   позы героя у поля по событиям; переключатель HeroArt.enabled возвращает рисунок кодом;
-##   картонка 3D-дома собирается один раз, а не каждый кадр.
+##   картонка 3D-дома собирается один раз, а не каждый кадр;
+##   0.19: рамка картонки вмещает все слои наряда, включая спутника с покачиванием (морской конёк не обрезан).
 ## Запуск: godot --headless --path block_game -s tests/test_v018_art.gd
 
 var failed := 0
@@ -59,6 +60,7 @@ func _run() -> void:
 	_test_poses()
 	await _test_drawing()
 	await _test_card()
+	_test_card_bounds()
 	print("Итог: ", "ВСЁ ОК" if failed == 0 else "%d ошибок" % failed)
 	quit(1 if failed else 0)
 
@@ -317,3 +319,90 @@ func _test_card() -> void:
 		check(card.renders == r2 + 2, "касание — поза happy, картинка собрана один раз")
 	vp.queue_free()
 	await process_frame
+
+
+# ---------- 0.19: границы картонки 3D-дома ----------
+
+## Прямоугольник в координатах «героя кодом» -> пиксели картонки
+func _to_px(card, r: Rect2) -> Rect2:
+	var k: float = card._px()
+	return Rect2(card.origin_px + r.position * k, r.size * k)
+
+
+func _test_card_bounds() -> void:
+	print("— границы картонки 3D-дома")
+	var vp := SubViewport.new()
+	vp.size = Vector2i(512, 512)
+	root.add_child(vp)
+	var card = HeroCard.new()
+	vp.add_child(card)
+	var spr := Sprite3D.new()
+	card.sprite = spr
+	# без наряда — прежний квадрат 512, ноги на месте (герой в комнате того же размера и там же)
+	card.kind = "owl"
+	card.outfit = {}
+	card.layout()
+	check(vp.size == Vector2i(512, 512) and card.feet_px().is_equal_approx(Vector2(256, 470)), "без наряда картонка 512×512, ноги в (256, 470)")
+	# все наряды: каждая вещь отдельно; все спутники с каждым сиянием и с вещами на голову, глаза, шею, спину
+	var outfits: Array = []
+	for it in Meta.ITEMS:
+		if it.slot != "skin":
+			outfits.append([it.hero, {it.slot: it.id}])
+	for kind in ["owl", "axolotl", "puppy", "kitten"]:
+		var rest := {}
+		for slot in ["head", "eyes", "neck", "back"]:
+			var l: Array = Meta.items_in(slot, kind)
+			if not l.is_empty():
+				rest[slot] = l[-1].id
+		for c in Meta.items_in("companion", kind):
+			var o: Dictionary = rest.duplicate()
+			o["companion"] = c.id
+			outfits.append([kind, o])
+			for a in Meta.items_in("aura", kind):
+				outfits.append([kind, {"companion": c.id, "aura": a.id}])
+	var bad: Array = []
+	var comps := 0
+	for size in [512, 320]:
+		card.size = size
+		for o in outfits:
+			card.kind = o[0]
+			card.outfit = o[1]
+			card.layout()
+			var pic := Rect2(Vector2.ZERO, Vector2(vp.size))
+			var ok: bool = vp.size == Vector2i((card.frame_rect.size * card._px()).ceil())
+			# ноги спрайта — в начале координат спрайта (offset, ось y вверх)
+			var fp: Vector2 = card.feet_px()
+			ok = ok and is_equal_approx(spr.offset.x - vp.size.x * 0.5 + fp.x, 0.0) and is_equal_approx(spr.offset.y + vp.size.y * 0.5 - fp.y, 0.0)
+			for pose in ["idle", "happy"]:
+				var p := HeroArt.plan(o[0], o[1], pose)
+				if p.is_empty():
+					continue
+				ok = ok and pic.encloses(_to_px(card, HeroArt.tex_rect(p.hero, p.X)))
+				for e in p.behind + p.front:
+					var r := HeroArt.tex_rect(e[0], e[1])
+					if e[3] == "companion":
+						comps += 1
+						# крайние положения покачивания спутника
+						for d in [Vector2(-1, -1), Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1)]:
+							ok = ok and pic.encloses(_to_px(card, Rect2(r.position + d * HeroArt.COMP_SWAY, r.size)))
+					else:
+						ok = ok and pic.encloses(_to_px(card, r))
+			if not ok:
+				bad.append("%s %s %d" % [o[0], o[1], size])
+	check(bad.is_empty(), "все слои %d нарядов (герой, вещи, спутник с покачиванием) внутри картонки в позах idle и happy, ноги спрайта на месте%s" % [outfits.size(), "" if bad.is_empty() else ": " + str(bad.slice(0, 5))])
+	check(comps > 0, "проверены слои спутников (%d)" % comps)
+	# морской конёк аксолотля (баг 0.19: от конька в 3D-доме были видны полоски у края)
+	card.size = 512
+	card.kind = "axolotl"
+	card.outfit = {"head": "ax_coral_tiara", "eyes": "ax_dive_mask", "neck": "ax_coral_beads", "companion": "ax_seahorse"}
+	card.layout()
+	var p := HeroArt.plan("axolotl", card.outfit, "idle")
+	var sea: Array = (p.behind + p.front).filter(func(e): return e[3] == "companion")
+	var sr: Rect2 = _to_px(card, HeroArt.tex_rect(sea[0][0], sea[0][1])) if sea.size() == 1 else Rect2()
+	check(sea.size() == 1 and sr.end.x > 512.0 and Rect2(Vector2.ZERO, Vector2(vp.size)).encloses(sr.grow(HeroArt.COMP_SWAY.x)),
+		"морской конёк правее прежнего квадрата 512, а картонка расширена и вмещает его (%s в %s)" % [sr, vp.size])
+	card.size = 320
+	card.layout()
+	check(vp.size.x < 512 and vp.size.x > 320, "простое качество: картонка с коньком меньше, но шире квадрата 320 (%s)" % vp.size)
+	spr.free()
+	vp.queue_free()

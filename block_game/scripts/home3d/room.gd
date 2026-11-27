@@ -312,6 +312,7 @@ func set_outfit(of: Dictionary) -> void:
 	outfit = of.duplicate()
 	if card:
 		card.outfit = outfit
+		card.layout()
 
 
 func set_highlight(spot: String) -> void:
@@ -348,7 +349,6 @@ func set_quality(hq: bool) -> void:
 		shelf.set_high(hq)
 	if card_vp:
 		var sz := 512 if hq else 320
-		card_vp.size = Vector2i(sz, sz)
 		card.size = sz
 		hero_sprite.pixel_size = HPS * 512.0 / sz
 		_place_hero_sprite()
@@ -678,12 +678,13 @@ func _hero() -> void:
 func _place_hero_sprite() -> void:
 	if hero_sprite == null:
 		return
-	var sz := float(card_vp.size.y)
-	hero_sprite.position = hero_feet + Vector3(0, (HeroCard.FEET - 0.5) * sz * hero_sprite.pixel_size, 0)
+	# 0.19: начало координат спрайта — точка под лапками (offset задаёт картонка, размер картинки — под наряд)
+	hero_sprite.position = hero_feet
 	if card:
 		# 0.18: нарисованный герой дышит масштабом спрайта (картинка собирается один раз)
 		card.sprite = hero_sprite
 		card.feet3d = hero_feet
+		card.layout()
 
 
 func hero_center() -> Vector3:
@@ -856,8 +857,9 @@ func _process(delta: float) -> void:
 		# камера вплотную к «картонке» — прячем её, чтобы не закрывала экран
 		hero_sprite.visible = cam.global_position.distance_to(hero_center()) > 0.5
 	if hero_sprite and hero_bob > 0.0:
-		_place_hero_sprite()
-		hero_sprite.position.y += sin(_t * 1.4) * hero_bob
+		hero_sprite.position = hero_feet + Vector3(0, sin(_t * 1.4) * hero_bob, 0)
+		if card:
+			card.lift = sin(_t * 1.4) * hero_bob
 	if ring and ring.visible:
 		var m: ShaderMaterial = ring.material_override
 		m.set_shader_parameter("pulse", 0.5 + 0.5 * sin(_t * 5.0))
