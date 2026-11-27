@@ -33,7 +33,7 @@ SPEC = {
  "owl/ow_scholar_scarf": ("owl", "A cosy knitted striped scholar's scarf as worn around a neck: a short curved band wrapping around (front view, like a U shape), wide stripes of navy blue, golden yellow and burgundy, one long end hanging down on the right side with a fringe, and a small gold badge pin shaped like an open book on the band.", "ow_scholar_scarf"),
  "owl/ow_book": ("owl", "A magical flying open book with a cute little smiling face on the pages, dark red cover with gold corners, cream pages slightly fluttering, a red bookmark ribbon hanging down, tiny golden sparkles around.", "ow_book"),
  "owl/ow_quill": ("owl", "A long elegant quill feather: deep blue feather with silver-white tiny stars on the vane, curving to the upper right, its base pinned by a small golden crescent-moon brooch at the bottom.", "ow_quill"),
- "owl/ow_star_scarf": ("owl", "A starry night scarf as worn around a neck, front view: a curved band of deep navy blue with small golden stars, one loose end on the right flowing sideways and turning into a glowing comet tail of pastel pink, lilac and gold light with sparkles.", "ow_star_scarf"),
+ "owl/ow_star_scarf": ("owl", "A soft knitted starry night scarf as worn wrapped around a neck, front view: a thick curved navy-blue band (smile-shaped arc) with small golden stars, and one long loose end hanging down and fluttering to the right whose tip dissolves into a glowing comet tail of pastel pink, lilac and gold sparkles.", None),
  "owl/ow_lantern": ("owl", "A cute little old brass watchman lantern with a round ring handle on top, warm glass panes with a glowing orange-gold flame inside, soft warm glow.", "ow_lantern"),
  "owl/ow_moth": ("owl", "A cute magical moon moth companion: soft mint-green wings with long elegant tails, lilac eye-spots on the wings, a fluffy cream body, tiny antennae and a cute small face with big shiny eyes.", "ow_moth"),
  "owl/ow_night_goggles": ("owl", "Steampunk night-vision goggles: two big round brass eyepieces with rivets, glowing mint-turquoise lenses, a dark leather strap on both sides and a small brass adjustment wheel on the bridge.", "ow_night_goggles"),
@@ -104,20 +104,21 @@ SPEC = {
 # иконки сияний (только для карточек; сами сияния — частицы в коде)
 AURA = {
  "owl/ow_aura_starfall": ("owl", "Icon: a shower of falling golden and white shooting stars with sparkly trails, diagonal."),
- "owl/ow_page_whirl": ("owl", "Icon: LEGENDARY magic whirlwind of old book pages with glowing golden runes swirling in a circle, sparkles."),
- "owl/ow_stargazer": ("owl", "Icon: SUPER-EXCLUSIVE emblem: a deep-blue starry wizard hat with a gold crescent moon, tiny planets orbiting around it on golden orbit lines, rich glow."),
+ "owl/ow_page_whirl": ("owl", "Icon: very ornate and precious, magic whirlwind of old book pages with glowing golden runes swirling in a circle, sparkles."),
+ "owl/ow_stargazer": ("owl", "Icon: the most precious and ornate emblem: a deep-blue starry wizard hat with a gold crescent moon, tiny planets orbiting around it on golden orbit lines, rich glow."),
  "axolotl/ax_aura_bubbles": ("axolotl", "Icon: a cluster of shiny iridescent soap bubbles of different sizes rising."),
- "axolotl/ax_plankton": ("axolotl", "Icon: LEGENDARY two swirling spirals of tiny glowing plankton dots in turquoise, pink and gold, like a dancing galaxy."),
- "axolotl/ax_abyssal": ("axolotl", "Icon: SUPER-EXCLUSIVE: three cute glowing jellyfish lanterns in turquoise, pink and violet around a glowing pearl, deep-sea glow."),
- "puppy/pu_petal_rainbow": ("puppy", "Icon: LEGENDARY a small pastel rainbow arc with white daisy petals and little daisies floating around."),
- "puppy/pu_aura_bolts": ("puppy", "Icon: LEGENDARY crackling yellow lightning bolts with speed lines, energetic."),
- "puppy/pu_hero": ("puppy", "Icon: SUPER-EXCLUSIVE emblem: a red flowing hero cape behind a golden star medal with a paw print, golden stars."),
- "kitten/ki_clue_trail": ("kitten", "Icon: LEGENDARY a trail of small paw prints leading to golden question marks, a warm flashlight beam glow."),
- "kitten/ki_aura_fireworks": ("kitten", "Icon: LEGENDARY pastel festive fireworks bursts in pink, lilac and gold."),
- "kitten/ki_starry": ("kitten", "Icon: SUPER-EXCLUSIVE emblem: a silver tiara with a crystal and a golden star crown side by side, surrounded by glowing butterflies and little comets."),
+ "axolotl/ax_plankton": ("axolotl", "Icon: very ornate and precious, two swirling spirals of tiny glowing plankton dots in turquoise, pink and gold, like a dancing galaxy."),
+ "axolotl/ax_abyssal": ("axolotl", "Icon: the most precious and ornate: three cute glowing jellyfish lanterns in turquoise, pink and violet around a glowing pearl, deep-sea glow."),
+ "puppy/pu_petal_rainbow": ("puppy", "Icon: very ornate and precious, a small pastel rainbow arc with white daisy petals and little daisies floating around."),
+ "puppy/pu_aura_bolts": ("puppy", "Icon: very ornate and precious, crackling yellow lightning bolts with speed lines, energetic."),
+ "puppy/pu_hero": ("puppy", "Icon: the most precious and ornate emblem: a red flowing hero cape behind a golden star medal with a paw print, golden stars."),
+ "kitten/ki_clue_trail": ("kitten", "Icon: very ornate and precious, a trail of small paw prints leading to golden question marks, a warm flashlight beam glow."),
+ "kitten/ki_aura_fireworks": ("kitten", "Icon: very ornate and precious, pastel festive fireworks bursts in pink, lilac and gold."),
+ "kitten/ki_starry": ("kitten", "Icon: the most precious and ornate emblem: a silver tiara with a crystal and a golden star crown side by side, surrounded by glowing butterflies and little comets."),
 }
-AURA_ISO = (" A compact square game icon composition of the effect only, centered, on a plain flat solid dark navy "
-            "background (#1E1236). No character, no text, no frame, no border.")
+AURA_ISO = (" A compact game icon composition of the effect only, centered, filling most of the frame, with bright "
+            "saturated glowing colours, on a plain flat solid light grey background. No character, no animal, no words, "
+            "no letters, no numbers, no text at all, no frame, no border, no rounded square, no badge.")
 
 
 def spent():
@@ -192,8 +193,6 @@ def make(key, tag=""):
     os.makedirs(f"{WORK}/raw", exist_ok=True)
     rawp = f"{WORK}/raw/{name}.png"
     raw.save(rawp)
-    if key in AURA:
-        return rawp
     cut = call("fal-ai/birefnet", {"image_url": datauri(rawp), "output_format": "png"})
     log("fal-ai/birefnet", name + ".png", "bg removal")
     im = fetch(cut["image"]["url"]).convert("RGBA")
