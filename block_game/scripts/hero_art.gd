@@ -56,7 +56,7 @@ const GILL_BASE := [Vector2(-0.45, 0.32), Vector2(-0.62, 0.45), Vector2(-0.6, 0.
 static var _anch := {}
 static var _fit := {}
 static var _loaded := false
-static var _tex := {}      # путь -> CanvasTexture (или null, если файла нет)
+static var _tex := {}      # путь -> Texture2D (или null, если файла нет)
 static var _plans := {}    # ключ наряда -> план сборки
 static var _hu := {}       # kind -> единиц кода на U
 static var plans_built := 0  # сколько планов посчитано (для тестов кэша)
@@ -95,7 +95,7 @@ static func fit_item(id: String) -> Dictionary:
 	return fit_items().get(id, {})
 
 
-## Текстура (загружается один раз; CanvasTexture — со сглаживанием мипмапами при уменьшении)
+## Текстура (загружается один раз; сглаживание мипмапами — настройкой проекта)
 static func tex(path: String) -> Texture2D:
 	if _tex.has(path):
 		return _tex[path]
@@ -103,10 +103,10 @@ static func tex(path: String) -> Texture2D:
 	if ResourceLoader.exists(path):
 		var base = load(path)
 		if base is Texture2D:
-			var ct := CanvasTexture.new()
-			ct.diffuse_texture = base
-			ct.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-			t = ct
+			# Без CanvasTexture: его нет в облегчённом движке для Android.
+			# Сглаживание мипмапами задаёт настройка проекта
+			# rendering/textures/canvas_textures/default_texture_filter.
+			t = base
 	_tex[path] = t
 	return t
 
