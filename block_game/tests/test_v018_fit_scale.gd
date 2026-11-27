@@ -109,12 +109,12 @@ func _test_sizes() -> void:
 # ---------- 2. Геометрия слоёв относительно героя ----------
 
 ## Углы слоя в пикселях картинки героя — по правилам compose.py (независимо от layer_xform):
-## pivot в точке place(), ширина width·U, высота — по пропорции ИСХОДНОЙ картинки, поворот по часовой, flip.
+## pivot в точке place(), ширина width·U, высота — по пропорции ИСХОДНОЙ картинки × sy, поворот по часовой, flip.
 func _expected_corners(L: Dictionary, an: Dictionary, W: float, H: float, pose: String, kind: String, src: Vector2) -> PackedVector2Array:
 	var pl := HeroArt.place(L, an, W, H, pose, kind)
 	var at: Vector2 = pl[0]
 	var wpx: float = pl[1]
-	var hpx: float = wpx * src.y / src.x
+	var hpx: float = wpx * src.y / src.x * float(L.get("sy", 1.0))
 	var pv: Array = L.get("pivot", [0.5, 0.5])
 	var px := float(pv[0])
 	var py := float(pv[1])

@@ -10,9 +10,10 @@ extends RefCounted
 ## Если картинки нет (вещь без слоя, неизвестный окрас), scripts/hero.gd сам рисует кодом.
 ##
 ## Как собирается наряд (повторяет compose.py ТОЧНО):
-##   U = (neck.y - head.y) * высота картинки героя — «высота головы», единица размеров вещей;
-##   слой: точка героя anchor + offset·U (+ поправки pose_fix героя, затем poses слоя),
-##   ширина width·U, поворот rot по часовой вокруг pivot, flip — отражение;
+##   U = расстояние head–neck в px картинки героя — «высота головы», единица размеров вещей;
+##   слой: точка героя anchor + offset·U (+ поправки pose_fix героя, затем poses слоя; у слоя с tilt
+##   offset поворачивается на наклон головы anchors.tilt·L.tilt, он же прибавляется к rot),
+##   ширина width·U (высота — по пропорции картинки, умноженная на sy), поворот rot по часовой вокруг pivot, flip — отражение;
 ##   порядок: z="behind" (по order) -> герой -> z="front" (по order); gender — слой только для облика.
 ## В игре слои не сливаются в одну картинку: «план» сборки (текстуры + матрицы) считается ОДИН раз
 ## на ключ (герой, облик, окрас, поза, набор вещей) и кэшируется, а кадр — это 2–10 текстурных
@@ -40,8 +41,9 @@ const TOP := {"owl": -84.0, "axolotl": -92.0, "puppy": -106.0, "kitten": -106.0,
 ## Картинка, по которой подобран размер героя (высота «макушка–лапы» = как у героя кодом)
 const REF := {"owl": "owl/boy_base_idle", "axolotl": "axolotl/boy_base_idle", "puppy": "puppy/boy_base_idle",
 	"kitten": "kitten/boy_base_idle", "master": "master_uh/master_base_talk"}
-## Поправка размера нарисованного героя (подобрано по снимкам экранов)
-const ART_K := {"owl": 1.08, "axolotl": 1.0, "puppy": 1.0, "kitten": 1.0, "master": 1.0}
+## Поправка размера нарисованного героя (подобрано по снимкам экранов; в 0.19 макушка head размечена точнее —
+## множители пересчитаны так, чтобы герои на экране остались того же размера, что в 0.18)
+const ART_K := {"owl": 1.0986, "axolotl": 1.0118, "puppy": 0.9944, "kitten": 1.0227, "master": 1.0}
 ## Глаза от точки eyes (в U, по горизонтали) — для эффектов кода (сияющие глаза)
 const EYE_DX := {"owl": 0.3, "axolotl": 0.4, "puppy": 0.27, "kitten": 0.25}
 ## Хвост котика (для звёздного хвоста): ломаная в долях картинки, от тела к кончику; нет позы — хвоста не видно
@@ -174,7 +176,7 @@ static func _units_per_u(kind: String) -> float:
 	var a := anchors(REF.get(kind, REF.owl))
 	var v := 100.0
 	if not a.is_empty():
-		var u: float = a.neck[1] - a.head[1]
+		var u: float = a.neck[1] - a.head[1]  # у картинок REF шея ровно под макушкой: U/H = разница y
 		v = (FEET_Y - float(TOP.get(kind, -84.0))) / ((a.ground[1] - a.head[1]) / u) * float(ART_K.get(kind, 1.0))
 	_hu[kind] = v
 	return v
@@ -211,7 +213,7 @@ static func layers_for(items: Array, gender := "boy") -> Array:
 
 ## Где и каким размером рисовать слой: [точка pivot в px героя, ширина px, поворот (град.), U px]
 static func place(L: Dictionary, anch: Dictionary, W: float, H: float, pose: String, kind: String) -> Array:
-	var U: float = (anch.neck[1] - anch.head[1]) * H
+	var U := unit(anch, W, H)
 	var ap: Array = anch[L.anchor]
 	var off: Array = L.get("offset", [0, 0])
 	var ox := float(off[0])
@@ -225,7 +227,21 @@ static func place(L: Dictionary, anch: Dictionary, W: float, H: float, pose: Str
 		oy += float(p.get("dy", 0.0))
 		w *= float(p.get("scale", 1.0))
 		rot += float(p.get("rot", 0.0))
+	# наклон головы (anchors.tilt) — слою с полем tilt: offset поворачивается вокруг точки героя, rot += tilt·L.tilt
+	var t := float(anch.get("tilt", 0.0)) * float(L.get("tilt", 0.0))
+	if t != 0.0:
+		var c := cos(deg_to_rad(t))
+		var s := sin(deg_to_rad(t))
+		var nx := ox * c - oy * s
+		oy = ox * s + oy * c
+		ox = nx
+		rot += t
 	return [Vector2(float(ap[0]) * W + ox * U, float(ap[1]) * H + oy * U), w * U, rot, U]
+
+
+## U в px: расстояние от макушки (head) до шеи (neck) на картинке W×H — «высота головы»
+static func unit(anch: Dictionary, W: float, H: float) -> float:
+	return Vector2((float(anch.neck[0]) - float(anch.head[0])) * W, (float(anch.neck[1]) - float(anch.head[1])) * H).length()
 
 
 ## Матрица слоя: пиксели картинки вещи (tw×th) -> пиксели картинки героя
@@ -233,7 +249,8 @@ static func layer_xform(L: Dictionary, tsize: Vector2, at: Vector2, width_px: fl
 	var k := width_px / tsize.x
 	var pv: Array = L.get("pivot", [0.5, 0.5])
 	var sx := -1.0 if L.get("flip", false) else 1.0
-	return Transform2D(deg_to_rad(rot), Vector2(k * sx, k), 0.0, at) * Transform2D(0.0, Vector2.ONE, 0.0, -Vector2(float(pv[0]) * tsize.x, float(pv[1]) * tsize.y))
+	var sy := float(L.get("sy", 1.0))
+	return Transform2D(deg_to_rad(rot), Vector2(k * sx, k * sy), 0.0, at) * Transform2D(0.0, Vector2.ONE, 0.0, -Vector2(float(pv[0]) * tsize.x, float(pv[1]) * tsize.y))
 
 
 # ---------- План сборки (кэш) ----------
@@ -267,14 +284,15 @@ static func _build_plan(kind: String, gender: String, skin: String, pose: String
 	var sz := ht.get_size()
 	var W := sz.x
 	var H := sz.y
-	var U: float = (an.neck[1] - an.head[1]) * H
+	var U := unit(an, W, H)
 	var f: float = _units_per_u(kind) / U
 	var ground := Vector2(an.ground[0] * W, an.ground[1] * H)
 	# картинка героя (px) -> координаты «героя кодом»
 	var X := Transform2D(0.0, Vector2(f, f), 0.0, Vector2(0, FEET_Y) - ground * f)
 	var pts := {}
-	for n in ["head", "eyes", "neck", "back", "ground"]:
-		pts[n] = X * Vector2(an[n][0] * W, an[n][1] * H)
+	for n in ["head", "eyes", "neck", "back", "ground", "eye_l", "eye_r"]:
+		if an.has(n):
+			pts[n] = X * Vector2(an[n][0] * W, an[n][1] * H)
 	var behind: Array = []
 	var front: Array = []
 	var placed := {}
@@ -290,7 +308,7 @@ static func _build_plan(kind: String, gender: String, skin: String, pose: String
 		placed[L.item] = true
 	var missing: Array = items.filter(func(id): return not placed.has(id))
 	return {"key": hk, "kind": kind, "pose": pose, "hero": ht, "X": X, "size": sz, "U": U, "Uc": U * f, "f": f,
-		"pts": pts, "behind": behind, "front": front, "missing": missing, "girl": gender == "girl"}
+		"pts": pts, "tilt": float(an.get("tilt", 0.0)), "behind": behind, "front": front, "missing": missing, "girl": gender == "girl"}
 
 
 ## Точки «героя кодом» для эффектов кода (сияния-частицы, блеск редкости, сияющие глаза) по нарисованному герою
@@ -300,9 +318,12 @@ static func code_anchors(p: Dictionary) -> Dictionary:
 	var pts: Dictionary = p.pts
 	var ex: float = EYE_DX.get(kind, 0.27) * Uc
 	var e: Vector2 = pts.eyes
+	# глаза — по разметке (eye_l, eye_r), иначе — от точки eyes на EYE_DX
+	var el: Vector2 = pts.get("eye_l", e + Vector2(-ex, 0))
+	var er: Vector2 = pts.get("eye_r", e + Vector2(ex, 0))
 	var comp: Vector2 = {"kitten": Vector2(126, -104), "puppy": Vector2(132, -100), "axolotl": Vector2(140, -78)}.get(kind, Vector2(128, -72))
-	return {"top": pts.head, "top_w": Uc * 0.7, "tilt": 0.0,
-		"eye_l": e + Vector2(-ex, 0), "eye_r": e + Vector2(ex, 0), "eye_rad": Uc * 0.17, "temple": Uc * 0.62,
+	return {"top": pts.head, "top_w": Uc * 0.7, "tilt": deg_to_rad(float(p.get("tilt", 0.0))),
+		"eye_l": el, "eye_r": er, "eye_rad": Uc * 0.17, "temple": Uc * 0.62,
 		"neck": pts.neck, "neck_w": Uc * 0.8, "back": pts.back, "back_w": Uc * 0.9, "kind": kind,
 		"comp": comp, "center": (pts.head + pts.ground) * 0.5, "size": float({"kitten": 114.0, "puppy": 118.0, "axolotl": 120.0}.get(kind, 118.0)),
 		"hp": func(v): return v}
@@ -465,7 +486,7 @@ static func _draw_layer_img(canvas: Image, L: Dictionary, kind: String, pl: Arra
 	var at: Vector2 = pl[0] + off
 	var k: float = pl[1] / src.get_width()
 	var im := src.duplicate() as Image
-	im.resize(maxi(1, roundi(src.get_width() * k)), maxi(1, roundi(src.get_height() * k)), Image.INTERPOLATE_LANCZOS)
+	im.resize(maxi(1, roundi(src.get_width() * k)), maxi(1, roundi(src.get_height() * k * float(L.get("sy", 1.0)))), Image.INTERPOLATE_LANCZOS)
 	var pv: Array = L.get("pivot", [0.5, 0.5])
 	var px := float(pv[0])
 	var py := float(pv[1])

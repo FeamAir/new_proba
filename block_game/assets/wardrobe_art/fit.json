@@ -1,28 +1,7 @@
 {
  "_about": "Посадка вещей гардероба на нарисованных героев (этап 2). Логика — art_src/wardrobe/compose.py (образец для Godot). Единица U = (neck.y - head.y) * высота картинки героя в px (точки — art_src/heroes/anchors.json). Слой: file — картинка assets/wardrobe_art/<герой>/<file>.webp; anchor — точка героя (head, eyes, neck, back, ground); pivot — точка крепления на картинке вещи (доли её ширины и высоты); offset — сдвиг от точки героя в U (x вправо, y вниз); width — ширина вещи в U; rot — поворот в градусах по часовой вокруг pivot; flip — отразить по горизонтали; z — behind (за героем) или front (поверх); order — порядок слоёв (меньше — раньше); gender — только для облика boy/girl; poses — поправки для поз: dx, dy (в U, к offset), scale (множитель width), rot (прибавка). Сияния (slot aura) — частицы кода; картинка у них только иконка (icons/) и мягкое свечение <id>_glow (см. glow_layers).",
  "unit": "U",
- "pose_fix": {
-  "kitten": {
-   "happy": {
-    "neck": {
-     "dy": 0.12
-    }
-   }
-  },
-  "axolotl": {
-   "happy": {
-    "head": {
-     "scale": 0.94
-    },
-    "eyes": {
-     "scale": 0.94
-    },
-    "neck": {
-     "dy": 0.08
-    }
-   }
-  }
- },
+ "pose_fix": {},
  "items": {
   "ow_mortarboard": {
    "layers": [
@@ -33,14 +12,15 @@
      "anchor": "head",
      "pivot": [
       0.5,
-      0.85
+      0.88
      ],
      "offset": [
       0,
-      0.14
+      0.2
      ],
-     "width": 1.25,
+     "width": 1.5,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -54,14 +34,15 @@
      "anchor": "eyes",
      "pivot": [
       0.5,
-      0.2
+      0.25
      ],
      "offset": [
       0,
-      0.02
+      0.1
      ],
-     "width": 1.35,
+     "width": 1.32,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -79,9 +60,9 @@
      ],
      "offset": [
       0,
-      0.02
+      -0.04
      ],
-     "width": 1.3,
+     "width": 1.35,
      "rot": 0,
      "poses": {}
     }
@@ -100,7 +81,7 @@
      ],
      "offset": [
       1.15,
-      0.25
+      0.282
      ],
      "width": 0.7,
      "rot": 0,
@@ -121,11 +102,12 @@
      ],
      "offset": [
       0.35,
-      0.25
+      0.282
      ],
      "width": 0.6,
      "rot": 0,
-     "poses": {}
+     "poses": {},
+     "tilt": 1
     }
    ]
   },
@@ -138,13 +120,13 @@
      "anchor": "neck",
      "pivot": [
       0.5,
-      0.08
+      0.18
      ],
      "offset": [
       0,
       0.02
      ],
-     "width": 1.2,
+     "width": 1.3,
      "rot": 0,
      "poses": {}
     }
@@ -163,7 +145,7 @@
      ],
      "offset": [
       0.75,
-      0.0
+      -0.066
      ],
      "width": 0.45,
      "rot": 0,
@@ -184,7 +166,7 @@
      ],
      "offset": [
       1.15,
-      0.25
+      0.282
      ],
      "width": 0.6,
      "rot": 0,
@@ -200,15 +182,16 @@
      "order": 30,
      "anchor": "eyes",
      "pivot": [
-      0.5,
-      0.5
+      0.505,
+      0.48
      ],
      "offset": [
       0,
       0
      ],
-     "width": 1.45,
+     "width": 1.6,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -222,13 +205,13 @@
      "anchor": "neck",
      "pivot": [
       0.5,
-      0.2
+      0.1
      ],
      "offset": [
       0,
-      0
+      -0.03
      ],
-     "width": 0.9,
+     "width": 0.95,
      "rot": 0,
      "poses": {}
     }
@@ -242,15 +225,16 @@
      "order": 30,
      "anchor": "eyes",
      "pivot": [
-      0.5,
-      0.3
+      0.525,
+      0.33
      ],
      "offset": [
       0,
       0
      ],
-     "width": 1.3,
+     "width": 1.41,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -264,14 +248,15 @@
      "anchor": "head",
      "pivot": [
       0.5,
-      0.85
+      0.95
      ],
      "offset": [
       0,
-      0.16
+      0.22
      ],
-     "width": 1.15,
+     "width": 1.2,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -289,7 +274,7 @@
      ],
      "offset": [
       1.15,
-      0.25
+      0.282
      ],
      "width": 0.6,
      "rot": 0,
@@ -310,7 +295,7 @@
      ],
      "offset": [
       1.1,
-      -0.1
+      -0.068
      ],
      "width": 0.9,
      "rot": 0,
@@ -330,8 +315,8 @@
       0.5
      ],
      "offset": [
-      0,
-      -0.45
+      0.0,
+      -0.516
      ],
      "width": 3.4,
      "rot": 0,
@@ -340,7 +325,7 @@
     {
      "file": "ow_stargazer_hat",
      "z": "front",
-     "order": 45,
+     "order": 40,
      "anchor": "head",
      "pivot": [
       0.5,
@@ -348,26 +333,82 @@
      ],
      "offset": [
       0,
-      0.1
+      0.15
      ],
-     "width": 1.3,
+     "width": 1.45,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     },
     {
      "file": "ow_stargazer_mantle",
      "z": "behind",
-     "order": 0,
+     "order": 10,
      "anchor": "back",
      "pivot": [
       0.5,
-      0.06
+      0.02
      ],
      "offset": [
       0,
-      -1.25
+      -1.0
      ],
-     "width": 3.2,
+     "width": 2.5,
+     "rot": 0,
+     "sy": 0.75,
+     "poses": {}
+    },
+    {
+     "file": "ow_stargazer_drape",
+     "z": "front",
+     "order": 15,
+     "anchor": "neck",
+     "pivot": [
+      1.0,
+      0.0
+     ],
+     "offset": [
+      -0.3,
+      -0.02
+     ],
+     "width": 0.62,
+     "rot": 0,
+     "sy": 0.85,
+     "poses": {}
+    },
+    {
+     "file": "ow_stargazer_drape",
+     "z": "front",
+     "order": 15,
+     "anchor": "neck",
+     "pivot": [
+      1.0,
+      0.0
+     ],
+     "offset": [
+      0.3,
+      -0.02
+     ],
+     "width": 0.62,
+     "rot": 0,
+     "sy": 0.85,
+     "flip": true,
+     "poses": {}
+    },
+    {
+     "file": "ow_stargazer_clasp",
+     "z": "front",
+     "order": 25,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      0,
+      0.0
+     ],
+     "width": 0.16,
      "rot": 0,
      "poses": {}
     }
@@ -385,12 +426,13 @@
       0.5
      ],
      "offset": [
-      0.45,
-      0.25
+      0.403,
+      0.243
      ],
-     "width": 0.45,
+     "width": 0.403,
      "rot": 15,
-     "poses": {}
+     "poses": {},
+     "tilt": 1
     }
    ]
   },
@@ -402,15 +444,16 @@
      "order": 30,
      "anchor": "eyes",
      "pivot": [
-      0.5,
-      0.5
+      0.48,
+      0.68
      ],
      "offset": [
       0,
       0
      ],
-     "width": 1.3,
+     "width": 1.2,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -428,9 +471,9 @@
      ],
      "offset": [
       0,
-      0
+      -0.02
      ],
-     "width": 1.1,
+     "width": 1.0,
      "rot": 0,
      "poses": {}
     }
@@ -448,10 +491,10 @@
       0.5
      ],
      "offset": [
-      1.45,
-      0.05
+      1.298,
+      0.064
      ],
-     "width": 0.55,
+     "width": 0.492,
      "rot": 0,
      "poses": {}
     }
@@ -470,10 +513,11 @@
      ],
      "offset": [
       0,
-      0.15
+      0.08
      ],
-     "width": 1.0,
+     "width": 0.75,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -490,15 +534,15 @@
       0.3
      ],
      "offset": [
-      -0.74,
-      -0.2
+      -0.662,
+      -0.16
      ],
-     "width": 0.2,
+     "width": 0.179,
      "rot": 0,
      "poses": {
       "happy": {
-       "dx": 0.08,
-       "dy": 0.12
+       "dx": 0.072,
+       "dy": 0.107
       }
      },
      "flip": true
@@ -513,15 +557,15 @@
       0.3
      ],
      "offset": [
-      -1.07,
-      0.15
+      -0.958,
+      0.153
      ],
-     "width": 0.2,
+     "width": 0.179,
      "rot": 0,
      "poses": {
       "happy": {
-       "dx": 0.06,
-       "dy": -0.05
+       "dx": 0.054,
+       "dy": -0.045
       }
      },
      "flip": true
@@ -536,15 +580,15 @@
       0.3
      ],
      "offset": [
-      -1.06,
-      0.88
+      -0.949,
+      0.807
      ],
-     "width": 0.2,
+     "width": 0.179,
      "rot": 0,
      "poses": {
       "happy": {
-       "dx": 0.03,
-       "dy": -0.3
+       "dx": 0.027,
+       "dy": -0.269
       }
      },
      "flip": true
@@ -559,15 +603,15 @@
       0.3
      ],
      "offset": [
-      0.74,
-      -0.2
+      0.662,
+      -0.16
      ],
-     "width": 0.2,
+     "width": 0.179,
      "rot": 0,
      "poses": {
       "happy": {
-       "dx": -0.08,
-       "dy": 0.12
+       "dx": -0.072,
+       "dy": 0.107
       }
      }
     },
@@ -581,15 +625,15 @@
       0.3
      ],
      "offset": [
-      1.07,
-      0.15
+      0.958,
+      0.153
      ],
-     "width": 0.2,
+     "width": 0.179,
      "rot": 0,
      "poses": {
       "happy": {
-       "dx": -0.06,
-       "dy": -0.05
+       "dx": -0.054,
+       "dy": -0.045
       }
      }
     },
@@ -603,15 +647,15 @@
       0.3
      ],
      "offset": [
-      1.05,
-      0.88
+      0.94,
+      0.807
      ],
-     "width": 0.2,
+     "width": 0.179,
      "rot": 0,
      "poses": {
       "happy": {
-       "dx": -0.03,
-       "dy": -0.3
+       "dx": -0.027,
+       "dy": -0.269
       }
      }
     }
@@ -626,11 +670,11 @@
      "anchor": "neck",
      "pivot": [
       0.5,
-      0.2
+      0.25
      ],
      "offset": [
       0,
-      0
+      -0.02
      ],
      "width": 1.0,
      "rot": 0,
@@ -651,9 +695,9 @@
      ],
      "offset": [
       0,
-      -0.35
+      -0.25
      ],
-     "width": 1.9,
+     "width": 1.7,
      "rot": 0,
      "poses": {}
     },
@@ -661,36 +705,38 @@
      "file": "ax_shell_strap",
      "z": "front",
      "order": 10,
-     "anchor": "back",
+     "anchor": "neck",
      "pivot": [
       0.5,
       0.0
      ],
      "offset": [
-      -0.42,
-      -0.55
+      -0.28,
+      -0.03
      ],
-     "width": 0.17,
+     "width": 0.13,
      "rot": 0,
+     "sy": 0.7,
      "poses": {}
     },
     {
      "file": "ax_shell_strap",
      "z": "front",
      "order": 10,
-     "anchor": "back",
+     "anchor": "neck",
      "pivot": [
       0.5,
       0.0
      ],
      "offset": [
-      0.42,
-      -0.55
+      0.28,
+      -0.03
      ],
-     "width": 0.17,
+     "width": 0.13,
      "rot": 0,
-     "poses": {},
-     "flip": true
+     "sy": 0.7,
+     "flip": true,
+     "poses": {}
     }
    ]
   },
@@ -703,11 +749,11 @@
      "anchor": "neck",
      "pivot": [
       0.5,
-      0.2
+      0.3
      ],
      "offset": [
       0,
-      0
+      -0.02
      ],
      "width": 0.9,
      "rot": 0,
@@ -730,8 +776,9 @@
       0,
       0
      ],
-     "width": 1.12,
+     "width": 1.22,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -744,15 +791,16 @@
      "order": 40,
      "anchor": "head",
      "pivot": [
-      0.3,
+      0.06,
       0.95
      ],
      "offset": [
-      0,
-      0.1
+      -0.05,
+      0.05
      ],
-     "width": 0.7,
+     "width": 0.75,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -769,10 +817,10 @@
       0.5
      ],
      "offset": [
-      1.5,
-      0.1
+      1.343,
+      0.109
      ],
-     "width": 0.45,
+     "width": 0.403,
      "rot": 0,
      "poses": {}
     }
@@ -790,10 +838,10 @@
       0.5
      ],
      "offset": [
-      1.55,
-      0.15
+      1.388,
+      0.153
      ],
-     "width": 0.5,
+     "width": 0.448,
      "rot": 0,
      "poses": {}
     }
@@ -811,10 +859,10 @@
       0.0
      ],
      "offset": [
-      0,
-      -1.0
+      -0.043,
+      -0.989
      ],
-     "width": 2.5,
+     "width": 2.238,
      "rot": 0,
      "poses": {}
     },
@@ -828,10 +876,10 @@
       0.2
      ],
      "offset": [
-      0,
-      0
+      0.0,
+      -0.086
      ],
-     "width": 0.6,
+     "width": 0.537,
      "rot": 0,
      "poses": {}
     }
@@ -849,28 +897,29 @@
       0.5
      ],
      "offset": [
-      0,
-      -0.45
+      -0.043,
+      -0.496
      ],
-     "width": 3.4,
+     "width": 3.044,
      "rot": 0,
      "poses": {}
     },
     {
      "file": "ax_abyssal_crown",
      "z": "front",
-     "order": 45,
+     "order": 40,
      "anchor": "head",
      "pivot": [
       0.5,
-      0.85
+      0.93
      ],
      "offset": [
       0,
-      0.17
+      0.1
      ],
-     "width": 0.95,
+     "width": 0.8,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -883,15 +932,16 @@
      "order": 40,
      "anchor": "head",
      "pivot": [
-      0.5,
-      0.85
+      0.42,
+      0.72
      ],
      "offset": [
-      0.05,
-      0.3
+      0,
+      0.21
      ],
-     "width": 1.0,
+     "width": 1.25,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -909,7 +959,7 @@
      ],
      "offset": [
       0,
-      0.04
+      0
      ],
      "width": 0.75,
      "rot": 0,
@@ -930,10 +980,11 @@
      ],
      "offset": [
       0,
-      0.0
+      0
      ],
-     "width": 0.98,
+     "width": 1.1,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -950,10 +1001,10 @@
       1.0
      ],
      "offset": [
-      1.0,
-      0
+      1.04,
+      0.0
      ],
-     "width": 0.4,
+     "width": 0.416,
      "rot": 0,
      "poses": {}
     }
@@ -968,14 +1019,15 @@
      "anchor": "head",
      "pivot": [
       0.5,
-      0.6
+      0.5
      ],
      "offset": [
       0,
-      0.2
+      0.12
      ],
-     "width": 1.1,
+     "width": 1.15,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -989,13 +1041,13 @@
      "anchor": "neck",
      "pivot": [
       0.5,
-      0.1
+      0.15
      ],
      "offset": [
       0,
-      0.02
+      -0.02
      ],
-     "width": 0.9,
+     "width": 0.95,
      "rot": 0,
      "poses": {}
     }
@@ -1009,15 +1061,16 @@
      "order": 30,
      "anchor": "eyes",
      "pivot": [
-      0.5,
-      0.5
+      0.49,
+      0.47
      ],
      "offset": [
       0,
       0
      ],
-     "width": 1.12,
+     "width": 1.16,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -1034,10 +1087,10 @@
       0.5
      ],
      "offset": [
-      1.15,
+      1.213,
       0.25
      ],
-     "width": 0.65,
+     "width": 0.676,
      "rot": 0,
      "poses": {}
     }
@@ -1056,10 +1109,11 @@
      ],
      "offset": [
       0,
-      0.3
+      0.2
      ],
      "width": 1.15,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -1073,13 +1127,13 @@
      "anchor": "neck",
      "pivot": [
       0.5,
-      0.2
+      0.12
      ],
      "offset": [
       0,
-      0
+      -0.02
      ],
-     "width": 1.0,
+     "width": 0.95,
      "rot": 0,
      "poses": {}
     }
@@ -1098,16 +1152,17 @@
      ],
      "offset": [
       0,
-      -0.7
+      -0.2
      ],
      "width": 1.85,
      "rot": 0,
+     "sy": 0.7,
      "poses": {}
     },
     {
      "file": "pu_jetpack_straps",
      "z": "front",
-     "order": 10,
+     "order": 25,
      "anchor": "neck",
      "pivot": [
       0.5,
@@ -1115,10 +1170,11 @@
      ],
      "offset": [
       0,
-      0.02
+      -0.02
      ],
-     "width": 0.6,
+     "width": 0.52,
      "rot": 0,
+     "sy": 0.62,
      "poses": {}
     }
    ]
@@ -1135,10 +1191,10 @@
       0.5
      ],
      "offset": [
-      1.15,
+      1.213,
       0.25
      ],
-     "width": 0.6,
+     "width": 0.624,
      "rot": 0,
      "poses": {}
     }
@@ -1156,10 +1212,10 @@
       0.5
      ],
      "offset": [
-      1.15,
+      1.213,
       0.25
      ],
-     "width": 0.8,
+     "width": 0.832,
      "rot": 0,
      "poses": {}
     }
@@ -1177,17 +1233,17 @@
       0.5
      ],
      "offset": [
-      0,
-      -0.45
+      -0.017,
+      -0.554
      ],
-     "width": 3.4,
+     "width": 3.536,
      "rot": 0,
      "poses": {}
     },
     {
      "file": "pu_hero_mask",
      "z": "front",
-     "order": 45,
+     "order": 30,
      "anchor": "eyes",
      "pivot": [
       0.5,
@@ -1197,42 +1253,44 @@
       0,
       0
      ],
-     "width": 1.4,
+     "width": 1.15,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     },
     {
      "file": "pu_hero_medal",
      "z": "front",
-     "order": 44,
+     "order": 25,
      "anchor": "neck",
      "pivot": [
       0.5,
-      0.05
+      0.03
      ],
      "offset": [
       0,
-      0.0
+      -0.02
      ],
-     "width": 0.42,
+     "width": 0.38,
      "rot": 0,
      "poses": {}
     },
     {
      "file": "pu_hero_cape",
      "z": "behind",
-     "order": 0,
+     "order": 10,
      "anchor": "back",
      "pivot": [
       0.5,
-      0.15
+      0.1
      ],
      "offset": [
       0,
-      -0.7
+      -0.65
      ],
-     "width": 2.6,
+     "width": 1.9,
      "rot": 0,
+     "sy": 0.75,
      "poses": {}
     }
    ]
@@ -1246,14 +1304,15 @@
      "anchor": "head",
      "pivot": [
       0.5,
-      0.85
+      0.95
      ],
      "offset": [
       0,
-      0.3
+      0.27
      ],
-     "width": 1.0,
+     "width": 0.98,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -1267,11 +1326,11 @@
      "anchor": "neck",
      "pivot": [
       0.5,
-      0.1
+      0.2
      ],
      "offset": [
       0,
-      0.1
+      -0.02
      ],
      "width": 0.8,
      "rot": 0,
@@ -1291,10 +1350,10 @@
       0.5
      ],
      "offset": [
-      1.15,
-      0.25
+      1.109,
+      0.277
      ],
-     "width": 0.6,
+     "width": 0.579,
      "rot": 0,
      "poses": {}
     }
@@ -1305,18 +1364,19 @@
     {
      "file": "ki_sweater",
      "z": "front",
-     "order": 10,
+     "order": 20,
      "anchor": "neck",
      "pivot": [
       0.5,
-      0.06
+      0.08
      ],
      "offset": [
       0,
-      0.04
+      -0.03
      ],
-     "width": 1.12,
+     "width": 1.0,
      "rot": 0,
+     "sy": 0.7,
      "poses": {}
     }
    ]
@@ -1330,14 +1390,15 @@
      "anchor": "head",
      "pivot": [
       0.5,
-      0.85
+      0.92
      ],
      "offset": [
       0,
-      0.22
+      0.25
      ],
-     "width": 1.1,
+     "width": 1.2,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -1351,14 +1412,15 @@
      "anchor": "eyes",
      "pivot": [
       0.5,
-      0.35
+      0.3
      ],
      "offset": [
       0,
-      0.3
+      0.17
      ],
-     "width": 0.68,
+     "width": 0.62,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -1372,11 +1434,11 @@
      "anchor": "neck",
      "pivot": [
       0.5,
-      0.1
+      0.12
      ],
      "offset": [
       0,
-      0.1
+      0
      ],
      "width": 0.8,
      "rot": 0,
@@ -1389,35 +1451,37 @@
     {
      "file": "ki_trench",
      "z": "behind",
-     "order": 0,
-     "anchor": "back",
-     "pivot": [
-      0.5,
-      0.1
-     ],
-     "offset": [
-      0,
-      -0.7
-     ],
-     "width": 1.85,
-     "rot": 0,
-     "poses": {}
-    },
-    {
-     "file": "ki_trench_collar",
-     "z": "front",
      "order": 10,
-     "anchor": "neck",
+     "anchor": "back",
      "pivot": [
       0.5,
       0.05
      ],
      "offset": [
       0,
-      0.08
+      -0.62
+     ],
+     "width": 1.85,
+     "rot": 0,
+     "sy": 0.75,
+     "poses": {}
+    },
+    {
+     "file": "ki_trench_collar",
+     "z": "front",
+     "order": 25,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.0
+     ],
+     "offset": [
+      0,
+      -0.06
      ],
      "width": 0.62,
      "rot": 0,
+     "sy": 0.8,
      "poses": {}
     }
    ]
@@ -1434,10 +1498,10 @@
       0.5
      ],
      "offset": [
-      1.15,
-      0.25
+      1.109,
+      0.277
      ],
-     "width": 0.6,
+     "width": 0.579,
      "rot": 0,
      "poses": {}
     }
@@ -1451,15 +1515,16 @@
      "order": 30,
      "anchor": "eyes",
      "pivot": [
-      0.5,
-      0.55
+      0.49,
+      0.66
      ],
      "offset": [
       0,
       0
      ],
-     "width": 1.12,
+     "width": 1.15,
      "rot": 0,
+     "tilt": 1,
      "poses": {}
     }
    ]
@@ -1477,7 +1542,7 @@
      ],
      "offset": [
       0,
-      0.1
+      0
      ],
      "width": 0.75,
      "rot": 0,
@@ -1497,12 +1562,13 @@
       0.9
      ],
      "offset": [
-      0.22,
-      0.25
+      0.212,
+      0.277
      ],
-     "width": 0.6,
+     "width": 0.579,
      "rot": 10,
-     "poses": {}
+     "poses": {},
+     "tilt": 1
     }
    ]
   },
@@ -1511,34 +1577,72 @@
     {
      "file": "ki_ball_cloak",
      "z": "behind",
-     "order": 0,
+     "order": 10,
      "anchor": "back",
      "pivot": [
       0.5,
-      0.15
+      0.02
      ],
      "offset": [
       0,
-      -0.7
+      -0.62
      ],
-     "width": 2.4,
+     "width": 1.95,
      "rot": 0,
+     "sy": 0.52,
+     "poses": {}
+    },
+    {
+     "file": "ki_ball_drape",
+     "z": "front",
+     "order": 15,
+     "anchor": "neck",
+     "pivot": [
+      1.0,
+      0.0
+     ],
+     "offset": [
+      -0.13,
+      -0.03
+     ],
+     "width": 0.42,
+     "rot": 0,
+     "sy": 0.98,
+     "poses": {}
+    },
+    {
+     "file": "ki_ball_drape",
+     "z": "front",
+     "order": 15,
+     "anchor": "neck",
+     "pivot": [
+      1.0,
+      0.0
+     ],
+     "offset": [
+      0.13,
+      -0.03
+     ],
+     "width": 0.42,
+     "rot": 0,
+     "sy": 0.98,
+     "flip": true,
      "poses": {}
     },
     {
      "file": "ki_ball_clasp",
      "z": "front",
-     "order": 20,
+     "order": 25,
      "anchor": "neck",
      "pivot": [
       0.5,
-      0.2
+      0.45
      ],
      "offset": [
       0,
       0
      ],
-     "width": 0.5,
+     "width": 0.8,
      "rot": 0,
      "poses": {}
     }
@@ -1556,10 +1660,10 @@
       0.5
      ],
      "offset": [
-      1.15,
-      0.25
+      1.109,
+      0.277
      ],
-     "width": 0.7,
+     "width": 0.675,
      "rot": 0,
      "poses": {}
     }
@@ -1577,17 +1681,17 @@
       0.5
      ],
      "offset": [
-      0,
-      -0.45
+      0.0,
+      -0.498
      ],
-     "width": 3.4,
+     "width": 3.279,
      "rot": 0,
      "poses": {}
     },
     {
      "file": "ki_starry_tiara",
      "z": "front",
-     "order": 45,
+     "order": 40,
      "anchor": "head",
      "pivot": [
       0.5,
@@ -1595,30 +1699,32 @@
      ],
      "offset": [
       0,
-      0.22
+      0.15
      ],
-     "width": 0.95,
+     "width": 0.85,
      "rot": 0,
-     "poses": {},
-     "gender": "girl"
+     "tilt": 1,
+     "gender": "girl",
+     "poses": {}
     },
     {
      "file": "ki_starry_crown",
      "z": "front",
-     "order": 45,
+     "order": 40,
      "anchor": "head",
      "pivot": [
       0.5,
-      0.85
+      0.93
      ],
      "offset": [
       0,
-      0.26
+      0.17
      ],
-     "width": 0.9,
+     "width": 0.8,
      "rot": 0,
-     "poses": {},
-     "gender": "boy"
+     "tilt": 1,
+     "gender": "boy",
+     "poses": {}
     }
    ]
   },
@@ -1634,8 +1740,8 @@
       0.5
      ],
      "offset": [
-      0,
-      -0.45
+      0.0,
+      -0.516
      ],
      "width": 3.4,
      "rot": 0,
@@ -1655,8 +1761,8 @@
       0.5
      ],
      "offset": [
-      0,
-      -0.45
+      0.0,
+      -0.516
      ],
      "width": 3.4,
      "rot": 0,
@@ -1676,10 +1782,10 @@
       0.5
      ],
      "offset": [
-      0,
-      -0.45
+      -0.043,
+      -0.496
      ],
-     "width": 3.4,
+     "width": 3.044,
      "rot": 0,
      "poses": {}
     }
@@ -1697,10 +1803,10 @@
       0.5
      ],
      "offset": [
-      0,
-      -0.45
+      -0.043,
+      -0.496
      ],
-     "width": 3.4,
+     "width": 3.044,
      "rot": 0,
      "poses": {}
     }
@@ -1718,10 +1824,10 @@
       0.5
      ],
      "offset": [
-      0,
-      -0.45
+      -0.017,
+      -0.554
      ],
-     "width": 3.4,
+     "width": 3.536,
      "rot": 0,
      "poses": {}
     }
@@ -1739,10 +1845,10 @@
       0.5
      ],
      "offset": [
-      0,
-      -0.45
+      -0.017,
+      -0.554
      ],
-     "width": 3.4,
+     "width": 3.536,
      "rot": 0,
      "poses": {}
     }
@@ -1760,10 +1866,10 @@
       0.5
      ],
      "offset": [
-      0,
-      -0.45
+      0.0,
+      -0.498
      ],
-     "width": 3.4,
+     "width": 3.279,
      "rot": 0,
      "poses": {}
     }
@@ -1781,10 +1887,10 @@
       0.5
      ],
      "offset": [
-      0,
-      -0.45
+      0.0,
+      -0.498
      ],
-     "width": 3.4,
+     "width": 3.279,
      "rot": 0,
      "poses": {}
     }
