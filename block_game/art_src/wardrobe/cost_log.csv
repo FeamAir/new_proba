@@ -1,0 +1,7 @@
+time,model,file,est_usd,note
+2026-11-27 01:17:17,fal-ai/nano-banana/edit,owl_ow_mortarboard.png,0.0398,item
+2026-11-27 01:17:17,fal-ai/nano-banana/edit,axolotl_ax_coral_beads.png,0.0398,item
+2026-11-27 01:17:17,fal-ai/nano-banana/edit,kitten_ki_trench.png,0.0398,item
+2026-11-27 01:17:20,fal-ai/birefnet,axolotl_ax_coral_beads.png,0.002,bg removal
+2026-11-27 01:17:20,fal-ai/birefnet,kitten_ki_trench.png,0.002,bg removal
+2026-11-27 01:17:20,fal-ai/birefnet,owl_ow_mortarboard.png,0.002,bg removal
