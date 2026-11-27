@@ -10,15 +10,21 @@
 КАК СЧИТАЕТСЯ ПОСАДКА (подробно — fit.json, поле _about):
 1. Картинка героя: art_src/heroes/<герой>/<облик>_<окрас>_<поза>.png, точки — art_src/heroes/anchors.json
    (доли ширины/высоты картинки героя).
-2. Единица размера U = (neck.y - head.y) * высота картинки героя, в пикселях — «высота головы».
+2. Единица размера U — расстояние в пикселях от макушки head до шеи neck («высота головы»).
    Она одинаково ведёт себя во всех позах и окрасах, поэтому вещи масштабируются от неё.
+   Ещё в anchors.json есть eye_l, eye_r (центры глаз; ими пользуются эффекты кода) и tilt — наклон головы
+   в позе (градусы по часовой относительно idle).
 3. Слой вещи (fit.json -> items -> <id> -> layers[]):
    file   — имя картинки вещи (art_src/wardrobe/<герой>/<file>.png; в игре assets/wardrobe_art/<герой>/<file>.webp);
    anchor — точка героя: head, eyes, neck, back, ground;
    pivot  — точка крепления на самой картинке вещи (доли её ширины/высоты);
    offset — сдвиг от точки героя, в U (x вправо, y вниз);
    width  — ширина вещи в U (высота — по пропорции картинки);
+   sy     — сжатие/растяжение по высоте (множитель к высоте по пропорции; нет поля — 1): плащ, свитер
+            покороче под пропорции героя;
    rot    — поворот в градусах вокруг pivot, по часовой стрелке (как rotation_degrees в Godot);
+   tilt   — доля наклона головы (anchors -> tilt), которую получает слой: 1 — шапки, очки, маски (поворачиваются
+            вместе с головой, offset тоже поворачивается вокруг точки героя), 0 или нет поля — не наклоняется;
    flip   — отразить по горизонтали (pivot тоже отражается);
    z      — "behind" (позади героя) или "front" (поверх); order — порядок среди слоёв (меньше — раньше);
    gender — если указан, слой только для этого облика ("boy"/"girl");
@@ -28,7 +34,7 @@
    точке героя в этой позе (например, у котика в прыжке шея ниже). Сначала pose_fix, потом poses слоя.
 4. Порядок рисования: слои z="behind" (по order) -> герой -> слои z="front" (по order).
 """
-import os, sys, json
+import os, sys, json, math
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -79,9 +85,14 @@ def layers_for(hero, items, gender="boy"):
     return out
 
 
+def unit(anchors, W, H):
+    """U в px: расстояние от макушки (head) до шеи (neck) — «высота головы»."""
+    return math.hypot((anchors["neck"][0] - anchors["head"][0]) * W, (anchors["neck"][1] - anchors["head"][1]) * H)
+
+
 def place(L, anchors, W, H, pose, hero=""):
-    """Где и каким размером рисовать слой: (центр-pivot в px героя, ширина px, поворот, flip)."""
-    U = (anchors["neck"][1] - anchors["head"][1]) * H
+    """Где и каким размером рисовать слой: (центр-pivot в px героя, ширина px, поворот, U)."""
+    U = unit(anchors, W, H)
     ax, ay = anchors[L["anchor"]]
     ox, oy = L.get("offset", [0, 0])
     w = L["width"]
@@ -92,13 +103,20 @@ def place(L, anchors, W, H, pose, hero=""):
         oy += p.get("dy", 0.0)
         w *= p.get("scale", 1.0)
         rot += p.get("rot", 0.0)
+    # наклон головы (anchors -> tilt, градусы по часовой) — слой с полем tilt поворачивается вместе с головой:
+    # сдвиг offset поворачивается вокруг точки героя, к rot прибавляется tilt * L.tilt
+    t = anchors.get("tilt", 0.0) * L.get("tilt", 0.0)
+    if t:
+        c, s_ = math.cos(math.radians(t)), math.sin(math.radians(t))
+        ox, oy = ox * c - oy * s_, ox * s_ + oy * c
+        rot += t
     return (ax * W + ox * U, ay * H + oy * U), w * U, rot, U
 
 
 def draw_layer(canvas, L, hero, at, width_px, rot, game=False):
     src = _img(item_path(hero, L["file"], game))
     k = width_px / src.width
-    im = src.resize((max(1, round(src.width * k)), max(1, round(src.height * k))), Image.LANCZOS)
+    im = src.resize((max(1, round(src.width * k)), max(1, round(src.height * k * L.get("sy", 1.0)))), Image.LANCZOS)
     px, py = L.get("pivot", [0.5, 0.5])
     if L.get("flip"):
         im = im.transpose(Image.FLIP_LEFT_RIGHT)
