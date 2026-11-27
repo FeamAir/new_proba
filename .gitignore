@@ -26,3 +26,4 @@ Thumbs.db
 
 # Списки тестировщиков (личные данные)
 block_game/store/testing/testers_list.csv
+__pycache__/
