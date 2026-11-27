@@ -432,8 +432,9 @@ static func _image(path: String) -> Image:
 	return img
 
 
-## Повторяет compose.compose(): холст с полями margin, слои позади, герой, слои спереди, обрезка по содержимому.
-static func compose_image(kind: String, pose: String, items: Array, gender := "boy", skin := "", margin := 0.55) -> Image:
+## Повторяет compose.compose(): холст с полями margin, слои позади, герой, слои спереди, обрезка по содержимому
+## (crop = false — без обрезки: герой в точке (W·margin, H·margin), для сравнения со сборкой по текстурам игры).
+static func compose_image(kind: String, pose: String, items: Array, gender := "boy", skin := "", margin := 0.55, crop := true) -> Image:
 	_load()
 	var key := hero_key(kind, pose, gender, skin)
 	var himg := _image(hero_path(key))
@@ -451,6 +452,8 @@ static func compose_image(kind: String, pose: String, items: Array, gender := "b
 	canvas.blend_rect(himg, Rect2i(0, 0, W, H), Vector2i(mx, my))
 	for L in Ls.filter(func(x): return x.get("z", "") != "behind"):
 		_draw_layer_img(canvas, L, kind, place(L, an, W, H, pose, kind), Vector2(mx, my))
+	if not crop:
+		return canvas
 	var bb := canvas.get_used_rect()
 	return canvas.get_region(bb) if bb.size.x > 0 else canvas
 
