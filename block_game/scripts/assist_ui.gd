@@ -130,7 +130,8 @@ func draw_home_goal() -> void:
 		var pulse := 0.5 + 0.5 * sin(g.t_total * 5.0)
 		g._rbox(r, Color(OK_COL, 0.12 + 0.12 * pulse), 27)
 		sc.shard_icon(r.position + Vector2(32, 27), 14)
-		sc._ctext(r.get_center().x + 14, r.position.y + 37, I18n.t("goal_ready") % name, 26, OK_COL, r.size.x - 70)
+		var ready_txt: String = I18n.t("goal_ready") % name
+		sc._ctext(r.get_center().x + 14, r.position.y + 37, ready_txt, fit(ready_txt, 26, r.size.x - 80), OK_COL, r.size.x - 70)
 	else:
 		sc.shard_icon(r.position + Vector2(32, 22), 12)
 		var label := I18n.t("goal_next") % [gl.need, I18n.forms("shards_forms", gl.need)]
