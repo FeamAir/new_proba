@@ -1,0 +1,1471 @@
+{
+ "_about": "Посадка вещей гардероба на нарисованных героев (этап 2). Логика — art_src/wardrobe/compose.py (образец для Godot). Единица U = (neck.y - head.y) * высота картинки героя в px (точки — art_src/heroes/anchors.json). Слой: file — картинка assets/wardrobe_art/<герой>/<file>.webp; anchor — точка героя (head, eyes, neck, back, ground); pivot — точка крепления на картинке вещи (доли её ширины и высоты); offset — сдвиг от точки героя в U (x вправо, y вниз); width — ширина вещи в U; rot — поворот в градусах по часовой вокруг pivot; flip — отразить по горизонтали; z — behind (за героем) или front (поверх); order — порядок слоёв (меньше — раньше); gender — только для облика boy/girl; poses — поправки для поз: dx, dy (в U, к offset), scale (множитель width), rot (прибавка). Сияния (slot aura) — частицы кода; картинка у них только иконка (icons/) и мягкое свечение <id>_glow (см. glow_layers).",
+ "unit": "U",
+ "items": {
+  "ow_mortarboard": {
+   "layers": [
+    {
+     "file": "ow_mortarboard",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.85
+     ],
+     "offset": [
+      0,
+      0.14
+     ],
+     "width": 1.25,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_halfglasses": {
+   "layers": [
+    {
+     "file": "ow_halfglasses",
+     "z": "front",
+     "order": 30,
+     "anchor": "eyes",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0.02
+     ],
+     "width": 1.35,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_scholar_scarf": {
+   "layers": [
+    {
+     "file": "ow_scholar_scarf",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.3,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_book": {
+   "layers": [
+    {
+     "file": "ow_book",
+     "z": "front",
+     "order": 50,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      1.15,
+      0.25
+     ],
+     "width": 0.7,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_quill": {
+   "layers": [
+    {
+     "file": "ow_quill",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.2,
+      0.9
+     ],
+     "offset": [
+      0.35,
+      0.25
+     ],
+     "width": 0.6,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_star_scarf": {
+   "layers": [
+    {
+     "file": "ow_star_scarf",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.4,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_lantern": {
+   "layers": [
+    {
+     "file": "ow_lantern",
+     "z": "front",
+     "order": 10,
+     "anchor": "back",
+     "pivot": [
+      0.5,
+      0.1
+     ],
+     "offset": [
+      0.75,
+      0.0
+     ],
+     "width": 0.45,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_moth": {
+   "layers": [
+    {
+     "file": "ow_moth",
+     "z": "front",
+     "order": 50,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      1.15,
+      0.25
+     ],
+     "width": 0.6,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_night_goggles": {
+   "layers": [
+    {
+     "file": "ow_night_goggles",
+     "z": "front",
+     "order": 30,
+     "anchor": "eyes",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.45,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_astrolabe": {
+   "layers": [
+    {
+     "file": "ow_astrolabe",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 0.9,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_lorgnette": {
+   "layers": [
+    {
+     "file": "ow_lorgnette",
+     "z": "front",
+     "order": 30,
+     "anchor": "eyes",
+     "pivot": [
+      0.5,
+      0.3
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.3,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_dome_hat": {
+   "layers": [
+    {
+     "file": "ow_dome_hat",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.85
+     ],
+     "offset": [
+      0,
+      0.16
+     ],
+     "width": 1.15,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_planet": {
+   "layers": [
+    {
+     "file": "ow_planet",
+     "z": "front",
+     "order": 50,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      1.15,
+      0.25
+     ],
+     "width": 0.6,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_comet": {
+   "layers": [
+    {
+     "file": "ow_comet",
+     "z": "front",
+     "order": 50,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      1.1,
+      -0.1
+     ],
+     "width": 0.9,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ow_stargazer": {
+   "layers": [
+    {
+     "file": "ow_stargazer_hat",
+     "z": "front",
+     "order": 45,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.85
+     ],
+     "offset": [
+      0,
+      0.1
+     ],
+     "width": 1.3,
+     "rot": 0,
+     "poses": {}
+    },
+    {
+     "file": "ow_stargazer_mantle",
+     "z": "behind",
+     "order": 0,
+     "anchor": "back",
+     "pivot": [
+      0.5,
+      0.06
+     ],
+     "offset": [
+      0,
+      -1.25
+     ],
+     "width": 2.7,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_starfish": {
+   "layers": [
+    {
+     "file": "ax_starfish",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      0.45,
+      0.25
+     ],
+     "width": 0.45,
+     "rot": 15,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_dive_mask": {
+   "layers": [
+    {
+     "file": "ax_dive_mask",
+     "z": "front",
+     "order": 30,
+     "anchor": "eyes",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.3,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_coral_beads": {
+   "layers": [
+    {
+     "file": "ax_coral_beads",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.1,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_bubble_pet": {
+   "layers": [
+    {
+     "file": "ax_bubble_pet",
+     "z": "front",
+     "order": 50,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      1.45,
+      0.05
+     ],
+     "width": 0.55,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_coral_tiara": {
+   "layers": [
+    {
+     "file": "ax_coral_tiara",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.85
+     ],
+     "offset": [
+      0,
+      0.15
+     ],
+     "width": 1.0,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_gill_pearls": {
+   "layers": [
+    {
+     "file": "ax_gill_pearl",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.3
+     ],
+     "offset": [
+      -0.74,
+      -0.2
+     ],
+     "width": 0.2,
+     "rot": 0,
+     "poses": {},
+     "flip": true
+    },
+    {
+     "file": "ax_gill_pearl",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.3
+     ],
+     "offset": [
+      -1.07,
+      0.15
+     ],
+     "width": 0.2,
+     "rot": 0,
+     "poses": {},
+     "flip": true
+    },
+    {
+     "file": "ax_gill_pearl",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.3
+     ],
+     "offset": [
+      -1.06,
+      0.88
+     ],
+     "width": 0.2,
+     "rot": 0,
+     "poses": {},
+     "flip": true
+    },
+    {
+     "file": "ax_gill_pearl",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.3
+     ],
+     "offset": [
+      0.74,
+      -0.2
+     ],
+     "width": 0.2,
+     "rot": 0,
+     "poses": {}
+    },
+    {
+     "file": "ax_gill_pearl",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.3
+     ],
+     "offset": [
+      1.07,
+      0.15
+     ],
+     "width": 0.2,
+     "rot": 0,
+     "poses": {}
+    },
+    {
+     "file": "ax_gill_pearl",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.3
+     ],
+     "offset": [
+      1.05,
+      0.88
+     ],
+     "width": 0.2,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_pearls": {
+   "layers": [
+    {
+     "file": "ax_pearls",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.0,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_shell_pack": {
+   "layers": [
+    {
+     "file": "ax_shell_pack",
+     "z": "behind",
+     "order": 0,
+     "anchor": "back",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      0,
+      -0.35
+     ],
+     "width": 1.9,
+     "rot": 0,
+     "poses": {}
+    },
+    {
+     "file": "ax_shell_straps",
+     "z": "front",
+     "order": 10,
+     "anchor": "back",
+     "pivot": [
+      0.5,
+      0.0
+     ],
+     "offset": [
+      0,
+      -0.62
+     ],
+     "width": 0.75,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_black_pearl": {
+   "layers": [
+    {
+     "file": "ax_black_pearl",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 0.9,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_porthole": {
+   "layers": [
+    {
+     "file": "ax_porthole",
+     "z": "front",
+     "order": 30,
+     "anchor": "eyes",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.35,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_angler": {
+   "layers": [
+    {
+     "file": "ax_angler",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.3,
+      0.95
+     ],
+     "offset": [
+      0,
+      0.1
+     ],
+     "width": 0.7,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_squid": {
+   "layers": [
+    {
+     "file": "ax_squid",
+     "z": "front",
+     "order": 50,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      1.5,
+      0.1
+     ],
+     "width": 0.45,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_seahorse": {
+   "layers": [
+    {
+     "file": "ax_seahorse",
+     "z": "front",
+     "order": 50,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      1.55,
+      0.15
+     ],
+     "width": 0.5,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_wave_cape": {
+   "layers": [
+    {
+     "file": "ax_wave_cape",
+     "z": "behind",
+     "order": 0,
+     "anchor": "back",
+     "pivot": [
+      0.5,
+      0.0
+     ],
+     "offset": [
+      0,
+      -1.0
+     ],
+     "width": 2.5,
+     "rot": 0,
+     "poses": {}
+    },
+    {
+     "file": "ax_wave_clasp",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 0.6,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ax_abyssal": {
+   "layers": [
+    {
+     "file": "ax_abyssal_crown",
+     "z": "front",
+     "order": 45,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.85
+     ],
+     "offset": [
+      0,
+      0.17
+     ],
+     "width": 0.95,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_cap": {
+   "layers": [
+    {
+     "file": "pu_cap",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.85
+     ],
+     "offset": [
+      0,
+      0.1
+     ],
+     "width": 1.15,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_whistle": {
+   "layers": [
+    {
+     "file": "pu_whistle",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 0.8,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_visor": {
+   "layers": [
+    {
+     "file": "pu_visor",
+     "z": "front",
+     "order": 30,
+     "anchor": "eyes",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.3,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_ball": {
+   "layers": [
+    {
+     "file": "pu_ball",
+     "z": "front",
+     "order": 50,
+     "anchor": "ground",
+     "pivot": [
+      0.5,
+      1.0
+     ],
+     "offset": [
+      1.0,
+      0
+     ],
+     "width": 0.4,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_daisy_wreath": {
+   "layers": [
+    {
+     "file": "pu_daisy_wreath",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.85
+     ],
+     "offset": [
+      0,
+      0.1
+     ],
+     "width": 1.3,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_flower_scarf": {
+   "layers": [
+    {
+     "file": "pu_flower_scarf",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.0,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_daisy_specs": {
+   "layers": [
+    {
+     "file": "pu_daisy_specs",
+     "z": "front",
+     "order": 30,
+     "anchor": "eyes",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.4,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_basket": {
+   "layers": [
+    {
+     "file": "pu_basket",
+     "z": "front",
+     "order": 50,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      1.15,
+      0.25
+     ],
+     "width": 0.65,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_bolt_band": {
+   "layers": [
+    {
+     "file": "pu_bolt_band",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      0,
+      0.25
+     ],
+     "width": 1.3,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_hero_bandana": {
+   "layers": [
+    {
+     "file": "pu_hero_bandana",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.0,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_jetpack": {
+   "layers": [
+    {
+     "file": "pu_jetpack",
+     "z": "behind",
+     "order": 0,
+     "anchor": "back",
+     "pivot": [
+      0.5,
+      0.4
+     ],
+     "offset": [
+      0,
+      -0.3
+     ],
+     "width": 1.9,
+     "rot": 0,
+     "poses": {}
+    },
+    {
+     "file": "pu_jetpack_straps",
+     "z": "front",
+     "order": 10,
+     "anchor": "back",
+     "pivot": [
+      0.5,
+      0.3
+     ],
+     "offset": [
+      0,
+      -0.3
+     ],
+     "width": 1.0,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_robo": {
+   "layers": [
+    {
+     "file": "pu_robo",
+     "z": "front",
+     "order": 50,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      1.15,
+      0.25
+     ],
+     "width": 0.6,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_frisbee": {
+   "layers": [
+    {
+     "file": "pu_frisbee",
+     "z": "front",
+     "order": 50,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      1.15,
+      0.25
+     ],
+     "width": 0.8,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "pu_hero": {
+   "layers": [
+    {
+     "file": "pu_hero_mask",
+     "z": "front",
+     "order": 45,
+     "anchor": "eyes",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.4,
+     "rot": 0,
+     "poses": {}
+    },
+    {
+     "file": "pu_hero_medal",
+     "z": "front",
+     "order": 44,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 0.7,
+     "rot": 0,
+     "poses": {}
+    },
+    {
+     "file": "pu_hero_cape",
+     "z": "behind",
+     "order": 0,
+     "anchor": "back",
+     "pivot": [
+      0.5,
+      0.15
+     ],
+     "offset": [
+      0,
+      -0.7
+     ],
+     "width": 2.6,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_pompom_hat": {
+   "layers": [
+    {
+     "file": "ki_pompom_hat",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.85
+     ],
+     "offset": [
+      0,
+      0.1
+     ],
+     "width": 1.0,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_bell_bow": {
+   "layers": [
+    {
+     "file": "ki_bell_bow",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 0.8,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_yarn": {
+   "layers": [
+    {
+     "file": "ki_yarn",
+     "z": "front",
+     "order": 50,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      1.15,
+      0.25
+     ],
+     "width": 0.6,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_sweater": {
+   "layers": [
+    {
+     "file": "ki_sweater",
+     "z": "front",
+     "order": 10,
+     "anchor": "back",
+     "pivot": [
+      0.5,
+      0.1
+     ],
+     "offset": [
+      0,
+      -0.45
+     ],
+     "width": 1.3,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_sleuth_hat": {
+   "layers": [
+    {
+     "file": "ki_sleuth_hat",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.85
+     ],
+     "offset": [
+      0,
+      0.1
+     ],
+     "width": 1.1,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_moustache": {
+   "layers": [
+    {
+     "file": "ki_moustache",
+     "z": "front",
+     "order": 30,
+     "anchor": "eyes",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      0,
+      0.3
+     ],
+     "width": 0.8,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_sleuth_badge": {
+   "layers": [
+    {
+     "file": "ki_sleuth_badge",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 0.8,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_trench": {
+   "layers": [
+    {
+     "file": "ki_trench",
+     "z": "front",
+     "order": 10,
+     "anchor": "back",
+     "pivot": [
+      0.5,
+      0.1
+     ],
+     "offset": [
+      0,
+      -0.45
+     ],
+     "width": 1.6,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_magnifier": {
+   "layers": [
+    {
+     "file": "ki_magnifier",
+     "z": "front",
+     "order": 50,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      1.15,
+      0.25
+     ],
+     "width": 0.6,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_masquerade": {
+   "layers": [
+    {
+     "file": "ki_masquerade",
+     "z": "front",
+     "order": 30,
+     "anchor": "eyes",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 1.3,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_cameo": {
+   "layers": [
+    {
+     "file": "ki_cameo",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 0.8,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_feather_hat": {
+   "layers": [
+    {
+     "file": "ki_feather_hat",
+     "z": "front",
+     "order": 40,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.85
+     ],
+     "offset": [
+      0.2,
+      0.1
+     ],
+     "width": 0.6,
+     "rot": 12,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_ball_cloak": {
+   "layers": [
+    {
+     "file": "ki_ball_cloak",
+     "z": "behind",
+     "order": 0,
+     "anchor": "back",
+     "pivot": [
+      0.5,
+      0.15
+     ],
+     "offset": [
+      0,
+      -0.7
+     ],
+     "width": 2.4,
+     "rot": 0,
+     "poses": {}
+    },
+    {
+     "file": "ki_ball_clasp",
+     "z": "front",
+     "order": 20,
+     "anchor": "neck",
+     "pivot": [
+      0.5,
+      0.2
+     ],
+     "offset": [
+      0,
+      0
+     ],
+     "width": 0.5,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_teacup": {
+   "layers": [
+    {
+     "file": "ki_teacup",
+     "z": "front",
+     "order": 50,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.5
+     ],
+     "offset": [
+      1.15,
+      0.25
+     ],
+     "width": 0.7,
+     "rot": 0,
+     "poses": {}
+    }
+   ]
+  },
+  "ki_starry": {
+   "layers": [
+    {
+     "file": "ki_starry_tiara",
+     "z": "front",
+     "order": 45,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.85
+     ],
+     "offset": [
+      0,
+      0.1
+     ],
+     "width": 0.9,
+     "rot": 0,
+     "poses": {},
+     "gender": "girl"
+    },
+    {
+     "file": "ki_starry_crown",
+     "z": "front",
+     "order": 45,
+     "anchor": "head",
+     "pivot": [
+      0.5,
+      0.85
+     ],
+     "offset": [
+      0,
+      0.1
+     ],
+     "width": 0.9,
+     "rot": 0,
+     "poses": {},
+     "gender": "boy"
+    }
+   ]
+  }
+ }
+}
