@@ -47,6 +47,8 @@ const DecorateUI := preload("res://scripts/decorate_ui.gd")  # 0.15: режим 
 const PlayHero := preload("res://scripts/play_hero.gd")
 const Access := preload("res://scripts/access.gd")
 const AccessUI := preload("res://scripts/access_ui.gd")
+## Ссылка на политику конфиденциальности в паузе (адрес — Privacy.URL)
+const Privacy := preload("res://scripts/privacy.gd")
 ## 0.17: после победы/поражения герой на панели празднует/грустит, затем появляется окно итога
 const RESULT_BEAT := 0.75
 const HomeTour := preload("res://scripts/home_tour.gd")  # 0.17: экскурсия по главному экрану
@@ -141,6 +143,7 @@ var decor_ui                  # 0.15: режим украшения комнат
 var play_hero = PlayHero.new()  # 0.17: герой на панели уровня
 var access = Access.new()       # 0.17: настройки «Удобство»
 var access_ui                   # 0.17: окно «Удобство» в паузе
+var privacy                     # ссылка «Конфиденциальность» в паузе (scripts/privacy.gd)
 var juice                       # 0.18: праздник каскада
 var say = HeroSay.new()         # 0.18: облачко с фразой героя
 var owl = OwlTime.new()         # 0.18: «Совиное время» — одна отмена за попытку
@@ -218,6 +221,7 @@ func _ready() -> void:
 	trophy_ui = TrophyUI.new(self)
 	decor_ui = DecorateUI.new(self)
 	access_ui = AccessUI.new(self)
+	privacy = Privacy.new(self)
 	play_hero.setup(self)  # 0.17: картинка героя панели (перерисовывается 20–30 раз в секунду)
 	home3d = Home3D.new()
 	home3d.name = "Home3D"
@@ -1162,6 +1166,8 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 		State.PAUSED:
 			if access_ui and access_ui.tap(pos):
 				return
+			if privacy and not assist_ui.stats_open and privacy.tap(pos):
+				return
 			if not assist_ui.tap_pause(pos):
 				_pause_menu_tap(pos)
 			return
@@ -1676,6 +1682,8 @@ func _draw_overlay() -> void:
 				var fsz: int = assist_ui.fit(labels[n], access.fs(32), r.size.x - 24)
 				draw_string(font, Vector2(r.position.x, r.get_center().y + fsz * 0.36), labels[n], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, fsz, Color("#2A1A0A") if n == "resume" else TEXT)
 			assist_ui.draw_pause_version()
+			if privacy:
+				privacy.draw()
 			if assist_ui.stats_open:
 				assist_ui.draw_stats()
 			elif access_ui and access_ui.open:
