@@ -89,9 +89,10 @@ func accept(n: int) -> bool:
 
 
 ## Убрать k нижних рядов камня: всё поле сдвигается вниз, кристаллы из убранных рядов
-## считаются освобождёнными. Хотя бы один ряд камня и один кристалл остаются.
+## считаются освобождёнными. Хотя бы keep рядов камня (по умолчанию один) и один кристалл остаются.
+## 0.18: кристалл возвращается только на клетку простого камня (stone), не на бомбу и не на тайник.
 ## Возвращает {"rows": сколько убрано, "freed": сколько кристаллов освобождено}.
-static func apply_boost(board: Array, cols: int, rows_total: int, empty: int, crystal: int, k: int, crystals_total: int) -> Dictionary:
+static func apply_boost(board: Array, cols: int, rows_total: int, empty: int, crystal: int, k: int, crystals_total: int, keep := 1, stone := 7) -> Dictionary:
 	var res := {"rows": 0, "freed": 0}
 	# ряды камня: снизу подряд, в ряду почти нет дыр (как в tools/level_bot.gd)
 	var stone_rows := 0
@@ -103,7 +104,7 @@ static func apply_boost(board: Array, cols: int, rows_total: int, empty: int, cr
 		if filled < cols - 3:
 			break
 		stone_rows += 1
-	k = mini(k, stone_rows - 1)
+	k = mini(k, stone_rows - maxi(keep, 1))
 	if k <= 0:
 		return res
 	var freed := 0
@@ -118,7 +119,7 @@ static func apply_boost(board: Array, cols: int, rows_total: int, empty: int, cr
 	if freed >= crystals_total:
 		var y := rows_total - 1
 		for x in cols:
-			if board[y * cols + x] != empty and board[y * cols + x] != crystal:
+			if board[y * cols + x] == stone:
 				board[y * cols + x] = crystal
 				freed -= 1
 				break

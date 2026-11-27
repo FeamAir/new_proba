@@ -12,7 +12,8 @@ extends SceneTree
 ##   --seeds=K      режим подбора раскладки: для каждого уровня пробует K зёрен
 ##                  (zerno = n*7919+13 + k*104729) и пишет в CSV строку на каждое
 ##   --k0=K         с какого k начинать перебор зёрен (по умолчанию 0)
-##   --set=a:1,b:2  временно заменить поля строки таблицы (например --set=hang:1,rows:3)
+##   --set=a:1,b:2  временно заменить поля строки таблицы (например --set=hang:1,rows:3;
+##                  0.18: и строки — --set=goal:pet,bomb:0)
 ##   --tuck=1       кроме бросков сверху пробовать «подсунуть» фигуру: опустить до упора
 ##                  и сдвинуть вбок на 1–3 клетки (под островок камня, уровни 51+);
 ##                  так играет человек, в ~2 раза медленнее. Уровни 51–100 настроены с --tuck=1
@@ -26,10 +27,16 @@ extends SceneTree
 ## без ошибок («хорошая игра»). В таблице есть столбцы стартовой заполненности: клеток% и высота%
 ## (самая верхняя занятая клетка, считая островки и висячие блоки).
 ## Без --err робот ставит фигуры мгновенно и без ошибок: скорость падения на него не влияет.
+## 0.18: робот знает новинки (scripts/specials.gd): взрыв кристалла-бомбы 3×3 и цепочку бомб,
+## кротёнка (не исчезает при очистке, цель — нижний ряд) и янтарный тайник (2×2 падает целиком,
+## цель — все 4 клетки). Оценка хода: на уровне «кротёнок» — глубина зверька и заполненность
+## рядов под ним, на уровне «тайник» — исчезнувшие клетки тайника и заполненность его рядов;
+## кристаллы там — только очки. Столбец «цель» в таблице: crystals / pet / chest, «бомб» — взрывов за партию.
 ## Прогресс игрока (user://save.cfg) сохраняется до прогона и возвращается после.
 
 const SAVE := "user://save.cfg"
 const Gravity := preload("res://scripts/gravity.gd")
+const Specials := preload("res://scripts/specials.gd")
 const Levels := preload("res://scripts/levels.gd")
 # Номера фигур в расчётах робота — заведомо больше игровых, чтобы не совпасть.
 const SIM_ID := 1000000
@@ -48,7 +55,9 @@ const W_HEIGHT := 3.0
 const W_BUMP := 4.0
 const W_TOP := 25.0      # штраф за каждую клетку выше безопасной высоты
 const SAFE_H := 8
-const W_CROW := 2.0      # бонус за заполненность рядов с кристаллами
+const W_CROW := 2.0      # бонус за заполненность рядов с кристаллами (и рядов цели)
+const W_GOAL := 1000.0   # 0.18: ряд глубже для кротёнка / клетка тайника — как кристалл
+const W_SIDE := 60.0     # 0.18: кристалл на уровне с другой целью — только очки
 
 var look := false
 var tuck := false
@@ -76,7 +85,7 @@ func _initialize() -> void:
 	pace = float(args.pace)
 	for kv in String(args.set).split(",", false):
 		var pr: PackedStringArray = kv.split(":")
-		var val = float(pr[1]) if pr[1].contains(".") else int(pr[1])
+		var val = (float(pr[1]) if pr[1].contains(".") else int(pr[1])) if pr[1].is_valid_float() else pr[1]  # 0.18: и строки (goal:pet)
 		set_fields[pr[0]] = val
 
 	# --- бережём сохранение игрока ---
@@ -99,9 +108,9 @@ func _initialize() -> void:
 		_seed_search(l_from, l_to, games, base_seed, max_pieces, int(args.seeds), args.csv, int(args.k0))
 		_restore(had_save, save_bytes)
 		return
-	var header := "lvl | ряды крист par | клеток% высота% | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь | медиана | par~40% | партий с каскадом% | партий с ×3+% | самая длинная"
+	var header := "lvl | цель бомб | ряды крист par | клеток% высота% | интервал | побед% | фигур(побед) | 1*/2*/3* % | цепь ср | каскад% | макс цепь | медиана | par~40% | партий с каскадом% | партий с ×3+% | самая длинная"
 	print(header)
-	lines.append("level,rows,crystals,par,fill_cells_pct,fill_height_pct,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain,median_pieces,suggested_par,cascade_games_pct,chain3_games_pct,top_chain")
+	lines.append("level,goal,bombs_per_game,rows,crystals,par,fill_cells_pct,fill_height_pct,fall_interval,win_pct,avg_pieces_win,avg_pieces_all,star1_pct,star2_pct,star3_pct,avg_chain,cascade_pct,avg_max_chain,median_pieces,suggested_par,cascade_games_pct,chain3_games_pct,top_chain")
 	var t0 := Time.get_ticks_msec()
 	var c3_total := 0
 	var c4_total := 0
@@ -123,6 +132,7 @@ func _initialize() -> void:
 		var rows_n := 0
 		var fill := [0.0, 0.0]
 		var plist: Array = []
+		var booms := 0
 		for gi in games:
 			seed(base_seed * 100003 + n * 1009 + gi)
 			G.start_level(n)
@@ -130,6 +140,7 @@ func _initialize() -> void:
 				rows_n = _stone_rows()
 				fill = _fill()
 			var r := _play(max_pieces)
+			booms += G.bombs_blown
 			pieces_all += r.pieces
 			chain_sum += r.chain_sum
 			clears += r.clears
@@ -160,11 +171,11 @@ func _initialize() -> void:
 			100.0 * st[1] / w, 100.0 * st[2] / w, 100.0 * st[3] / w,
 			float(chain_sum) / maxi(clears, 1), 100.0 * cascades / maxi(clears, 1), float(maxchain_sum) / games, med, sug,
 			100.0 * casc_games / games, 100.0 * c3_games / games, lvl_top]
-		print("%3d | %2d %2d %3d | %3.0f %3.0f | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f | %3d | %3d | %3.0f | %3.0f | ×%d" % [
-			row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[10], row[11], row[12], row[13], row[14], row[15], row[16], row[17], row[18], row[19], row[20]])
+		print("%3d | %-8s %.1f | %2d %2d %3d | %3.0f %3.0f | %.2fs | %5.0f | %6.1f | %3.0f/%3.0f/%3.0f | %.2f | %4.1f | %.2f | %3d | %3d | %3.0f | %3.0f | ×%d" % [
+			row[0], G.goal, float(booms) / games, row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[10], row[11], row[12], row[13], row[14], row[15], row[16], row[17], row[18], row[19], row[20]])
 		if args.get("dump", "") == "1":
 			print("PIECES %d %s" % [n, ",".join(plist.map(func(v): return str(v)))])
-		lines.append("%d,%d,%d,%d,%.1f,%.1f,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f,%d,%d,%.1f,%.1f,%d" % row)
+		lines.append(("%d,%s,%.2f," % [n, G.goal, float(booms) / games]) + "%d,%d,%d,%.1f,%.1f,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f,%d,%d,%.1f,%.1f,%d" % row.slice(1))
 	print("партий с цепочкой ×3 и больше: %d из %d (%.1f%%), ×4 и больше: %d, самая длинная цепочка: ×%d" % [
 		c3_total, games_total, 100.0 * c3_total / maxi(games_total, 1), c4_total, top_chain])
 	print("время: %.1f с, несовпадений хода: %d" % [(Time.get_ticks_msec() - t0) / 1000.0, mismatches])
@@ -207,7 +218,7 @@ func _stone_rows() -> int:
 	for y in ROWS:
 		var k := 0
 		for x in COLS:
-			if G.board[y * COLS + x] == G.STONE or G.board[y * COLS + x] == CRYSTAL:
+			if G.board[y * COLS + x] in [G.STONE, CRYSTAL, G.BOMB, G.CHEST]:
 				k += 1
 		if k >= COLS - 2:
 			n += 1
@@ -318,13 +329,13 @@ func _make(b: PackedInt32Array, ids: PackedInt32Array, t: int, cells: Array, r: 
 			nids[y * COLS + c.x + p.x] = new_id
 	var sim := _resolve(nb, nids)
 	return {"rot": r, "x": ox, "tx": slide.x, "ty": rest_y, "board": nb, "ids": nids, "crystals": sim.crystals, "lines": sim.lines,
-		"chain": sim.chain, "top_out": top_out}
+		"chain": sim.chain, "chest": sim.chest, "pet_y": Specials.pet_row(nb, COLS), "top_out": top_out}
 
 
-# Очистка линий с каскадом, как в игре («липкая» гравитация из scripts/gravity.gd).
-# Меняет доску и номера фигур на месте.
+# Очистка линий с каскадом, как в игре («липкая» гравитация из scripts/gravity.gd;
+# 0.18: взрывы бомб, кротёнок, тайник — scripts/specials.gd). Меняет доску и номера фигур на месте.
 func _resolve(b: PackedInt32Array, ids: PackedInt32Array) -> Dictionary:
-	return Gravity.resolve(b, ids, COLS, ROWS, EMPTY, [G.STONE, CRYSTAL], CRYSTAL, G.FALL_ALL)
+	return Specials.resolve(b, ids, COLS, ROWS, EMPTY, G.FALL_ALL)
 
 
 func _features(b: PackedInt32Array) -> float:
@@ -350,12 +361,15 @@ func _features(b: PackedInt32Array) -> float:
 			bump += absi(h - prev_h)
 		prev_h = h
 	var crow := 0
+	# 0.18: «ряды цели» — с кристаллами (обычная цель), с тайником, под кротёнком
+	var target: int = CRYSTAL if G.goal == "crystals" else (G.CHEST if G.goal == "chest" else -2)
+	var pet_y := Specials.pet_row(b, COLS) if G.goal == "pet" else -1
 	for y in ROWS:
-		var has_c := false
+		var has_c := pet_y >= 0 and y > pet_y
 		var filled := 0
 		for x in COLS:
 			var v: int = b[y * COLS + x]
-			if v == CRYSTAL:
+			if v == target:
 				has_c = true
 			if v != EMPTY:
 				filled += 1
@@ -367,7 +381,28 @@ func _features(b: PackedInt32Array) -> float:
 func _score(p: Dictionary) -> float:
 	if p.top_out:
 		return -1e9
-	return W_CRYSTAL * p.crystals + W_LINE * p.lines + _features(p.board)
+	return _gain(p) + W_LINE * p.lines + _features(p.board)
+
+
+## 0.18: польза хода для цели уровня: кристаллы, ряды, на которые опустился кротёнок, клетки тайника.
+func _gain(p: Dictionary) -> float:
+	match G.goal:
+		"pet":
+			var now := Specials.pet_row(G.board, COLS)
+			return W_SIDE * p.crystals + W_GOAL * maxi(0, p.pet_y - now)
+		"chest":
+			return W_SIDE * p.crystals + W_GOAL * p.chest
+	return W_CRYSTAL * p.crystals
+
+
+## 0.18: ход сразу даёт победу (цель уровня выполнена).
+func _wins(p: Dictionary) -> bool:
+	match G.goal:
+		"pet":
+			return p.pet_y == ROWS - 1
+		"chest":
+			return G.chest_left - p.chest <= 0
+	return G.crystals_left - p.crystals <= 0
 
 
 func _choose() -> Dictionary:
@@ -378,13 +413,13 @@ func _choose() -> Dictionary:
 	var best_s := -INF
 	for p in cands:
 		var s := _score(p)
-		if look and s > -1e8 and G.crystals_left - p.crystals > 0:
+		if look and s > -1e8 and not _wins(p):
 			var nexts := _placements(p.board, p.ids, G.next_type, 0, SIM_ID + 1)
 			var bn := -1e9
 			for q in nexts:
 				bn = maxf(bn, _score(q))
-			s = W_CRYSTAL * p.crystals + W_LINE * p.lines + bn
-		elif G.crystals_left - p.crystals <= 0:
+			s = _gain(p) + W_LINE * p.lines + bn
+		elif _wins(p) and not p.top_out:
 			s += 1e6
 		if s > best_s:
 			best_s = s

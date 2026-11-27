@@ -22,6 +22,11 @@ const STEPS := [
 	{"id": "l1_crystals", "level": 1, "text": "tut_crystals", "after": "l1_drop", "close": ALL, "hole": ["crystals"], "hand": "tap_crystals", "info": true},
 	{"id": "l2_crumble", "level": 2, "text": "tut_crumble", "close": ALL, "hole": ["stone"], "hand": "tap_hang", "info": true},
 	{"id": "l3_chain", "level": 3, "text": "tut_chain", "close": ALL, "hole": ["stone"], "hand": "tap_hang", "info": true},
+	# 0.18: при первой встрече с новинкой (на любом уровне) — одно пояснение; special — что
+	# должно быть на поле (game.gd: bomb — кристалл-бомба, pet — цель «кротёнок», chest — тайник)
+	{"id": "sp_bomb", "special": "bomb", "text": "tut_bomb", "close": ALL, "hole": ["sp_bomb"], "hand": "tap_special", "info": true},
+	{"id": "sp_pet", "special": "pet", "text": "tut_pet", "close": ALL, "hole": ["sp_pet", "crystals"], "hand": "tap_special", "info": true},
+	{"id": "sp_chest", "special": "chest", "text": "tut_chest", "close": ALL, "hole": ["sp_chest"], "hand": "tap_special", "info": true},
 ]
 const WARDROBE := "wardrobe"
 const UNDO_HINT := "undo"  # 0.18: подсказка «Совиного времени» (scripts/owl_time.gd), один раз
@@ -120,12 +125,42 @@ func _next(g) -> void:
 	if g.state != g.State.PLAYING or not g.has_piece:
 		return
 	for s in STEPS:
-		if s.level != g.level or seen.has(s.id) or s.has("on"):
+		if seen.has(s.id) or s.has("on"):
+			continue
+		if s.has("special"):
+			if not has_special(g, s.special):
+				continue
+		elif s.level != g.level:
 			continue
 		if s.has("after") and not seen.has(s.after):
 			continue
 		_show(s.id)
 		return
+
+
+## 0.18: есть ли на поле новинка kind ("bomb", "pet", "chest") — для подсказки при первой встрече.
+static func has_special(g, kind: String) -> bool:
+	match kind:
+		"bomb":
+			return g.board.has(g.BOMB)
+		"pet":
+			return g.goal == "pet" and g.board.has(g.PET)
+		"chest":
+			return g.chest_left > 0
+	return false
+
+
+## 0.18: клетки новинки на экране (кротёнок, первая бомба, весь тайник).
+static func special_rect(g, v: int) -> Rect2:
+	var r := Rect2()
+	for i in g.board.size():
+		if g.board[i] != v:
+			continue
+		var c := Rect2(g.board_pos + Vector2(i % g.COLS, i / g.COLS) * g.CELL, Vector2(g.CELL, g.CELL))
+		r = c if r.size.x <= 0 else r.merge(c)
+		if v != g.CHEST:
+			break
+	return r.grow(8) if r.size.x > 0 else r
 
 
 func _show(id: String) -> void:
@@ -170,7 +205,7 @@ func load_from(cfg: ConfigFile, max_level: int) -> void:
 	if not cfg.has_section("tutorial"):
 		if max_level > 1:
 			for s in STEPS:
-				if s.level < max_level:
+				if s.has("level") and s.level < max_level:
 					seen[s.id] = true
 			seen[WARDROBE] = true
 		return
@@ -220,6 +255,12 @@ func target(g, name: String) -> Rect2:
 		"stone":
 			var top := stone_top(g)
 			return Rect2(g.board_pos + Vector2(0, top) * C, Vector2(g.COLS, g.ROWS - top) * C).grow(8)
+		"sp_bomb":
+			return special_rect(g, g.BOMB)
+		"sp_pet":
+			return special_rect(g, g.PET)
+		"sp_chest":
+			return special_rect(g, g.CHEST)
 		"crystals":
 			var y: float = g.board_pos.y + 4.0 + 220.0
 			return Rect2(g.panel_x - 12, y - 30, g.W - g.panel_x - 8, 100)
@@ -314,6 +355,10 @@ func _hand_for(g, s: Dictionary) -> void:
 			_tap_hand(g, Vector2(cr.position.x + 44, cr.end.y - 22))
 		"tap_hang":
 			_tap_hand(g, hang_point(g))
+		"tap_special":
+			var sr := target(g, s.hole[0])
+			if sr.size.x > 0:
+				_tap_hand(g, sr.get_center())
 
 
 func _tap_hand(g, at: Vector2) -> void:

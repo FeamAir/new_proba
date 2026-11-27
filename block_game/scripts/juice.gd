@@ -115,6 +115,15 @@ func on_cascade(chain: int) -> void:
 	banner_col = Color("#FFB547") if chain == 3 else Color("#FF8FD8")
 
 
+## 0.18: взрыв кристалла-бомбы (n — сколько бомб взорвалось цепочкой): огненная вспышка поля,
+## короткое замедление, вибрация посильнее.
+func on_boom(n: int) -> void:
+	flash = maxf(flash, FLASH_TIME * 1.4)
+	flash_col = Color("#FF9A3C")
+	slow = maxf(slow, SLOW_TIME * 0.7)
+	vibrate(50 + 15 * mini(n, 4))
+
+
 ## Освобождённый кристалл в точке from летит к счётчику на панели.
 func fly(from: Vector2) -> void:
 	flyers.append({"from": from, "to": counter_pos(), "t": 0.0, "delay": 0.06 * flyers.size(), "done": false, "n": flyers.size()})

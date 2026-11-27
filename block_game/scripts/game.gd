@@ -13,6 +13,9 @@ const W := 720.0
 const EMPTY := -1
 const STONE := 7
 const CRYSTAL := 8
+const BOMB := 9      # 0.18: огненный кристалл в камне — взрыв 3×3 при очистке ряда (Specials.BOMB)
+const PET := 10      # 0.18: кротёнок — довести до нижнего ряда (Specials.PET)
+const CHEST := 11    # 0.18: янтарный тайник 2×2 (Specials.CHEST)
 
 const CLEAR_TIME := 0.22
 const SETTLE_TIME := 0.16
@@ -53,6 +56,10 @@ const Juice := preload("res://scripts/juice.gd")
 const HeroSay := preload("res://scripts/hero_say.gd")
 const OwlTime := preload("res://scripts/owl_time.gd")
 const StarGoal := preload("res://scripts/star_goal.gd")
+## 0.18: новинки уровней — кристалл-бомба, цель «Спаси кротёнка», «Янтарный тайник»
+## (правила — scripts/specials.gd, рисование — scripts/specials_draw.gd)
+const Specials := preload("res://scripts/specials.gd")
+const SpecialsDraw := preload("res://scripts/specials_draw.gd")
 ## true — после очистки падают все группы поля (и камень уровня над дырами ниже линии);
 ## false — только то, что выше нижней очищенной линии (ниже неё поле не трогается).
 const FALL_ALL := false
@@ -84,7 +91,7 @@ const SHAPES := [
 ]
 const KICKS := [Vector2i(0, 0), Vector2i(-1, 0), Vector2i(1, 0), Vector2i(-2, 0), Vector2i(2, 0), Vector2i(0, -1)]
 const SFX_NAMES := ["move", "rotate", "land", "drop", "line1", "line2", "line3", "line4",
-	"combo1", "combo2", "combo3", "combo4", "combo5", "crystal", "levelup", "gameover", "click", "pause"]
+	"combo1", "combo2", "combo3", "combo4", "combo5", "crystal", "levelup", "gameover", "click", "pause", "boom"]
 
 enum State { SPLASH, HOME, PLAYING, PAUSED, CLEARING, SETTLE, WIN, LOSE, PICK_HERO, WARDROBE, MAP, FORGE }
 
@@ -138,6 +145,18 @@ var juice                       # 0.18: праздник каскада
 var say = HeroSay.new()         # 0.18: облачко с фразой героя
 var owl = OwlTime.new()         # 0.18: «Совиное время» — одна отмена за попытку
 var _snapped := false           # 0.18: снимок для отмены уже сделан (сброс фигуры)
+var boom_fx = SpecialsDraw.new()  # 0.18: вспышки взрывов и открытия тайника (только эффекты)
+
+# 0.18: цель уровня и новинки (простые значения — «Совиное время» их снимает и возвращает)
+var goal := "crystals"          # "crystals" — освободить кристаллы, "pet" — кротёнок на дне, "chest" — открыть тайник
+var bombs_total := 0            # кристаллов-бомб на старте
+var bombs_blown := 0            # взорвалось в этой попытке
+var chest_total := 0            # клеток тайника на старте (4 или 0 — тайника нет)
+var chest_left := 0             # клеток тайника на поле
+var chest_open := false
+var chest_shards := 0           # осколков в тайнике (3–5), прибавляются к награде за победу
+var blast_cells: Array = []     # клетки вне очищаемых рядов, которые выбьет взрыв (на время CLEARING)
+var blast_bombs: Array = []     # центры взорвавшихся бомб (Vector2i)
 
 var fall_timer := 0.0
 var lock_timer := 0.0
@@ -323,6 +342,17 @@ func start_level(n: int) -> void:
 		board[stones[i]] = CRYSTAL
 	# Висячие блоки над дырами (поле hang таблицы уровней) — заготовка каскада.
 	Levels.add_hang(board, p, lr, COLS, ROWS, STONE)
+	# 0.18: бомбы, кротёнок, тайник — своим генератором случайных чисел после всей прежней раскладки
+	var sp: Dictionary = Specials.place(board, p, COLS, ROWS)
+	goal = Specials.goal_of(p)
+	if (goal == Specials.GOAL_PET and sp.pet < 0) or (goal == Specials.GOAL_CHEST and sp.chest < 0):
+		goal = Specials.GOAL_CRYSTALS  # не поместилось — обычная цель (тест следит, чтобы такого не было)
+	bombs_total = sp.bombs
+	bombs_blown = 0
+	chest_shards = sp.shards
+	chest_open = false
+	blast_cells = []
+	blast_bombs = []
 	# Камень и кристаллы — без номера фигуры: каждая клетка падает сама по себе.
 	next_piece_id = 0
 	crystals_left = crystals_total
@@ -338,7 +368,14 @@ func start_level(n: int) -> void:
 	popups.clear()
 	rng.seed = randi()
 	next_type = _pick_type(-1)
-	_apply_assist(n)
+	_apply_assist(n, sp.chest % COLS if sp.chest >= 0 else -1)
+	# тайник держится одной группой (падает целиком)
+	Specials.tag_chest(board, piece_ids)
+	chest_left = Specials.count(board, CHEST)
+	chest_total = 4 if chest_left > 0 else 0
+	boom_fx.reset()
+	if goal != Specials.GOAL_CRYSTALS:
+		_popup(I18n.t("goal_" + goal + "_start"), board_pos + Vector2(COLS * CELL / 2.0, 5 * CELL), ACCENT, 38)
 	play_hero.reset()
 	juice.reset()
 	say.reset()
@@ -352,12 +389,21 @@ func start_level(n: int) -> void:
 
 
 ## 0.9: попытка засчитывается; принятая «Подсказка кристалла» убирает нижние ряды камня.
-func _apply_assist(n: int) -> void:
+## 0.18: на уровне «открой тайник» остаются хотя бы 2 ряда камня, а убранный вместе с рядами
+## тайник снова встаёт в два нижних ряда (chest_x — его колонка).
+func _apply_assist(n: int, chest_x := -1) -> void:
 	var rows: int = assist.on_start(n)
 	if rows <= 0:
 		return
-	var res: Dictionary = Assist.apply_boost(board, COLS, ROWS, EMPTY, CRYSTAL, rows, crystals_total)
-	crystals_left = crystals_total - int(res.freed)
+	var keep := 2 if goal == Specials.GOAL_CHEST else 1
+	var res: Dictionary = Assist.apply_boost(board, COLS, ROWS, EMPTY, CRYSTAL, rows, crystals_total, keep, STONE)
+	if goal == Specials.GOAL_CHEST and chest_x >= 0 and Specials.count(board, CHEST) < 4:
+		for i in board.size():
+			if board[i] == CHEST:
+				board[i] = STONE
+		for d in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]:
+			board[(ROWS - 2 + d.y) * COLS + chest_x + d.x] = CHEST
+	crystals_left = Specials.count(board, CRYSTAL)
 	if res.rows > 0:
 		_popup(I18n.t("boost_popup"), board_pos + Vector2(COLS * CELL / 2.0, (ROWS - 4) * CELL), CRYSTAL_COL, 34)
 
@@ -588,28 +634,52 @@ func _check_lines() -> bool:
 			clearing_rows.append(y)
 	if clearing_rows.is_empty():
 		return false
-	chain += 1
-	if chain == 3:
-		big_chains += 1
+	# 0.18: бомбы в очищаемых рядах взрываются (3×3, цепочкой) — клетки вне рядов тоже исчезают.
+	# Каждый взрыв — ещё одно звено каскада (Specials.links): ряд с бомбой — уже ×2.
+	var bl: Dictionary = Specials.blast(board, clearing_rows, COLS, ROWS, EMPTY)
+	blast_cells = bl.cells
+	blast_bombs = bl.bombs
+	for k in Specials.links(blast_bombs.size()):
+		chain += 1
+		if chain == 3:
+			big_chains += 1
 	var n := clearing_rows.size()
 	var gained: int = LINE_SCORES[mini(n, 4)] * chain
 	var freed := 0
 	var last_at := Vector2.ZERO
+	var gone: Array = []
 	for y in clearing_rows:
 		for x in COLS:
-			var v: int = board[y * COLS + x]
-			var center := board_pos + Vector2(x + 0.5, y + 0.5) * CELL
-			if v == CRYSTAL:
-				freed += 1
-				last_at = center
-				_burst(center, CRYSTAL_COL, 16, 420.0)
+			gone.append(y * COLS + x)
+	gone.append_array(blast_cells)
+	var chest_gone := 0
+	for i in gone:
+		var v: int = board[i]
+		var center := board_pos + Vector2(i % COLS + 0.5, i / COLS + 0.5) * CELL
+		if v == CRYSTAL:
+			freed += 1
+			last_at = center
+			_burst(center, CRYSTAL_COL, 16, 420.0)
+			if goal == Specials.GOAL_CRYSTALS:
 				juice.fly(center)  # 0.18: кристалл летит к счётчику на панели
-			else:
-				_burst(center, _cell_color(v), 6, 260.0)
+		elif v == PET:
+			continue  # кротёнок не исчезает: ряд очищается вокруг него
+		elif v == CHEST:
+			chest_gone += 1
+			_burst(center, SpecialsDraw.AMBER, 10, 320.0)
+		else:
+			_burst(center, _cell_color(v), 6, 260.0)
 	crystals_left -= freed
-	if freed > 0 and crystals_left <= 0:
+	if freed > 0 and crystals_left <= 0 and goal == Specials.GOAL_CRYSTALS:
 		juice.on_last_crystal(last_at)  # 0.18: последний кристалл уровня — маленький праздник
 	gained += freed * 150
+	if not blast_bombs.is_empty():
+		_on_boom()
+		gained += 100 * blast_bombs.size()
+	if chest_gone > 0 and chest_total > 0 and not chest_open:
+		chest_left -= chest_gone
+		if chest_left <= 0:
+			_on_chest_open()
 	score += gained
 	score_bump = 1.0
 	shake = maxf(shake, 3.0 + 3.0 * (n - 1) + 3.0 * (chain - 1))
@@ -638,10 +708,15 @@ func _check_lines() -> bool:
 
 func _finish_clear() -> void:
 	var lowest: int = clearing_rows.max()
-	Gravity.clear_rows(board, piece_ids, clearing_rows, COLS, EMPTY)
-	# Каскад, «липкая» гравитация (scripts/gravity.gd): клетки одной фигуры держатся
-	# вместе, камень и кристаллы падают поодиночке. Все группы поля падают, пока могут.
-	var fall := Gravity.settle(board, piece_ids, COLS, ROWS, EMPTY, [STONE, CRYSTAL], -1 if FALL_ALL else lowest)
+	for i in blast_cells:
+		lowest = maxi(lowest, i / COLS)
+	# 0.18: кротёнок остаётся на месте, клетки взрыва исчезают вместе с рядами
+	Specials.clear(board, piece_ids, clearing_rows, blast_cells, COLS, EMPTY)
+	blast_cells = []
+	blast_bombs = []
+	# Каскад, «липкая» гравитация (scripts/gravity.gd): клетки одной фигуры (и тайник) держатся
+	# вместе, камень, кристаллы, бомбы и кротёнок падают поодиночке. Все группы поля падают, пока могут.
+	var fall := Gravity.settle(board, piece_ids, COLS, ROWS, EMPTY, Specials.LOOSE, -1 if FALL_ALL else lowest)
 	var moved := false
 	for i in fall.size():
 		fall_dist[i] = fall[i]
@@ -652,8 +727,62 @@ func _finish_clear() -> void:
 	settle_timer = SETTLE_TIME if moved else 0.0
 
 
+## 0.18: взрыв бомб — большая вспышка, тряска, частицы, звук.
+func _on_boom() -> void:
+	bombs_blown += blast_bombs.size()
+	for c in blast_bombs:
+		var at := board_pos + Vector2(c.x + 0.5, c.y + 0.5) * CELL
+		boom_fx.boom(at)
+		_burst(at, SpecialsDraw.BOMB_COL, 26, 620.0)
+		_burst(at, SpecialsDraw.BOMB_CORE, 14, 380.0)
+	var c0: Vector2i = blast_bombs[0]
+	var at0 := board_pos + Vector2(c0.x + 0.5, c0.y + 0.5) * CELL
+	shake = maxf(shake, 14.0 + 4.0 * mini(blast_bombs.size(), 4))
+	juice.on_boom(blast_bombs.size())
+	play("boom", 1.0 if blast_bombs.size() == 1 else 0.85)
+	_popup(I18n.t("bomb_boom") if blast_bombs.size() == 1 else I18n.t("bomb_chain") % blast_bombs.size(), at0 + Vector2(0, -150), SpecialsDraw.BOMB_COL, 44)
+
+
+## 0.18: тайник открыт — осколки прибавятся к награде за победу.
+func _on_chest_open() -> void:
+	chest_open = true
+	chest_left = 0
+	var at := board_pos + Vector2(COLS * CELL / 2.0, (ROWS - 3) * CELL)
+	boom_fx.open(at, chest_shards)
+	_burst(at, SpecialsDraw.AMBER, 24, 480.0)
+	play("levelup", 1.3, -4.0)
+	_popup(I18n.t("chest_open") % chest_shards, at + Vector2(0, -40), SpecialsDraw.AMBER, 40)
+
+
+## 0.18: цель уровня выполнена? Кристаллы — все освобождены; кротёнок — в самом нижнем ряду;
+## тайник — открыт.
+func goal_done() -> bool:
+	match goal:
+		Specials.GOAL_PET:
+			return Specials.pet_row(board, COLS) == ROWS - 1
+		Specials.GOAL_CHEST:
+			return chest_open
+	return crystals_left <= 0
+
+
+## 0.18: сколько рядов кротёнку до дна (0 — на дне, -1 — его нет).
+func pet_depth() -> int:
+	var y := Specials.pet_row(board, COLS)
+	return -1 if y < 0 else ROWS - 1 - y
+
+
+## 0.18: строка итога поражения: кристаллы, глубина кротёнка или тайник.
+func goal_status() -> String:
+	match goal:
+		Specials.GOAL_PET:
+			return I18n.t("lose_pet") % pet_depth()
+		Specials.GOAL_CHEST:
+			return I18n.t("lose_chest") % [chest_total - chest_left, chest_total]
+	return I18n.t("lose_crystals") % [crystals_total - crystals_left, crystals_total]
+
+
 func _after_chain() -> void:
-	if crystals_left <= 0:
+	if goal_done():
 		_win()
 	else:
 		_set_state(State.PLAYING)
@@ -669,6 +798,9 @@ func _win() -> void:
 	if gift > 0:
 		last_reward.gift = gift
 		last_reward.total += gift
+	if chest_open and chest_shards > 0:
+		last_reward.chest = chest_shards  # 0.18: осколки из янтарного тайника
+		last_reward.total += chest_shards
 	assist.on_win(level, pieces_used, access.slow)  # 0.17: победа с медленным падением отмечается в статистике
 	meta.shards += last_reward.total
 	stars[level] = maxi(stars.get(level, 0), last_stars)
@@ -875,6 +1007,7 @@ func _process(delta: float) -> void:
 	juice.update(delta)  # 0.18: эффекты праздника — в настоящем времени
 	say.update(delta)
 	owl.update(self, delta)
+	boom_fx.update(delta)
 	var k: float = juice.time_k() if state in [State.PLAYING, State.CLEARING, State.SETTLE] else 1.0
 	step(delta * k)  # 0.18: на ×3+ — короткое замедление
 	_update_effects(delta * k)
@@ -1154,6 +1287,12 @@ func _cell_color(v: int) -> Color:
 		return STONE_COL
 	if v == CRYSTAL:
 		return CRYSTAL_COL
+	if v == BOMB:
+		return SpecialsDraw.BOMB_COL
+	if v == PET:
+		return SpecialsDraw.PET_FUR
+	if v == CHEST:
+		return SpecialsDraw.AMBER
 	return GEMS[v]
 
 
@@ -1203,6 +1342,7 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO)
 	_draw_controls()
 	_draw_effects()
+	boom_fx.draw(self)  # 0.18: взрывы бомб, открытие тайника
 	juice.draw()  # 0.18: вспышка, летящие кристаллы, «Супер!» / «Мега!»
 	if state in [State.PLAYING, State.CLEARING, State.SETTLE, State.WIN, State.LOSE]:
 		owl.draw(self)  # 0.18: кнопка «Совиное время»
@@ -1296,13 +1436,27 @@ func _draw_board() -> void:
 			if v == EMPTY:
 				continue
 			var dy: float = fall_dist[y * COLS + x] * settle_k * settle_k
+			if v == CHEST:  # 0.18: клетки тайника сливаются в один сундук
+				var i := y * COLS + x
+				SpecialsDraw.draw_chest_cell(self, board_pos + Vector2(x, y - dy) * CELL, CELL,
+					x > 0 and board[i - 1] == CHEST, x < COLS - 1 and board[i + 1] == CHEST,
+					y > 0 and board[i - COLS] == CHEST, y < ROWS - 1 and board[i + COLS] == CHEST)
+				continue
 			_draw_block(board_pos + Vector2(x, y - dy) * CELL, CELL, v)
+	_draw_chest_lock(settle_k)
 
 	if state == State.CLEARING:
 		var k := clampf(clear_timer / CLEAR_TIME, 0.0, 1.0)
 		for y in clearing_rows:
 			var h := CELL * k
 			draw_rect(Rect2(board_pos + Vector2(0, y * CELL + (CELL - h) / 2.0), Vector2(bsize.x, h)), Color(1, 1, 1, 0.85 * k))
+		for i in blast_cells:  # 0.18: клетки, которые выбивает взрыв, — огненная вспышка
+			var cp := board_pos + Vector2(i % COLS, i / COLS) * CELL
+			draw_rect(Rect2(cp, Vector2(CELL, CELL)).grow(-4.0 * (1.0 - k)), Color(SpecialsDraw.BOMB_CORE, 0.8 * k))
+		for y in clearing_rows:  # кротёнок виден поверх вспышки ряда
+			for x in COLS:
+				if board[y * COLS + x] == PET:
+					SpecialsDraw.draw_pet(self, board_pos + Vector2(x, y) * CELL, CELL)
 
 	if has_piece and state != State.LOSE:
 		for c in piece_cells:
@@ -1311,7 +1465,30 @@ func _draw_board() -> void:
 				_draw_block(board_pos + Vector2(p) * CELL, CELL, piece_type, true)
 
 
+## 0.18: замок на сундуке — в середине оставшихся клеток тайника.
+func _draw_chest_lock(settle_k: float) -> void:
+	if chest_left <= 0:
+		return
+	var sum := Vector2.ZERO
+	var n := 0
+	for i in board.size():
+		if board[i] == CHEST:
+			sum += Vector2(i % COLS + 0.5, i / COLS + 0.5 - fall_dist[i] * settle_k * settle_k)
+			n += 1
+	if n > 0:
+		SpecialsDraw.draw_lock(self, board_pos + sum / n * CELL, CELL * 1.5)
+
+
 func _draw_block(p: Vector2, s: float, v: int, glow := false) -> void:
+	if v == BOMB:
+		SpecialsDraw.draw_bomb(self, p, s)
+		return
+	if v == PET:
+		SpecialsDraw.draw_pet(self, p, s)
+		return
+	if v == CHEST:
+		SpecialsDraw.draw_chest_cell(self, p, s, false, false, false, false)
+		return
 	var col := _cell_color(v)
 	var r := Rect2(p + Vector2(3, 3), Vector2(s - 6, s - 6))
 	var rad := s * 0.18
@@ -1367,13 +1544,18 @@ func _draw_panel() -> void:
 			_draw_block(origin + Vector2(c) * cs, cs, next_type)
 
 	y += 220.0
-	draw_string(font, Vector2(panel_x, y), I18n.t("panel_crystals"), HORIZONTAL_ALIGNMENT_LEFT, pw, lab, DIM)
-	# 0.18: счётчик прибавляет кристалл, когда тот долетает, и «подпрыгивает»
-	var jb: float = juice.bump
-	var cs := 56.0 * (1.0 + 0.22 * jb)
-	_draw_block(Vector2(panel_x - 6 + 28, y + 38) - Vector2(cs, cs) / 2.0 - Vector2(0, 10 * jb), cs, CRYSTAL)
-	var got := maxi(0, crystals_total - crystals_left - juice.in_flight())
-	draw_string(font, Vector2(panel_x + 52, y + 52 - 8 * jb), "%d/%d" % [got, crystals_total], HORIZONTAL_ALIGNMENT_LEFT, pw - 52, int(access.fs(38) * (1.0 + 0.2 * jb)), CRYSTAL_COL)
+	if goal == Specials.GOAL_CRYSTALS:
+		draw_string(font, Vector2(panel_x, y), I18n.t("panel_crystals"), HORIZONTAL_ALIGNMENT_LEFT, pw, lab, DIM)
+		# 0.18: счётчик прибавляет кристалл, когда тот долетает, и «подпрыгивает»
+		var jb: float = juice.bump
+		var cs := 56.0 * (1.0 + 0.22 * jb)
+		_draw_block(Vector2(panel_x - 6 + 28, y + 38) - Vector2(cs, cs) / 2.0 - Vector2(0, 10 * jb), cs, CRYSTAL)
+		var got := maxi(0, crystals_total - crystals_left - juice.in_flight())
+		draw_string(font, Vector2(panel_x + 52, y + 52 - 8 * jb), "%d/%d" % [got, crystals_total], HORIZONTAL_ALIGNMENT_LEFT, pw - 52, int(access.fs(38) * (1.0 + 0.2 * jb)), CRYSTAL_COL)
+		if chest_total > 0:  # 0.18: бонусный тайник — значок справа от счётчика
+			SpecialsDraw.chest_icon(self, Vector2(panel_x + pw - 14, y + 36), 32, chest_open)
+	else:
+		_draw_goal_panel(y, pw, lab)
 
 	var bump := 1.0 + 0.25 * score_bump
 	var val := access.fs(40)
@@ -1394,6 +1576,24 @@ func _draw_panel() -> void:
 		var kind: String = meta.hero if meta.hero != "" else "owl"
 		play_hero.draw_on(self, kind, meta.outfit(), Rect2(panel_x - 8, top, pw + 16, bottom - top))
 		say.draw(self, Rect2(panel_x - 8, top - 4.0, pw + 16, bottom - top), board_pos.x + COLS * CELL + 10.0)  # 0.18: облачко героя
+
+
+## 0.18: цель «кротёнок» / «тайник» на панели — вместо счётчика кристаллов.
+func _draw_goal_panel(y: float, pw: float, lab: int) -> void:
+	var big := access.fs(38)
+	if goal == Specials.GOAL_PET:
+		draw_string(font, Vector2(panel_x, y), I18n.t("panel_pet"), HORIZONTAL_ALIGNMENT_LEFT, pw, lab, DIM)
+		SpecialsDraw.draw_pet(self, Vector2(panel_x - 6, y + 8), 60)
+		var d := maxi(pet_depth(), 0)
+		var ax := panel_x + 70.0
+		var bob := 4.0 * sin(t_total * 4.0)
+		draw_colored_polygon(PackedVector2Array([Vector2(ax, y + 30 + bob), Vector2(ax + 20, y + 30 + bob), Vector2(ax + 10, y + 50 + bob)]), ACCENT)
+		draw_rect(Rect2(ax + 6, y + 14 + bob, 8, 18), ACCENT)
+		draw_string(font, Vector2(ax + 26, y + 52), str(d), HORIZONTAL_ALIGNMENT_LEFT, pw - 96, big, ACCENT if d <= 1 else TEXT)
+	else:
+		draw_string(font, Vector2(panel_x, y), I18n.t("panel_chest"), HORIZONTAL_ALIGNMENT_LEFT, pw, lab, DIM)
+		SpecialsDraw.chest_icon(self, Vector2(panel_x + 22, y + 38), 50, chest_open)
+		draw_string(font, Vector2(panel_x + 56, y + 52), "%d/%d" % [chest_total - chest_left, chest_total], HORIZONTAL_ALIGNMENT_LEFT, pw - 56, big, SpecialsDraw.AMBER)
 
 
 func _draw_controls() -> void:
