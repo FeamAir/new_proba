@@ -422,12 +422,12 @@ func _test_undo_hint() -> void:
 
 func _test_star_goal() -> void:
 	print("— счётчик «до 3 звёзд»")
-	# 0.19: нормы мягче — 3★ до ceil(par × 1,5), 2★ до ceil(par × 3) (scripts/star_goal.gd)
+	# 0.19: нормы мягче — 3★ до ceil(par × 1,5), 2★ до par × 5 (scripts/star_goal.gd)
 	check(StarGoal.goal(10, 0) == [3, 15], "par 10, ещё ни одной фигуры — 3★: ещё 15")
 	check(StarGoal.goal(10, 14) == [3, 1], "14 фигур — 3★: ещё 1")
-	check(StarGoal.goal(10, 15) == [2, 15], "15 фигур — 3★ уже нельзя, 2★: ещё 15 (предел 30)")
-	check(StarGoal.goal(10, 29) == [2, 1], "29 фигур — 2★: ещё 1")
-	check(StarGoal.goal(10, 30) == [0, 0], "30 фигур — строка прячется")
+	check(StarGoal.goal(10, 15) == [2, 35], "15 фигур — 3★ уже нельзя, 2★: ещё 35 (предел 50)")
+	check(StarGoal.goal(10, 49) == [2, 1], "49 фигур — 2★: ещё 1")
+	check(StarGoal.goal(10, 50) == [0, 0], "50 фигур — строка прячется")
 	# совпадает со звёздами за победу (game.gd _win) для разных par
 	var bad := []
 	for par in [3, 5, 7, 8, 11, 16, 22]:

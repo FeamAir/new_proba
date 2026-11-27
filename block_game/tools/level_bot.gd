@@ -34,7 +34,13 @@ extends SceneTree
 ##                  сигма F; для сравнения: кристалл = 1000, линия = 40). Человек не просчитывает каскады
 ##                  и не всегда видит лучший ход — с --err/--rush робот всё ещё играет почти идеально
 ##                  (3 звезды по старым нормам в ~50% побед при любом --err), а живые тестировщики почти
-##                  всегда получали 1 звезду. Нормы звёзд 0.19 (scripts/star_goal.gd) подобраны с --fuzz
+##                  всегда получали 1 звезду. Шум снижает и число побед: выигрываются в основном лёгкие партии,
+##                  поэтому доля 3 звёзд среди побед с --fuzz даже растёт — для подбора норм он не годится
+##   --slack=S      0.19: «живой игрок тратит в S раз больше фигур, чем робот»: звёзды в таблице и в итоге
+##                  считаются по ceil(фигур × S) (сама партия не меняется). Под отзыв закрытого теста
+##                  («почти всегда 1 звезда» по прежним нормам — у «человека» --err=0.05 это ~75% побед на 1★)
+##                  подобрано S=2. Нормы звёзд 0.19 (scripts/star_goal.gd) подобраны с
+##                  --tuck=1 --err=0.05 --pace=3 и --pace=6 при --slack=2; итог печатается и по прежним нормам
 ## Версия 0.18: зёрна подобраны с --tuck=1 --err=0.05 --pace=3 (режим «человек», со «спешкой») и
 ## проверены --pace=6 («медленный»), par — по «хорошей игре» (--tuck=1 без ошибок) вместе с «человеком». В таблице есть столбцы стартовой заполненности: клеток% и высота%
 ## (самая верхняя занятая клетка, считая островки и висячие блоки).
@@ -50,6 +56,7 @@ const SAVE := "user://save.cfg"
 const Gravity := preload("res://scripts/gravity.gd")
 const Specials := preload("res://scripts/specials.gd")
 const Levels := preload("res://scripts/levels.gd")
+const StarGoal := preload("res://scripts/star_goal.gd")  # 0.19: нормы звёзд (для --slack и итога)
 # Номера фигур в расчётах робота — заведомо больше игровых, чтобы не совпасть.
 const SIM_ID := 1000000
 
@@ -78,6 +85,7 @@ var pace := 3.0
 var rush := false
 var fuzz := 0.0       # 0.19: --fuzz, шум в оценке хода
 var seek := 1.0       # 0.19: --seek, насколько робот «охотится» за целью уровня
+var slack := 1.0      # 0.19: --slack, во сколько раз больше фигур тратит живой игрок (только для звёзд)
 var hurry := 0.6
 var spent := 0.0      # модельное время, потраченное на последнюю фигуру (секунды)
 var rushed_n := 0     # фигур, положенных в спешке (за прогон)
@@ -88,7 +96,7 @@ var mismatches := 0
 
 
 func _initialize() -> void:
-	var args := {"levels": "1-100", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0", "dump": "0", "set": "", "k0": "0", "tuck": "0", "err": "0", "pace": "3.0", "rush": "", "hurry": "0.6", "fuzz": "0", "seek": "1"}
+	var args := {"levels": "1-100", "games": "30", "seed": "1", "max": "200", "look": "0", "csv": "", "seeds": "0", "dump": "0", "set": "", "k0": "0", "tuck": "0", "err": "0", "pace": "3.0", "rush": "", "hurry": "0.6", "fuzz": "0", "seek": "1", "slack": "1"}
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--") and a.contains("="):
 			var kv := a.substr(2).split("=", true, 1)
@@ -105,6 +113,7 @@ func _initialize() -> void:
 	pace = float(args.pace)
 	fuzz = float(args.fuzz)
 	seek = float(args.seek)
+	slack = float(args.slack)
 	rush = (args.rush == "1") if args.rush != "" else err > 0.0
 	hurry = float(args.hurry)
 	for kv in String(args.set).split(",", false):
@@ -140,6 +149,8 @@ func _initialize() -> void:
 	var c4_total := 0
 	var top_chain := 0
 	var games_total := 0
+	var st_new := [0, 0, 0, 0]  # 0.19: звёзды всех побед — по нормам 0.19 (StarGoal.stars)
+	var st_old := [0, 0, 0, 0]  # 0.19: и по прежним нормам (par и int(par × 1,4)) — для сравнения
 	G.level_override = set_fields.duplicate()
 	for n in range(l_from, l_to + 1):
 		var wins := 0
@@ -184,7 +195,11 @@ func _initialize() -> void:
 				wins += 1
 				pieces_win += r.pieces
 				plist.append(r.pieces)
-				st[r.stars] += 1
+				var used := ceili(r.pieces * slack - 0.0001)  # 0.19: --slack (при 1 — как в игре)
+				var sn: int = r.stars if slack == 1.0 else StarGoal.stars(G.par, used)
+				st[sn] += 1
+				st_new[sn] += 1
+				st_old[3 if used <= G.par else (2 if used <= int(G.par * 1.4) else 1)] += 1
 		var w := maxi(wins, 1)
 		plist.sort()
 		var med: int = plist[plist.size() / 2] if plist.size() > 0 else 0
@@ -202,6 +217,10 @@ func _initialize() -> void:
 		lines.append(("%d,%s,%.2f," % [n, G.goal, float(booms) / games]) + "%d,%d,%d,%.1f,%.1f,%.3f,%.1f,%.2f,%.2f,%.1f,%.1f,%.1f,%.3f,%.1f,%.3f,%d,%d,%.1f,%.1f,%d" % row.slice(1))
 	print("партий с цепочкой ×3 и больше: %d из %d (%.1f%%), ×4 и больше: %d, самая длинная цепочка: ×%d" % [
 		c3_total, games_total, 100.0 * c3_total / maxi(games_total, 1), c4_total, top_chain])
+	var wt := maxi(st_new[1] + st_new[2] + st_new[3], 1)
+	print("звёзды всех побед (%d), 1*/2*/3*: нормы 0.19 %.0f/%.0f/%.0f %%, прежние нормы %.0f/%.0f/%.0f %%" % [wt,
+		100.0 * st_new[1] / wt, 100.0 * st_new[2] / wt, 100.0 * st_new[3] / wt,
+		100.0 * st_old[1] / wt, 100.0 * st_old[2] / wt, 100.0 * st_old[3] / wt])
 	print("время: %.1f с, несовпадений хода: %d" % [(Time.get_ticks_msec() - t0) / 1000.0, mismatches])
 	if rush:
 		print("спешка: %.1f%% фигур, упали на месте: %.1f%%" % [100.0 * rushed_n / maxi(placed_n, 1), 100.0 * panic_n / maxi(placed_n, 1)])

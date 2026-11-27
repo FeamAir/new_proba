@@ -438,12 +438,16 @@ static func hand(g, tip: Vector2, press: float, angle: float) -> void:
 ## Облачко с фразой над или под окном.
 ## with_hand — под окном рука-указатель: облачко ставится ниже, чтобы она его не закрывала.
 static func bubble(g, text: String, anchor: Rect2, sub: String, a: float, with_hand := false) -> void:
-	var size := 40
-	while size > 26 and g.font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > 600.0:
-		size -= 2
-	var tw: float = g.font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	# 0.19: фраза, которая не влезает в строку и мелким шрифтом, переносится на две строки
+	var lines := bubble_lines(g, text)
+	var size: int = lines[0]
+	lines = lines.slice(1)
+	var tw := 0.0
+	for ln in lines:
+		tw = maxf(tw, g.font.get_string_size(ln, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x)
 	var w := clampf(tw + 70.0, 360.0, 680.0)
-	var h := 92.0 if sub == "" else 126.0
+	var extra := (lines.size() - 1) * (size + 8.0)
+	var h := (92.0 if sub == "" else 126.0) + extra
 	var y: float
 	if anchor.get_center().y > g.H * 0.5:
 		y = anchor.position.y - h - 26.0
@@ -454,9 +458,33 @@ static func bubble(g, text: String, anchor: Rect2, sub: String, a: float, with_h
 	var r := Rect2(x, y, w, h)
 	g._rbox(r.grow(5), Color(g.ACCENT, 0.35 * a), 34)
 	g._rbox(r, Color(0.16, 0.09, 0.3, 0.97 * a), 30)
-	g.draw_string(g.font, Vector2(r.position.x, r.position.y + 58), text, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, size, Color(g.TEXT, a))
+	for i in lines.size():
+		g.draw_string(g.font, Vector2(r.position.x, r.position.y + 58 + i * (size + 8.0)), lines[i], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, size, Color(g.TEXT, a))
 	if sub != "":
-		g.draw_string(g.font, Vector2(r.position.x, r.position.y + 100), sub, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 22, Color(g.DIM, a * (0.6 + 0.4 * sin(Time.get_ticks_msec() / 300.0))))
+		g.draw_string(g.font, Vector2(r.position.x, r.position.y + 100 + extra), sub, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 22, Color(g.DIM, a * (0.6 + 0.4 * sin(Time.get_ticks_msec() / 300.0))))
+
+
+## 0.19: [размер шрифта, строка] или [размер, строка 1, строка 2]: фраза облачка в ширину 600.
+## Одна строка — как раньше (шрифт 40, уменьшается до 26); не влезает и так — две строки,
+## разрыв по пробелу ближе к середине, шрифт снова с 40 и уменьшается, пока обе не влезут.
+static func bubble_lines(g, text: String) -> Array:
+	var wide := func(s: String, sz: int) -> bool: return g.font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x > 600.0
+	var size := 40
+	while size > 26 and wide.call(text, size):
+		size -= 2
+	if not wide.call(text, size) or not text.contains(" "):
+		return [size, text]
+	var mid := text.length() / 2
+	var cut := -1
+	for i in text.length():
+		if text[i] == " " and (cut < 0 or absi(i - mid) < absi(cut - mid)):
+			cut = i
+	var l1 := text.substr(0, cut)
+	var l2 := text.substr(cut + 1)
+	size = 40
+	while size > 22 and (wide.call(l1, size) or wide.call(l2, size)):
+		size -= 2
+	return [size, l1, l2]
 
 
 ## Подсказка гардероба: окно на первой карточке вещи, рука нажимает на неё.

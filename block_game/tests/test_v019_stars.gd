@@ -56,7 +56,7 @@ func _run() -> void:
 	_test_win_uses_formula()
 	_test_texts()
 	await _test_win_screen()
-	_test_tutorial()
+	await _test_tutorial()
 	_finish()
 
 
@@ -64,20 +64,20 @@ func _run() -> void:
 
 func _test_formula() -> void:
 	print("— формула звёзд")
-	check(StarGoal.limit(10, 3) == 15 and StarGoal.limit(10, 2) == 30, "par 10: 3★ — до 15 фигур, 2★ — до 30")
-	check(StarGoal.limit(7, 3) == 11 and StarGoal.limit(7, 2) == 21, "par 7: округление вверх — 3★ до 11 (10,5), 2★ до 21")
-	check(StarGoal.limit(13, 3) == 20 and StarGoal.limit(13, 2) == 39, "par 13: 3★ до 20 (19,5 вверх), 2★ до 39")
+	check(StarGoal.limit(10, 3) == 15 and StarGoal.limit(10, 2) == 50, "par 10: 3★ — до 15 фигур, 2★ — до 50")
+	check(StarGoal.limit(7, 3) == 11 and StarGoal.limit(7, 2) == 35, "par 7: округление вверх — 3★ до 11 (10,5), 2★ до 35")
+	check(StarGoal.limit(13, 3) == 20 and StarGoal.limit(13, 2) == 65, "par 13: 3★ до 20 (19,5 вверх), 2★ до 65")
 	check(StarGoal.limit(20, 3) == 30 and StarGoal.limit(11, 3) == 17, "par 20 — ровно 30, без лишней фигуры от округления; par 11 — 17")
 	check(StarGoal.stars(10, 1) == 3 and StarGoal.stars(10, 15) == 3, "1 и 15 фигур при par 10 — 3★")
-	check(StarGoal.stars(10, 16) == 2 and StarGoal.stars(10, 30) == 2, "16 и 30 фигур — 2★")
-	check(StarGoal.stars(10, 31) == 1 and StarGoal.stars(10, 200) == 1, "31 фигура и больше — 1★")
+	check(StarGoal.stars(10, 16) == 2 and StarGoal.stars(10, 50) == 2, "16 и 50 фигур — 2★")
+	check(StarGoal.stars(10, 51) == 1 and StarGoal.stars(10, 200) == 1, "51 фигура и больше — 1★")
 	var bad := []
 	for par in range(1, 60):
 		var l3 := StarGoal.limit(par, 3)
 		var l2 := StarGoal.limit(par, 2)
 		if l3 < par or l2 < l3 or (par >= 2 and l2 <= l3):
 			bad.append(par)
-		for used in range(0, 150):
+		for used in range(0, 320):
 			var s := StarGoal.stars(par, used)
 			var want := 3 if used <= l3 else (2 if used <= l2 else 1)
 			if s != want or (used > 0 and s > StarGoal.stars(par, used - 1)):
@@ -86,7 +86,7 @@ func _test_formula() -> void:
 	# мягче прежних норм: никто не теряет звёзды
 	var worse := []
 	for par in range(1, 60):
-		for used in range(0, 150):
+		for used in range(0, 320):
 			var was := 3 if used <= par else (2 if used <= int(par * 1.4) else 1)
 			if StarGoal.stars(par, used) < was:
 				worse.append("%d/%d" % [par, used])
@@ -100,7 +100,7 @@ func _test_formula() -> void:
 			if shown != StarGoal.stars(par, used + 1):
 				mism.append("%d/%d" % [par, used])
 	check(mism.is_empty(), "«★★★ ещё N» совпадает со звёздами за победу следующей фигурой %s" % str(mism))
-	check(StarGoal.goal(10, 0) == [3, 15] and StarGoal.goal(10, 15) == [2, 15], "par 10: в начале «★★★ ещё 15», после 15 фигур — «★★ ещё 15»")
+	check(StarGoal.goal(10, 0) == [3, 15] and StarGoal.goal(10, 15) == [2, 35], "par 10: в начале «★★★ ещё 15», после 15 фигур — «★★ ещё 35»")
 
 
 func _test_win_uses_formula() -> void:
@@ -211,6 +211,34 @@ func _test_tutorial() -> void:
 	check(g.tut.cur == "", "строка звёзд спрятана — подсказка не показывается")
 	g.tut.replay()
 	check(not g.tut.seen.has(Tutorial.STARS), "«Обучение» в паузе — покажется снова")
+	# облачко: длинная фраза переносится на две строки, а не обрезается краем экрана
+	var too_wide := []
+	for l in I18n.LANGS:
+		I18n.set_lang(l)
+		for s in Tutorial.STEPS:
+			var bl: Array = Tutorial.bubble_lines(g, I18n.t(s.text))
+			for ln in bl.slice(1):
+				if g.font.get_string_size(ln, HORIZONTAL_ALIGNMENT_LEFT, -1, bl[0]).x > 600.0 or bl[0] < 22:
+					too_wide.append("%s:%s" % [l, s.id])
+		var st: Array = Tutorial.bubble_lines(g, I18n.t("tut_stars"))
+		check(st.size() == 3 and st[0] >= 30, "%s: подсказка про звёзды — в две строки, шрифт %d: %s" % [l, st[0], str(st.slice(1))])
+	check(too_wide.is_empty(), "все фразы обучения помещаются в облачко %s" % str(too_wide))
+	I18n.set_lang("ru")
+	check(Tutorial.bubble_lines(g, I18n.t("tut_move")).size() == 2, "короткая фраза — по-прежнему одной строкой")
+	g.tut.seen = {Tutorial.UNDO_HINT: true}
+	for s in Tutorial.STEPS:
+		if s.id != Tutorial.STARS:
+			g.tut.seen[s.id] = true
+	g.start_level(3)
+	g.pieces_used = 1
+	g.tut.cur = ""
+	g.tut.on_spawn(g)
+	g.queue_redraw()
+	await process_frame
+	await process_frame
+	check(g.tut.cur == Tutorial.STARS, "облачко в две строки рисуется без ошибок")
+	g.tut.seen[Tutorial.STARS] = true
+	g.tut.cur = ""
 	g.tut.enabled = false
 
 
