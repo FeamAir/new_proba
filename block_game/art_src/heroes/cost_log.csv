@@ -1,0 +1,303 @@
+time,model,file,est_usd,note
+2026-11-27 00:31:03,fal-ai/nano-banana/edit,kitten_boy_base_idle_a.png,0.0398,base design
+2026-11-27 00:31:05,fal-ai/nano-banana/edit,puppy_boy_base_idle_a.png,0.0398,base design
+2026-11-27 00:31:07,fal-ai/nano-banana/edit,axolotl_boy_base_idle_a.png,0.0398,base design
+2026-11-27 00:31:07,fal-ai/nano-banana/edit,owl_boy_base_idle_a.png,0.0398,base design
+2026-11-27 00:31:44,fal-ai/nano-banana/edit,owl_boy_base_idle_b.png,0.0398,base design retry
+2026-11-27 00:31:44,fal-ai/nano-banana/edit,axolotl_boy_base_idle_b.png,0.0398,base design retry
+2026-11-27 00:31:46,fal-ai/nano-banana/edit,owl_boy_base_idle_c.png,0.0398,base design retry
+2026-11-27 00:32:10,fal-ai/nano-banana/edit,owl_boy_base_idle_d.png,0.0398,base fix ears
+2026-11-27 00:32:37,fal-ai/nano-banana/edit,kitten_boy_base_idle_b.png,0.0398,base fix
+2026-11-27 00:32:41,fal-ai/nano-banana/edit,puppy_boy_base_idle_b.png,0.0398,base fix
+2026-11-27 00:33:01,fal-ai/nano-banana/edit,owl_girl_base_idle_a.png,0.0398,girl base
+2026-11-27 00:33:01,fal-ai/nano-banana/edit,axolotl_girl_base_idle_a.png,0.0398,girl base
+2026-11-27 00:33:02,fal-ai/nano-banana/edit,puppy_girl_base_idle_a.png,0.0398,girl base
+2026-11-27 00:33:37,fal-ai/nano-banana/edit,kitten_girl_base_sad.png,0.0398,pose
+2026-11-27 00:33:39,fal-ai/nano-banana/edit,owl_boy_base_wow.png,0.0398,pose
+2026-11-27 00:33:39,fal-ai/nano-banana/edit,owl_boy_base_happy.png,0.0398,pose
+2026-11-27 00:33:39,fal-ai/nano-banana/edit,owl_boy_base_worried.png,0.0398,pose
+2026-11-27 00:34:03,fal-ai/nano-banana/edit,owl_girl_base_wow.png,0.0398,pose
+2026-11-27 00:34:03,fal-ai/nano-banana/edit,owl_girl_base_happy.png,0.0398,pose
+2026-11-27 00:34:03,fal-ai/nano-banana/edit,owl_girl_base_sad.png,0.0398,pose
+2026-11-27 00:34:03,fal-ai/nano-banana/edit,owl_girl_base_worried.png,0.0398,pose
+2026-11-27 00:34:03,fal-ai/nano-banana/edit,axolotl_boy_base_happy.png,0.0398,pose
+2026-11-27 00:34:05,fal-ai/nano-banana/edit,owl_boy_base_sad.png,0.0398,pose
+2026-11-27 00:34:15,fal-ai/nano-banana/edit,axolotl_boy_base_wow.png,0.0398,pose
+2026-11-27 00:34:15,fal-ai/nano-banana/edit,axolotl_boy_base_sad.png,0.0398,pose
+2026-11-27 00:34:15,fal-ai/nano-banana/edit,axolotl_boy_base_worried.png,0.0398,pose
+2026-11-27 00:34:15,fal-ai/nano-banana/edit,axolotl_girl_base_happy.png,0.0398,pose
+2026-11-27 00:34:15,fal-ai/nano-banana/edit,axolotl_girl_base_wow.png,0.0398,pose
+2026-11-27 00:34:17,fal-ai/nano-banana/edit,axolotl_girl_base_worried.png,0.0398,pose
+2026-11-27 00:34:26,fal-ai/nano-banana/edit,axolotl_girl_base_sad.png,0.0398,pose
+2026-11-27 00:34:26,fal-ai/nano-banana/edit,puppy_boy_base_wow.png,0.0398,pose
+2026-11-27 00:34:26,fal-ai/nano-banana/edit,puppy_boy_base_worried.png,0.0398,pose
+2026-11-27 00:34:26,fal-ai/nano-banana/edit,puppy_boy_base_happy.png,0.0398,pose
+2026-11-27 00:34:27,fal-ai/nano-banana/edit,puppy_boy_base_sad.png,0.0398,pose
+2026-11-27 00:34:30,fal-ai/nano-banana/edit,puppy_girl_base_happy.png,0.0398,pose
+2026-11-27 00:34:38,fal-ai/nano-banana/edit,puppy_girl_base_worried.png,0.0398,pose
+2026-11-27 00:34:38,fal-ai/nano-banana/edit,puppy_girl_base_sad.png,0.0398,pose
+2026-11-27 00:34:39,fal-ai/nano-banana/edit,puppy_girl_base_wow.png,0.0398,pose
+2026-11-27 00:34:40,fal-ai/nano-banana/edit,kitten_boy_base_happy.png,0.0398,pose
+2026-11-27 00:34:40,fal-ai/nano-banana/edit,kitten_boy_base_wow.png,0.0398,pose
+2026-11-27 00:34:41,fal-ai/nano-banana/edit,kitten_boy_base_worried.png,0.0398,pose
+2026-11-27 00:34:47,fal-ai/nano-banana/edit,kitten_boy_base_sad.png,0.0398,pose
+2026-11-27 00:35:20,fal-ai/nano-banana/edit,puppy_boy_base_happy_b.png,0.0398,redo ears
+2026-11-27 00:35:22,fal-ai/nano-banana/edit,puppy_girl_base_happy_b.png,0.0398,redo ears
+2026-11-27 00:35:54,fal-ai/nano-banana/edit,owl_boy_ow_skin_snowy_idle.png,0.0398,skin idle
+2026-11-27 00:35:54,fal-ai/nano-banana/edit,axolotl_boy_skin_pearl_idle.png,0.0398,skin idle
+2026-11-27 00:35:54,fal-ai/nano-banana/edit,axolotl_girl_skin_pearl_idle.png,0.0398,skin idle
+2026-11-27 00:35:56,fal-ai/nano-banana/edit,owl_girl_skin_constellation_idle.png,0.0398,skin idle
+2026-11-27 00:35:56,fal-ai/nano-banana/edit,owl_boy_skin_constellation_idle.png,0.0398,skin idle
+2026-11-27 00:35:56,fal-ai/nano-banana/edit,owl_girl_ow_skin_snowy_idle.png,0.0398,skin idle
+2026-11-27 00:36:05,fal-ai/nano-banana/edit,puppy_boy_skin_gold_idle.png,0.0398,skin idle
+2026-11-27 00:36:05,fal-ai/nano-banana/edit,puppy_boy_skin_moon_idle.png,0.0398,skin idle
+2026-11-27 00:36:06,fal-ai/nano-banana/edit,axolotl_girl_skin_midnight_idle.png,0.0398,skin idle
+2026-11-27 00:36:06,fal-ai/nano-banana/edit,puppy_girl_skin_gold_idle.png,0.0398,skin idle
+2026-11-27 00:36:06,fal-ai/nano-banana/edit,axolotl_boy_skin_midnight_idle.png,0.0398,skin idle
+2026-11-27 00:36:07,fal-ai/nano-banana/edit,puppy_girl_skin_moon_idle.png,0.0398,skin idle
+2026-11-27 00:36:15,fal-ai/nano-banana/edit,puppy_boy_pu_skin_cotton_idle.png,0.0398,skin idle
+2026-11-27 00:36:17,fal-ai/nano-banana/edit,kitten_girl_skin_moon_idle.png,0.0398,skin idle
+2026-11-27 00:36:17,fal-ai/nano-banana/edit,kitten_boy_skin_mint_idle.png,0.0398,skin idle
+2026-11-27 00:36:17,fal-ai/nano-banana/edit,kitten_girl_skin_mint_idle.png,0.0398,skin idle
+2026-11-27 00:36:17,fal-ai/nano-banana/edit,kitten_boy_skin_moon_idle.png,0.0398,skin idle
+2026-11-27 00:36:17,fal-ai/nano-banana/edit,puppy_girl_pu_skin_cotton_idle.png,0.0398,skin idle
+2026-11-27 00:36:42,fal-ai/nano-banana/edit,puppy_boy_skin_gold_idle.png,0.0398,skin idle redo (accessory leak)
+2026-11-27 00:36:43,fal-ai/nano-banana/edit,puppy_boy_pu_skin_cotton_idle.png,0.0398,skin idle redo (accessory leak)
+2026-11-27 00:36:44,fal-ai/nano-banana/edit,axolotl_boy_skin_midnight_idle.png,0.0398,skin idle redo (accessory leak)
+2026-11-27 00:36:45,fal-ai/nano-banana/edit,kitten_boy_skin_mint_idle.png,0.0398,skin idle redo (accessory leak)
+2026-11-27 00:37:04,fal-ai/nano-banana/edit,axolotl_boy_skin_midnight_idle.png,0.0398,skin idle redo (tuft)
+2026-11-27 00:38:26,fal-ai/nano-banana/edit,owl_boy_skin_constellation_sad.png,0.0398,skin pose
+2026-11-27 00:38:26,fal-ai/nano-banana/edit,owl_boy_skin_constellation_wow.png,0.0398,skin pose
+2026-11-27 00:38:26,fal-ai/nano-banana/edit,owl_boy_skin_constellation_worried.png,0.0398,skin pose
+2026-11-27 00:38:28,fal-ai/nano-banana/edit,owl_girl_skin_constellation_sad.png,0.0398,skin pose
+2026-11-27 00:38:28,fal-ai/nano-banana/edit,owl_boy_skin_constellation_happy.png,0.0398,skin pose
+2026-11-27 00:38:28,fal-ai/nano-banana/edit,owl_girl_skin_constellation_happy.png,0.0398,skin pose
+2026-11-27 00:38:28,fal-ai/nano-banana/edit,owl_girl_skin_constellation_wow.png,0.0398,skin pose
+2026-11-27 00:38:29,fal-ai/nano-banana/edit,owl_girl_skin_constellation_worried.png,0.0398,skin pose
+2026-11-27 00:38:37,fal-ai/nano-banana/edit,owl_boy_ow_skin_snowy_happy.png,0.0398,skin pose
+2026-11-27 00:38:38,fal-ai/nano-banana/edit,owl_boy_ow_skin_snowy_wow.png,0.0398,skin pose
+2026-11-27 00:38:38,fal-ai/nano-banana/edit,owl_boy_ow_skin_snowy_worried.png,0.0398,skin pose
+2026-11-27 00:38:39,fal-ai/nano-banana/edit,owl_boy_ow_skin_snowy_sad.png,0.0398,skin pose
+2026-11-27 00:38:40,fal-ai/nano-banana/edit,owl_girl_ow_skin_snowy_happy.png,0.0398,skin pose
+2026-11-27 00:38:40,fal-ai/nano-banana/edit,owl_girl_ow_skin_snowy_wow.png,0.0398,skin pose
+2026-11-27 00:38:40,fal-ai/nano-banana/edit,owl_girl_ow_skin_snowy_worried.png,0.0398,skin pose
+2026-11-27 00:38:41,fal-ai/nano-banana/edit,owl_girl_ow_skin_snowy_sad.png,0.0398,skin pose
+2026-11-27 00:38:49,fal-ai/nano-banana/edit,axolotl_boy_skin_pearl_sad.png,0.0398,skin pose
+2026-11-27 00:38:49,fal-ai/nano-banana/edit,axolotl_boy_skin_pearl_happy.png,0.0398,skin pose
+2026-11-27 00:38:49,fal-ai/nano-banana/edit,axolotl_boy_skin_pearl_wow.png,0.0398,skin pose
+2026-11-27 00:38:49,fal-ai/nano-banana/edit,axolotl_boy_skin_pearl_worried.png,0.0398,skin pose
+2026-11-27 00:38:51,fal-ai/nano-banana/edit,axolotl_girl_skin_pearl_happy.png,0.0398,skin pose
+2026-11-27 00:38:52,fal-ai/nano-banana/edit,axolotl_girl_skin_pearl_sad.png,0.0398,skin pose
+2026-11-27 00:38:53,fal-ai/nano-banana/edit,axolotl_girl_skin_pearl_wow.png,0.0398,skin pose
+2026-11-27 00:38:54,fal-ai/nano-banana/edit,axolotl_girl_skin_pearl_worried.png,0.0398,skin pose
+2026-11-27 00:39:00,fal-ai/nano-banana/edit,axolotl_boy_skin_midnight_happy.png,0.0398,skin pose
+2026-11-27 00:39:01,fal-ai/nano-banana/edit,axolotl_boy_skin_midnight_sad.png,0.0398,skin pose
+2026-11-27 00:39:02,fal-ai/nano-banana/edit,axolotl_boy_skin_midnight_wow.png,0.0398,skin pose
+2026-11-27 00:39:02,fal-ai/nano-banana/edit,axolotl_boy_skin_midnight_worried.png,0.0398,skin pose
+2026-11-27 00:39:03,fal-ai/nano-banana/edit,axolotl_girl_skin_midnight_happy.png,0.0398,skin pose
+2026-11-27 00:39:03,fal-ai/nano-banana/edit,axolotl_girl_skin_midnight_wow.png,0.0398,skin pose
+2026-11-27 00:39:05,fal-ai/nano-banana/edit,axolotl_girl_skin_midnight_worried.png,0.0398,skin pose
+2026-11-27 00:39:05,fal-ai/nano-banana/edit,axolotl_girl_skin_midnight_sad.png,0.0398,skin pose
+2026-11-27 00:39:12,fal-ai/nano-banana/edit,puppy_boy_skin_moon_happy.png,0.0398,skin pose
+2026-11-27 00:39:14,fal-ai/nano-banana/edit,puppy_boy_skin_moon_sad.png,0.0398,skin pose
+2026-11-27 00:39:14,fal-ai/nano-banana/edit,puppy_girl_skin_moon_sad.png,0.0398,skin pose
+2026-11-27 00:39:14,fal-ai/nano-banana/edit,puppy_girl_skin_moon_happy.png,0.0398,skin pose
+2026-11-27 00:39:14,fal-ai/nano-banana/edit,puppy_boy_skin_moon_wow.png,0.0398,skin pose
+2026-11-27 00:39:16,fal-ai/nano-banana/edit,puppy_boy_skin_moon_worried.png,0.0398,skin pose
+2026-11-27 00:39:16,fal-ai/nano-banana/edit,puppy_girl_skin_moon_worried.png,0.0398,skin pose
+2026-11-27 00:39:17,fal-ai/nano-banana/edit,puppy_girl_skin_moon_wow.png,0.0398,skin pose
+2026-11-27 00:39:23,fal-ai/nano-banana/edit,puppy_boy_skin_gold_happy.png,0.0398,skin pose
+2026-11-27 00:39:25,fal-ai/nano-banana/edit,puppy_boy_skin_gold_wow.png,0.0398,skin pose
+2026-11-27 00:39:25,fal-ai/nano-banana/edit,puppy_girl_skin_gold_happy.png,0.0398,skin pose
+2026-11-27 00:39:26,fal-ai/nano-banana/edit,puppy_boy_skin_gold_sad.png,0.0398,skin pose
+2026-11-27 00:39:27,fal-ai/nano-banana/edit,puppy_girl_skin_gold_worried.png,0.0398,skin pose
+2026-11-27 00:39:27,fal-ai/nano-banana/edit,puppy_boy_skin_gold_worried.png,0.0398,skin pose
+2026-11-27 00:39:27,fal-ai/nano-banana/edit,puppy_girl_skin_gold_wow.png,0.0398,skin pose
+2026-11-27 00:39:28,fal-ai/nano-banana/edit,puppy_girl_skin_gold_sad.png,0.0398,skin pose
+2026-11-27 00:39:35,fal-ai/nano-banana/edit,puppy_boy_pu_skin_cotton_happy.png,0.0398,skin pose
+2026-11-27 00:39:36,fal-ai/nano-banana/edit,puppy_boy_pu_skin_cotton_wow.png,0.0398,skin pose
+2026-11-27 00:39:37,fal-ai/nano-banana/edit,puppy_boy_pu_skin_cotton_worried.png,0.0398,skin pose
+2026-11-27 00:39:37,fal-ai/nano-banana/edit,puppy_boy_pu_skin_cotton_sad.png,0.0398,skin pose
+2026-11-27 00:39:39,fal-ai/nano-banana/edit,puppy_girl_pu_skin_cotton_happy.png,0.0398,skin pose
+2026-11-27 00:39:39,fal-ai/nano-banana/edit,puppy_girl_pu_skin_cotton_wow.png,0.0398,skin pose
+2026-11-27 00:39:39,fal-ai/nano-banana/edit,puppy_girl_pu_skin_cotton_worried.png,0.0398,skin pose
+2026-11-27 00:39:40,fal-ai/nano-banana/edit,puppy_girl_pu_skin_cotton_sad.png,0.0398,skin pose
+2026-11-27 00:39:46,fal-ai/nano-banana/edit,kitten_boy_skin_mint_happy.png,0.0398,skin pose
+2026-11-27 00:39:48,fal-ai/nano-banana/edit,kitten_boy_skin_mint_worried.png,0.0398,skin pose
+2026-11-27 00:39:48,fal-ai/nano-banana/edit,kitten_boy_skin_mint_sad.png,0.0398,skin pose
+2026-11-27 00:39:50,fal-ai/nano-banana/edit,kitten_boy_skin_mint_wow.png,0.0398,skin pose
+2026-11-27 00:39:50,fal-ai/nano-banana/edit,kitten_girl_skin_mint_happy.png,0.0398,skin pose
+2026-11-27 00:39:50,fal-ai/nano-banana/edit,kitten_girl_skin_mint_worried.png,0.0398,skin pose
+2026-11-27 00:39:51,fal-ai/nano-banana/edit,kitten_girl_skin_mint_wow.png,0.0398,skin pose
+2026-11-27 00:39:51,fal-ai/nano-banana/edit,kitten_girl_skin_mint_sad.png,0.0398,skin pose
+2026-11-27 00:39:58,fal-ai/nano-banana/edit,kitten_boy_skin_moon_happy.png,0.0398,skin pose
+2026-11-27 00:40:00,fal-ai/nano-banana/edit,kitten_boy_skin_moon_wow.png,0.0398,skin pose
+2026-11-27 00:40:00,fal-ai/nano-banana/edit,kitten_boy_skin_moon_worried.png,0.0398,skin pose
+2026-11-27 00:40:01,fal-ai/nano-banana/edit,kitten_girl_skin_moon_happy.png,0.0398,skin pose
+2026-11-27 00:40:02,fal-ai/nano-banana/edit,kitten_girl_skin_moon_worried.png,0.0398,skin pose
+2026-11-27 00:40:02,fal-ai/nano-banana/edit,kitten_girl_skin_moon_sad.png,0.0398,skin pose
+2026-11-27 00:40:03,fal-ai/nano-banana/edit,kitten_boy_skin_moon_sad.png,0.0398,skin pose
+2026-11-27 00:40:04,fal-ai/nano-banana/edit,kitten_girl_skin_moon_wow.png,0.0398,skin pose
+2026-11-27 00:40:58,fal-ai/nano-banana/edit,owl_boy_ow_skin_snowy_happy_r.png,0.0398,skin pose redo
+2026-11-27 00:40:58,fal-ai/nano-banana/edit,axolotl_boy_skin_pearl_happy_r.png,0.0398,skin pose redo
+2026-11-27 00:41:00,fal-ai/nano-banana/edit,owl_girl_skin_constellation_worried_r.png,0.0398,skin pose redo
+2026-11-27 00:41:00,fal-ai/nano-banana/edit,axolotl_girl_skin_pearl_worried_r.png,0.0398,skin pose redo
+2026-11-27 00:41:00,fal-ai/nano-banana/edit,owl_girl_ow_skin_snowy_happy_r.png,0.0398,skin pose redo
+2026-11-27 00:41:00,fal-ai/nano-banana/edit,axolotl_girl_skin_pearl_sad_r.png,0.0398,skin pose redo
+2026-11-27 00:41:01,fal-ai/nano-banana/edit,owl_boy_skin_constellation_happy_r.png,0.0398,skin pose redo
+2026-11-27 00:41:01,fal-ai/nano-banana/edit,owl_girl_skin_constellation_happy_r.png,0.0398,skin pose redo
+2026-11-27 00:41:09,fal-ai/nano-banana/edit,kitten_boy_skin_mint_sad_r.png,0.0398,skin pose redo
+2026-11-27 00:41:09,fal-ai/nano-banana/edit,kitten_boy_skin_moon_happy_r.png,0.0398,skin pose redo
+2026-11-27 00:41:11,fal-ai/nano-banana/edit,kitten_boy_skin_moon_sad_r.png,0.0398,skin pose redo
+2026-11-27 00:41:11,fal-ai/nano-banana/edit,puppy_boy_skin_moon_happy_r.png,0.0398,skin pose redo
+2026-11-27 00:41:11,fal-ai/nano-banana/edit,puppy_boy_skin_moon_wow_r.png,0.0398,skin pose redo
+2026-11-27 00:41:12,fal-ai/nano-banana/edit,kitten_girl_skin_moon_happy_r.png,0.0398,skin pose redo
+2026-11-27 00:41:12,fal-ai/nano-banana/edit,puppy_girl_skin_moon_happy_r.png,0.0398,skin pose redo
+2026-11-27 00:41:12,fal-ai/nano-banana/edit,puppy_girl_skin_moon_wow_r.png,0.0398,skin pose redo
+2026-11-27 00:41:21,fal-ai/nano-banana/edit,puppy_boy_skin_gold_happy_r.png,0.0398,skin pose redo
+2026-11-27 00:41:21,fal-ai/nano-banana/edit,puppy_girl_skin_gold_happy_r.png,0.0398,skin pose redo
+2026-11-27 00:41:23,fal-ai/nano-banana/edit,puppy_girl_skin_gold_wow_r.png,0.0398,skin pose redo
+2026-11-27 00:41:23,fal-ai/nano-banana/edit,puppy_girl_skin_gold_worried_r.png,0.0398,skin pose redo
+2026-11-27 00:41:25,fal-ai/nano-banana/edit,puppy_boy_skin_gold_worried_r.png,0.0398,skin pose redo
+2026-11-27 00:41:25,fal-ai/nano-banana/edit,puppy_boy_skin_gold_wow_r.png,0.0398,skin pose redo
+2026-11-27 00:41:56,fal-ai/nano-banana/edit,kitten_girl_skin_moon_happy_r2.png,0.0398,skin pose redo
+2026-11-27 00:41:56,fal-ai/nano-banana/edit,puppy_boy_skin_moon_happy_r2.png,0.0398,skin pose redo
+2026-11-27 00:41:58,fal-ai/nano-banana/edit,kitten_boy_skin_moon_sad_r2.png,0.0398,skin pose redo 2
+2026-11-27 00:42:24,fal-ai/nano-banana/edit,master_uh_talk.png,0.0398,master base
+2026-11-27 00:42:42,fal-ai/nano-banana/edit,master_uh_forge.png,0.0398,master pose
+2026-11-27 00:42:42,fal-ai/nano-banana/edit,master_uh_happy.png,0.0398,master pose
+2026-11-27 00:43:12,fal-ai/birefnet,owl_boy_base_sad.png,0.002,bg removal
+2026-11-27 00:43:12,fal-ai/birefnet,owl_boy_base_happy.png,0.002,bg removal
+2026-11-27 00:43:12,fal-ai/birefnet,owl_boy_base_wow.png,0.002,bg removal
+2026-11-27 00:43:12,fal-ai/birefnet,owl_boy_base_idle.png,0.002,bg removal
+2026-11-27 00:43:12,fal-ai/birefnet,owl_boy_base_worried.png,0.002,bg removal
+2026-11-27 00:43:13,fal-ai/birefnet,owl_girl_base_idle.png,0.002,bg removal
+2026-11-27 00:43:13,fal-ai/birefnet,owl_girl_base_happy.png,0.002,bg removal
+2026-11-27 00:43:13,fal-ai/birefnet,owl_girl_base_wow.png,0.002,bg removal
+2026-11-27 00:43:15,fal-ai/birefnet,owl_girl_base_worried.png,0.002,bg removal
+2026-11-27 00:43:15,fal-ai/birefnet,owl_girl_base_sad.png,0.002,bg removal
+2026-11-27 00:43:15,fal-ai/birefnet,owl_boy_skin_constellation_idle.png,0.002,bg removal
+2026-11-27 00:43:15,fal-ai/birefnet,owl_boy_skin_constellation_happy.png,0.002,bg removal
+2026-11-27 00:43:16,fal-ai/birefnet,owl_boy_skin_constellation_worried.png,0.002,bg removal
+2026-11-27 00:43:16,fal-ai/birefnet,owl_boy_skin_constellation_sad.png,0.002,bg removal
+2026-11-27 00:43:16,fal-ai/birefnet,owl_boy_skin_constellation_wow.png,0.002,bg removal
+2026-11-27 00:43:16,fal-ai/birefnet,owl_girl_skin_constellation_idle.png,0.002,bg removal
+2026-11-27 00:43:18,fal-ai/birefnet,owl_girl_skin_constellation_happy.png,0.002,bg removal
+2026-11-27 00:43:18,fal-ai/birefnet,owl_girl_skin_constellation_wow.png,0.002,bg removal
+2026-11-27 00:43:18,fal-ai/birefnet,owl_girl_skin_constellation_worried.png,0.002,bg removal
+2026-11-27 00:43:18,fal-ai/birefnet,owl_girl_skin_constellation_sad.png,0.002,bg removal
+2026-11-27 00:43:19,fal-ai/birefnet,owl_boy_ow_skin_snowy_idle.png,0.002,bg removal
+2026-11-27 00:43:19,fal-ai/birefnet,owl_boy_ow_skin_snowy_happy.png,0.002,bg removal
+2026-11-27 00:43:19,fal-ai/birefnet,owl_boy_ow_skin_snowy_wow.png,0.002,bg removal
+2026-11-27 00:43:19,fal-ai/birefnet,owl_boy_ow_skin_snowy_worried.png,0.002,bg removal
+2026-11-27 00:43:20,fal-ai/birefnet,owl_boy_ow_skin_snowy_sad.png,0.002,bg removal
+2026-11-27 00:43:21,fal-ai/birefnet,owl_girl_ow_skin_snowy_idle.png,0.002,bg removal
+2026-11-27 00:43:21,fal-ai/birefnet,owl_girl_ow_skin_snowy_happy.png,0.002,bg removal
+2026-11-27 00:43:21,fal-ai/birefnet,owl_girl_ow_skin_snowy_worried.png,0.002,bg removal
+2026-11-27 00:43:21,fal-ai/birefnet,owl_girl_ow_skin_snowy_wow.png,0.002,bg removal
+2026-11-27 00:43:22,fal-ai/birefnet,owl_girl_ow_skin_snowy_sad.png,0.002,bg removal
+2026-11-27 00:43:22,fal-ai/birefnet,axolotl_boy_base_idle.png,0.002,bg removal
+2026-11-27 00:43:22,fal-ai/birefnet,axolotl_boy_base_happy.png,0.002,bg removal
+2026-11-27 00:43:23,fal-ai/birefnet,axolotl_boy_base_wow.png,0.002,bg removal
+2026-11-27 00:43:24,fal-ai/birefnet,axolotl_boy_base_worried.png,0.002,bg removal
+2026-11-27 00:43:24,fal-ai/birefnet,axolotl_boy_base_sad.png,0.002,bg removal
+2026-11-27 00:43:24,fal-ai/birefnet,axolotl_girl_base_idle.png,0.002,bg removal
+2026-11-27 00:43:24,fal-ai/birefnet,axolotl_girl_base_happy.png,0.002,bg removal
+2026-11-27 00:43:25,fal-ai/birefnet,axolotl_girl_base_wow.png,0.002,bg removal
+2026-11-27 00:43:25,fal-ai/birefnet,axolotl_girl_base_worried.png,0.002,bg removal
+2026-11-27 00:43:25,fal-ai/birefnet,axolotl_girl_base_sad.png,0.002,bg removal
+2026-11-27 00:43:26,fal-ai/birefnet,axolotl_boy_skin_pearl_idle.png,0.002,bg removal
+2026-11-27 00:43:26,fal-ai/birefnet,axolotl_boy_skin_pearl_happy.png,0.002,bg removal
+2026-11-27 00:43:27,fal-ai/birefnet,axolotl_boy_skin_pearl_worried.png,0.002,bg removal
+2026-11-27 00:43:27,fal-ai/birefnet,axolotl_boy_skin_pearl_wow.png,0.002,bg removal
+2026-11-27 00:43:27,fal-ai/birefnet,axolotl_boy_skin_pearl_sad.png,0.002,bg removal
+2026-11-27 00:43:28,fal-ai/birefnet,axolotl_girl_skin_pearl_wow.png,0.002,bg removal
+2026-11-27 00:43:28,fal-ai/birefnet,axolotl_girl_skin_pearl_idle.png,0.002,bg removal
+2026-11-27 00:43:28,fal-ai/birefnet,axolotl_girl_skin_pearl_happy.png,0.002,bg removal
+2026-11-27 00:43:29,fal-ai/birefnet,axolotl_girl_skin_pearl_worried.png,0.002,bg removal
+2026-11-27 00:43:29,fal-ai/birefnet,axolotl_girl_skin_pearl_sad.png,0.002,bg removal
+2026-11-27 00:43:30,fal-ai/birefnet,axolotl_boy_skin_midnight_idle.png,0.002,bg removal
+2026-11-27 00:43:30,fal-ai/birefnet,axolotl_boy_skin_midnight_happy.png,0.002,bg removal
+2026-11-27 00:43:30,fal-ai/birefnet,axolotl_boy_skin_midnight_worried.png,0.002,bg removal
+2026-11-27 00:43:30,fal-ai/birefnet,axolotl_boy_skin_midnight_wow.png,0.002,bg removal
+2026-11-27 00:43:31,fal-ai/birefnet,axolotl_boy_skin_midnight_sad.png,0.002,bg removal
+2026-11-27 00:43:31,fal-ai/birefnet,axolotl_girl_skin_midnight_idle.png,0.002,bg removal
+2026-11-27 00:43:32,fal-ai/birefnet,axolotl_girl_skin_midnight_wow.png,0.002,bg removal
+2026-11-27 00:43:32,fal-ai/birefnet,axolotl_girl_skin_midnight_happy.png,0.002,bg removal
+2026-11-27 00:43:32,fal-ai/birefnet,axolotl_girl_skin_midnight_worried.png,0.002,bg removal
+2026-11-27 00:43:32,fal-ai/birefnet,axolotl_girl_skin_midnight_sad.png,0.002,bg removal
+2026-11-27 00:43:33,fal-ai/birefnet,puppy_boy_base_idle.png,0.002,bg removal
+2026-11-27 00:43:33,fal-ai/birefnet,puppy_boy_base_happy.png,0.002,bg removal
+2026-11-27 00:43:34,fal-ai/birefnet,puppy_boy_base_worried.png,0.002,bg removal
+2026-11-27 00:43:34,fal-ai/birefnet,puppy_boy_base_wow.png,0.002,bg removal
+2026-11-27 00:43:35,fal-ai/birefnet,puppy_boy_base_sad.png,0.002,bg removal
+2026-11-27 00:43:35,fal-ai/birefnet,puppy_girl_base_idle.png,0.002,bg removal
+2026-11-27 00:43:35,fal-ai/birefnet,puppy_girl_base_happy.png,0.002,bg removal
+2026-11-27 00:43:35,fal-ai/birefnet,puppy_girl_base_wow.png,0.002,bg removal
+2026-11-27 00:43:36,fal-ai/birefnet,puppy_girl_base_worried.png,0.002,bg removal
+2026-11-27 00:43:36,fal-ai/birefnet,puppy_boy_skin_moon_idle.png,0.002,bg removal
+2026-11-27 00:43:36,fal-ai/birefnet,puppy_girl_base_sad.png,0.002,bg removal
+2026-11-27 00:43:36,fal-ai/birefnet,puppy_boy_skin_moon_happy.png,0.002,bg removal
+2026-11-27 00:43:38,fal-ai/birefnet,puppy_boy_skin_moon_wow.png,0.002,bg removal
+2026-11-27 00:43:38,fal-ai/birefnet,puppy_boy_skin_moon_worried.png,0.002,bg removal
+2026-11-27 00:43:38,fal-ai/birefnet,puppy_boy_skin_moon_sad.png,0.002,bg removal
+2026-11-27 00:43:38,fal-ai/birefnet,puppy_girl_skin_moon_idle.png,0.002,bg removal
+2026-11-27 00:43:39,fal-ai/birefnet,puppy_girl_skin_moon_happy.png,0.002,bg removal
+2026-11-27 00:43:39,fal-ai/birefnet,puppy_girl_skin_moon_worried.png,0.002,bg removal
+2026-11-27 00:43:39,fal-ai/birefnet,puppy_girl_skin_moon_wow.png,0.002,bg removal
+2026-11-27 00:43:39,fal-ai/birefnet,puppy_girl_skin_moon_sad.png,0.002,bg removal
+2026-11-27 00:43:40,fal-ai/birefnet,puppy_boy_skin_gold_idle.png,0.002,bg removal
+2026-11-27 00:43:41,fal-ai/birefnet,puppy_boy_skin_gold_wow.png,0.002,bg removal
+2026-11-27 00:43:41,fal-ai/birefnet,puppy_boy_skin_gold_happy.png,0.002,bg removal
+2026-11-27 00:43:41,fal-ai/birefnet,puppy_boy_skin_gold_worried.png,0.002,bg removal
+2026-11-27 00:43:42,fal-ai/birefnet,puppy_boy_skin_gold_sad.png,0.002,bg removal
+2026-11-27 00:43:42,fal-ai/birefnet,puppy_girl_skin_gold_happy.png,0.002,bg removal
+2026-11-27 00:43:42,fal-ai/birefnet,puppy_girl_skin_gold_idle.png,0.002,bg removal
+2026-11-27 00:43:42,fal-ai/birefnet,puppy_girl_skin_gold_wow.png,0.002,bg removal
+2026-11-27 00:43:43,fal-ai/birefnet,puppy_girl_skin_gold_worried.png,0.002,bg removal
+2026-11-27 00:43:44,fal-ai/birefnet,puppy_girl_skin_gold_sad.png,0.002,bg removal
+2026-11-27 00:43:44,fal-ai/birefnet,puppy_boy_pu_skin_cotton_idle.png,0.002,bg removal
+2026-11-27 00:43:44,fal-ai/birefnet,puppy_boy_pu_skin_cotton_happy.png,0.002,bg removal
+2026-11-27 00:43:45,fal-ai/birefnet,puppy_boy_pu_skin_cotton_wow.png,0.002,bg removal
+2026-11-27 00:43:45,fal-ai/birefnet,puppy_boy_pu_skin_cotton_worried.png,0.002,bg removal
+2026-11-27 00:43:45,fal-ai/birefnet,puppy_boy_pu_skin_cotton_sad.png,0.002,bg removal
+2026-11-27 00:43:45,fal-ai/birefnet,puppy_girl_pu_skin_cotton_idle.png,0.002,bg removal
+2026-11-27 00:43:46,fal-ai/birefnet,puppy_girl_pu_skin_cotton_happy.png,0.002,bg removal
+2026-11-27 00:43:46,fal-ai/birefnet,puppy_girl_pu_skin_cotton_wow.png,0.002,bg removal
+2026-11-27 00:43:46,fal-ai/birefnet,puppy_girl_pu_skin_cotton_worried.png,0.002,bg removal
+2026-11-27 00:43:47,fal-ai/birefnet,puppy_girl_pu_skin_cotton_sad.png,0.002,bg removal
+2026-11-27 00:43:47,fal-ai/birefnet,kitten_boy_base_idle.png,0.002,bg removal
+2026-11-27 00:43:48,fal-ai/birefnet,kitten_boy_base_wow.png,0.002,bg removal
+2026-11-27 00:43:48,fal-ai/birefnet,kitten_boy_base_happy.png,0.002,bg removal
+2026-11-27 00:43:48,fal-ai/birefnet,kitten_boy_base_worried.png,0.002,bg removal
+2026-11-27 00:43:49,fal-ai/birefnet,kitten_boy_base_sad.png,0.002,bg removal
+2026-11-27 00:43:49,fal-ai/birefnet,kitten_girl_base_sad.png,0.002,bg removal
+2026-11-27 00:43:50,fal-ai/birefnet,kitten_boy_skin_mint_idle.png,0.002,bg removal
+2026-11-27 00:43:50,fal-ai/birefnet,kitten_boy_skin_mint_wow.png,0.002,bg removal
+2026-11-27 00:43:50,fal-ai/birefnet,kitten_boy_skin_mint_happy.png,0.002,bg removal
+2026-11-27 00:43:50,fal-ai/birefnet,kitten_boy_skin_mint_worried.png,0.002,bg removal
+2026-11-27 00:43:51,fal-ai/birefnet,kitten_boy_skin_mint_sad.png,0.002,bg removal
+2026-11-27 00:43:51,fal-ai/birefnet,kitten_girl_skin_mint_idle.png,0.002,bg removal
+2026-11-27 00:43:52,fal-ai/birefnet,kitten_girl_skin_mint_happy.png,0.002,bg removal
+2026-11-27 00:43:52,fal-ai/birefnet,kitten_girl_skin_mint_wow.png,0.002,bg removal
+2026-11-27 00:43:53,fal-ai/birefnet,kitten_girl_skin_mint_worried.png,0.002,bg removal
+2026-11-27 00:43:53,fal-ai/birefnet,kitten_girl_skin_mint_sad.png,0.002,bg removal
+2026-11-27 00:43:53,fal-ai/birefnet,kitten_boy_skin_moon_idle.png,0.002,bg removal
+2026-11-27 00:43:53,fal-ai/birefnet,kitten_boy_skin_moon_happy.png,0.002,bg removal
+2026-11-27 00:43:54,fal-ai/birefnet,kitten_boy_skin_moon_wow.png,0.002,bg removal
+2026-11-27 00:43:54,fal-ai/birefnet,kitten_boy_skin_moon_worried.png,0.002,bg removal
+2026-11-27 00:43:55,fal-ai/birefnet,kitten_boy_skin_moon_sad.png,0.002,bg removal
+2026-11-27 00:43:55,fal-ai/birefnet,kitten_girl_skin_moon_idle.png,0.002,bg removal
+2026-11-27 00:43:56,fal-ai/birefnet,kitten_girl_skin_moon_happy.png,0.002,bg removal
+2026-11-27 00:43:56,fal-ai/birefnet,kitten_girl_skin_moon_wow.png,0.002,bg removal
+2026-11-27 00:43:56,fal-ai/birefnet,kitten_girl_skin_moon_sad.png,0.002,bg removal
+2026-11-27 00:43:56,fal-ai/birefnet,kitten_girl_skin_moon_worried.png,0.002,bg removal
+2026-11-27 00:43:56,fal-ai/birefnet,master_uh_master_base_happy.png,0.002,bg removal
+2026-11-27 00:43:57,fal-ai/birefnet,master_uh_master_base_talk.png,0.002,bg removal
+2026-11-27 00:43:57,fal-ai/birefnet,master_uh_master_base_forge.png,0.002,bg removal
+2026-11-27 00:51:39,fal-ai/nano-banana/edit,kitten_girl_skin_moon_happy_r3.png,0.0398,fix points
+2026-11-27 00:51:39,fal-ai/nano-banana/edit,puppy_boy_skin_gold_happy_r2.png,0.0398,fix spots
+2026-11-27 00:51:53,fal-ai/birefnet,puppy_boy_pu_skin_cotton_wow.png,0.002,bg removal
+2026-11-27 00:51:53,fal-ai/birefnet,puppy_boy_skin_gold_happy.png,0.002,bg removal
+2026-11-27 00:51:53,fal-ai/birefnet,puppy_girl_pu_skin_cotton_wow.png,0.002,bg removal
+2026-11-27 00:51:53,fal-ai/birefnet,kitten_girl_skin_moon_happy.png,0.002,bg removal
