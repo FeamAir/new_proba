@@ -1,5 +1,7 @@
 extends RefCounted
-## Герои Cascado — совёнок, аксолотль, щенок и котик — и вещи гардероба. Всё рисуется кодом.
+## Герои Cascado — совёнок, аксолотль, щенок и котик — и вещи гардероба.
+## 0.18: по умолчанию герой и вещи — нарисованные картинки (scripts/hero_art.gd, переключатель HeroArt.enabled);
+## рисунок кодом ниже — запасной вариант (нет картинки) и для тестов.
 ## Использование: Hero.new().draw(canvas_item, "owl", центр, масштаб, наряд, время, react)
 ##   наряд — словарь слот -> id вещи (scripts/meta.gd), react — секунд с последнего касания.
 ## Герой нарисован в своих координатах: туловище около (0, 0), ширина ~200, ноги на y ≈ 115.
@@ -26,6 +28,8 @@ const Sets := preload("res://scripts/hero_sets.gd")
 const Magic := preload("res://scripts/hero_magic.gd")
 ## 0.12b: гардероб по героям — вещи каждого героя рисуются в своём файле (только под него)
 const Meta := preload("res://scripts/meta.gd")
+## 0.18: нарисованные герои и гардероб (картинки); переключатель — HeroArt.enabled
+const HeroArt := preload("res://scripts/hero_art.gd")
 const W := {
 	"owl": preload("res://scripts/wardrobe_owl.gd"),
 	"axolotl": preload("res://scripts/wardrobe_axolotl.gd"),
@@ -91,6 +95,8 @@ var _fur_t := 0.0
 var _fur_env := 0.0
 ## 0.17: глаза героя на панели уровня: >1 — распахнуты (испуг), <1 — полуопущены (грусть); 1 — как обычно
 var eye_k := 1.0
+## 0.18: «неподвижно» — без дыхания и покачивания (картонка 3D-дома рисуется один раз, дышит сам спрайт)
+var still := false
 
 
 # ---------- Объёмные сетки ----------
@@ -401,7 +407,12 @@ static func blink(t: float, phase := 0.0) -> float:
 # ---------- Главный вызов ----------
 
 ## head_only — для аватарки: без лапок и туловища (у совёнка — без лапок).
-func draw(target: CanvasItem, kind: String, pos: Vector2, sc: float, outfit: Dictionary, t: float, react := 99.0, head_only := false) -> void:
+## pose (0.18, нарисованный герой): idle / happy / wow / worried / sad; "" — idle, при касании — happy.
+func draw(target: CanvasItem, kind: String, pos: Vector2, sc: float, outfit: Dictionary, t: float, react := 99.0, head_only := false, pose := "") -> void:
+	if pose == "":
+		pose = "happy" if react >= 0.0 and react < REACT_TIME else "idle"
+	if not head_only and _draw_art(target, kind, pos, sc, outfit, t, react, pose):
+		return
 	ci = target
 	_rid = target.get_canvas_item()
 	_T = Transform2D.IDENTITY
@@ -439,7 +450,11 @@ func draw_avatar(target: CanvasItem, kind: String, c: Vector2, r: float, outfit:
 	target.draw_circle(c, r + 4, OUT, true, -1.0, true)
 	target.draw_circle(c, r, Color("#2A1A4F"), true, -1.0, true)
 	target.draw_circle(c + Vector2(0, r * 0.35), r * 0.7, Color(ring, 0.18), true, -1.0, true)
-	if kind == "axolotl":
+	var ap := HeroArt.plan(kind, outfit, "happy" if react >= 0.0 and react < REACT_TIME else "idle")
+	if not ap.is_empty():
+		# 0.18: нарисованный герой — верх картинки (между макушкой и шеей), обрезанный кругом
+		HeroArt.draw_avatar(target, ap, c, r - 1.0)
+	elif kind == "axolotl":
 		draw(target, kind, c + Vector2(0, r * 0.22), r / 118.0, outfit, t, react, true)
 	elif kind == "puppy" or kind == "kitten":
 		draw(target, kind, c + Vector2(0, r * 0.3), r / 118.0, outfit, t, react, true)
@@ -1939,7 +1954,15 @@ func _front_items(outfit: Dictionary, a: Dictionary, t: float) -> void:
 
 
 ## 0.12: мастер-филин Ух — старый филин-ювелир (экран кузницы, scripts/forge_ui.gd)
-func draw_master(target: CanvasItem, pos: Vector2, sc: float, t: float, react := 99.0) -> void:
+## 0.18: нарисованный Мастер Ух — master_<pose>: talk (обычно), happy (касание), forge (у наковальни).
+func draw_master(target: CanvasItem, pos: Vector2, sc: float, t: float, react := 99.0, pose := "talk") -> void:
+	if react >= 0.0 and react < REACT_TIME:
+		pose = "happy"
+	var mp := HeroArt.plan("master", {}, pose)
+	if not mp.is_empty():
+		HeroArt.draw_hero_tex(target, mp, _life(pos, sc, t, 0.6))
+		target.draw_set_transform(Vector2.ZERO)
+		return
 	draw(target, "owl", pos, sc, {"skin": "_elder", "eyes": "_master", "neck": "_apron"}, t, react)
 
 
@@ -2038,6 +2061,9 @@ func draw_item_icon(target: CanvasItem, id: String, slot: String, kind: String, 
 	_T = Transform2D.IDENTITY
 	_react = 99.0
 	var d := Meta.draw_key(id)
+	# 0.18: нарисованный значок вещи (icons/); родной окрас — аватарка нарисованного героя
+	if HeroArt.draw_icon(target, id, kind, c, size * 1.05, gender == "girl"):
+		return
 	if slot == "skin":
 		draw_avatar(target, kind, c, size * 0.36, lk.merged({"skin": id}), t, palette(kind, {"skin": id}).body)
 		return
@@ -2116,3 +2142,89 @@ func draw_item_icon(target: CanvasItem, id: String, slot: String, kind: String, 
 			_back_items({"back": id}, a, t, true)
 	_T = Transform2D.IDENTITY
 	ci.draw_set_transform(Vector2.ZERO)
+
+
+# ---------- 0.18: нарисованный герой (scripts/hero_art.gd) ----------
+
+## «Живость» нарисованного героя: дыхание (масштаб по вертикали) и покачивание вокруг лапок.
+## Координаты «героя кодом» -> target (pos — центр, как у героя кодом; лапки на y = 115).
+func _life(pos: Vector2, sc: float, t: float, k := 1.0) -> Transform2D:
+	var breath := 1.0 + 0.018 * sin(t * 2.2) * k
+	var sway := 0.02 * sin(t * 1.25) * k
+	if still:
+		breath = 1.0
+		sway = 0.0
+	var feet := pos + Vector2(0, HeroArt.FEET_Y * sc)
+	return Transform2D(sway, Vector2(sc, sc * breath), 0.0, feet) * Transform2D(0.0, Vector2(0, -HeroArt.FEET_Y))
+
+
+## Нарисовать нарисованного героя в наряде; false — картинки нет (рисуется кодом).
+func _draw_art(target: CanvasItem, kind: String, pos: Vector2, sc: float, outfit: Dictionary, t: float, react: float, pose: String) -> bool:
+	var p := HeroArt.plan(kind, outfit, pose)
+	if p.is_empty():
+		return false
+	ci = target
+	_rid = target.get_canvas_item()
+	_T = Transform2D.IDENTITY
+	_react = react
+	_head_only = false
+	_icon = false
+	_girl = p.girl
+	if kind == "puppy":
+		if outfit.get("aura", "") == "pu_hero":
+			pos.y -= sin(clampf(react / REACT_TIME, 0.0, 1.0) * PI) * 46.0 * sc
+		else:
+			pos.y -= absf(sin(clampf(react / REACT_TIME, 0.0, 1.0) * TAU)) * 14.0 * sc * react_env(react)
+	var L := _life(pos, sc, t)
+	var a := HeroArt.code_anchors(p)
+	var a_fx := a.duplicate()
+	a_fx.erase("back")  # плащи и мантии супер-наград — картинки; код рисует только частицы
+	var aura: String = outfit.get("aura", "")
+	var miss := {}
+	for id in p.missing:
+		miss[Meta.item(id).get("slot", "")] = id
+	# позади: частицы сияния, вещи без картинки (кодом), слои вещей
+	target.draw_set_transform_matrix(L)
+	_aura(aura, a_fx, t, false)
+	if not miss.is_empty():
+		target.draw_set_transform_matrix(L)
+		_back_items(miss, a, t, true)
+	HeroArt.draw_layers(target, p, "behind", L, t)
+	HeroArt.draw_hero_tex(target, p, L)
+	HeroArt.draw_layers(target, p, "front", L, t)
+	target.draw_set_transform_matrix(L)
+	_T = Transform2D.IDENTITY
+	_art_fx(p, outfit, a, t)
+	if not miss.is_empty():
+		target.draw_set_transform_matrix(L)
+		_front_items(miss, a, t)
+	target.draw_set_transform_matrix(L)
+	_aura(aura, a_fx, t, true)
+	Magic.rarity_fx(self, outfit, a, t)
+	_T = Transform2D.IDENTITY
+	target.draw_set_transform(Vector2.ZERO)
+	return true
+
+
+## Эффекты супер-наград, оставленные кодом, на нарисованном герое: сияющие глаза звездочёта,
+## светящиеся веснушки и жабры Сияния глубин, звёздный хвост котика (места — по anchors.json).
+func _art_fx(p: Dictionary, outfit: Dictionary, a: Dictionary, t: float) -> void:
+	match outfit.get("aura", ""):
+		"ow_stargazer":
+			W.owl._glow_eyes(self, a, t)
+		"ax_abyssal":
+			_gills = HeroArt.gills(p)
+			W.axolotl.glow_gills(self, t)
+			var Uc: float = p.Uc
+			for sx in [-1.0, 1.0]:
+				for i in 3:
+					var f: Vector2 = (a.eye_l + a.eye_r) * 0.5 + Vector2(sx * (0.5 + i * 0.07) * Uc, (0.24 - absf(i - 1) * 0.03) * Uc)
+					var tw := snappedf(0.5 + 0.5 * sin(t * 2.5 + i * 1.4 + sx), 0.25)
+					_glow(f, 6.0 + 4.0 * tw, 6.0 + 4.0 * tw, Color(0.4, 1.0, 0.95, snappedf(0.3 + 0.4 * tw, 0.05)))
+					_dot(f, 2.0, Color(0.8, 1.0, 1.0, 0.9))
+		"ki_starry":
+			var tl := HeroArt.kitten_tail(p)
+			if not tl.is_empty():
+				_tail_mid = tl[0]
+				_tail_w = tl[1]
+				W.kitten.star_tail(self, t)

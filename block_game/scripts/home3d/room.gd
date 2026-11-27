@@ -680,6 +680,10 @@ func _place_hero_sprite() -> void:
 		return
 	var sz := float(card_vp.size.y)
 	hero_sprite.position = hero_feet + Vector3(0, (HeroCard.FEET - 0.5) * sz * hero_sprite.pixel_size, 0)
+	if card:
+		# 0.18: нарисованный герой дышит масштабом спрайта (картинка собирается один раз)
+		card.sprite = hero_sprite
+		card.feet3d = hero_feet
 
 
 func hero_center() -> Vector3:

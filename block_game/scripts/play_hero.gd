@@ -6,14 +6,18 @@ extends RefCounted
 ##   поле почти заполнено — пугается: глаза шире, дрожит, капелька пота;
 ##   победа — праздник (прыжки, искорки);  поражение — грустит (глаза-«полуопущены», слезинка);
 ##   касание героя — его обычная реакция.
+## 0.18: нарисованный герой меняет позу (pose()): idle — обычно, happy — каскад ×3+ и победа,
+##   wow — каскад ×2, кристалл и касание, worried — поле почти полное, sad — поражение.
 ## Рисует на узле игры (scripts/game.gd), правила игры не меняет.
 ## Производительность: герой — много мелких деталей (~2–5 мс на кадр), поэтому он рисуется в свою
 ## картинку (SubViewport) 20–30 раз в секунду, а в кадре уровня рисуется одна готовая картинка.
 ## Без setup() (тесты без экрана) — рисуется прямо на узле игры.
 
 const Hero := preload("res://scripts/hero.gd")
+const HeroArt := preload("res://scripts/hero_art.gd")
 
 const JUMP_TIME := 1.4      # прыжок с искорками (каскад ×3+)
+const WOW_TIME := 1.1       # 0.18: «Ого!» после кристалла
 const FEAR_IN := 4.0        # как быстро появляется / уходит испуг (1/с)
 ## Масштаб героя относительно места (у аксолотля шире жабры — чуть меньше)
 const KIND_K := {"owl": 1.0, "axolotl": 0.92, "puppy": 1.0, "kitten": 1.0}
@@ -32,6 +36,7 @@ var t := 0.0
 var react := 99.0      # секунд с радости / касания
 var jump := 99.0       # секунд с прыжка (каскад ×3+)
 var jump_chain := 0
+var wow := 99.0        # 0.18: секунд с освобождённого кристалла
 var fear := 0.0        # 0..1 — сглаженная опасность
 var mood := ""         # "", "win", "lose"
 var mood_t := 0.0
@@ -115,6 +120,7 @@ func reset() -> void:
 	react = 99.0
 	jump = 99.0
 	jump_chain = 0
+	wow = 99.0
 	fear = 0.0
 	mood = ""
 	mood_t = 0.0
@@ -124,6 +130,7 @@ func update(delta: float, danger: bool) -> void:
 	t += delta
 	react += delta
 	jump += delta
+	wow += delta
 	mood_t += delta
 	fear = move_toward(fear, 1.0 if danger and mood == "" else 0.0, delta * FEAR_IN)
 	_refresh(delta)
@@ -139,6 +146,15 @@ func on_cascade(chain: int) -> void:
 		react = 0.0
 	elif chain == 2:
 		react = 0.0
+
+
+## 0.18: освобождён кристалл — «Ого!» (поза wow), если нет реакции сильнее
+func on_crystal() -> void:
+	if mood != "":
+		return
+	if wow >= WOW_TIME:
+		_since = 99.0
+	wow = 0.0
 
 
 func on_win() -> void:
@@ -179,6 +195,20 @@ func current() -> String:
 	return "idle"
 
 
+## 0.18: поза нарисованного героя по текущей реакции
+func pose() -> String:
+	match current():
+		"jump", "win":
+			return "happy"
+		"joy":
+			return "wow"
+		"fear":
+			return "worried"
+		"lose":
+			return "sad"
+	return "wow" if wow < WOW_TIME else "idle"
+
+
 ## Глаза: >1 — распахнуты (испуг), <1 — полуопущены (грусть).
 func eye_k() -> float:
 	match current():
@@ -194,8 +224,11 @@ func eye_k() -> float:
 ## Спутник (книжка, мячик, клубок...) летает справа — тогда герой меньше и левее, чтобы всё влезло.
 static func place(kind: String, outfit: Dictionary, r: Rect2) -> Array:
 	var comp: bool = outfit.get("companion", "") != ""
-	var sc: float = minf(r.size.x / (275.0 if comp else 235.0), r.size.y / 285.0) * KIND_K.get(kind, 1.0)
-	var feet := Vector2(r.position.x + 108.0 * sc + 2.0 if comp else r.get_center().x, r.end.y - 10.0)
+	# 0.18: у нарисованного героя спутник висит дальше вправо — место под него шире
+	var art := HeroArt.available(kind, outfit)
+	var cw := 310.0 if art else 275.0
+	var sc: float = minf(r.size.x / (cw if comp else 235.0), r.size.y / 285.0) * KIND_K.get(kind, 1.0)
+	var feet := Vector2(r.position.x + (100.0 if art else 108.0) * sc + 2.0 if comp else r.get_center().x, r.end.y - 10.0)
 	return [sc, feet]
 
 
@@ -226,7 +259,7 @@ func draw(ci: CanvasItem, kind: String, outfit: Dictionary, r: Rect2, with_base 
 	match cur:
 		"jump":
 			var k := clampf(jump / 0.6, 0.0, 1.0)
-			pos.y -= sin(k * PI) * 52.0 * sc
+			pos.y -= sin(k * PI) * 40.0 * sc
 			rv = jump
 		"joy":
 			rv = react
@@ -238,7 +271,7 @@ func draw(ci: CanvasItem, kind: String, outfit: Dictionary, r: Rect2, with_base 
 	if fear > 0.05:
 		pos.x += sin(t * 52.0) * 2.4 * fear  # дрожит
 	hero.eye_k = eye_k()
-	hero.draw(ci, kind, pos, sc, outfit, t, rv)
+	hero.draw(ci, kind, pos, sc, outfit, t, rv, false, pose())
 	hero.eye_k = 1.0
 	var head := pos + Vector2(0, -50.0 * sc)
 	if cur == "fear" or (fear > 0.3 and cur == "joy"):
@@ -246,7 +279,8 @@ func draw(ci: CanvasItem, kind: String, outfit: Dictionary, r: Rect2, with_base 
 	if cur == "lose":
 		var k2 := fmod(mood_t, 1.6) / 1.6
 		_drop(ci, pos + Vector2(-40.0, -10.0 + k2 * 40.0) * sc, 8.0 * sc / 0.75, Color(DROP, 0.95 * (1.0 - k2)))
-		_cloud(ci, pos + Vector2(sin(t * 1.3) * 6.0, -160.0) * sc, sc)
+		# 0.18: у нарисованного героя голова (и шапка) выше — тучка тоже
+		_cloud(ci, pos + Vector2(sin(t * 1.3) * 6.0, -190.0 if HeroArt.available(kind, outfit) else -160.0) * sc, sc)
 	if cur == "jump":
 		_sparkles(ci, pos + Vector2(0, -10.0 * sc), sc, jump / JUMP_TIME, 6 + mini(jump_chain - 3, 3) * 2)
 	elif cur == "win":

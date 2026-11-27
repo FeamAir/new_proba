@@ -690,6 +690,8 @@ func _check_lines() -> bool:
 	var mid_y: float = board_pos.y + (clearing_rows[0] + 0.5) * CELL
 	var px := board_pos.x + COLS * CELL / 2.0
 	play_hero.on_cascade(chain)  # 0.17: ×2 — радость, ×3+ — прыжок с искорками
+	if freed > 0:
+		play_hero.on_crystal()  # 0.18: кристалл — «Ого!» (поза wow)
 	juice.on_cascade(chain)  # 0.18: ×3+ — замедление, вспышка, «Супер!» / «Мега!»; вибрация
 	if chain >= 2:
 		_popup(I18n.t("cascade") % chain, Vector2(px, mid_y - 50), ACCENT, 46)
