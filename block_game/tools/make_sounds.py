@@ -1,6 +1,10 @@
 """Синтез всех звуков игры (стиль «стекло и кристаллы»). Запуск: python3 tools/make_sounds.py
-Результат: assets/sounds/*.wav и music.ogg (через ffmpeg). Сторонних ассетов нет."""
-import numpy as np, wave, os, subprocess
+Результат: assets/sounds/*.wav и music.ogg (через ffmpeg). Сторонних ассетов нет.
+Только некоторые звуки: python3 tools/make_sounds.py boom  (остальные файлы не перезаписываются).
+0.18: boom — взрыв кристалла-бомбы (свой генератор шума, прежние звуки и музыка не меняются)."""
+import numpy as np, wave, os, subprocess, sys
+
+ONLY = set(sys.argv[1:])
 
 SR = 44100
 OUT = os.path.join(os.path.dirname(__file__), "..", "assets", "sounds")
@@ -49,6 +53,8 @@ def echo(s, delay=0.11, fb=0.3, n=3):
     return out
 
 def save(name, s, vol=0.8):
+    if ONLY and name not in ONLY:
+        return
     s = s / (np.max(np.abs(s)) + 1e-9) * vol
     data = (s * 32767).astype(np.int16)
     with wave.open(os.path.join(OUT, name + ".wav"), "w") as w:
@@ -109,6 +115,19 @@ music = music[:n]
 music[:len(tail)] += tail  # хвост эха переносим в начало: петля без щелчка
 save("music", music, 0.6)
 wav = os.path.join(OUT, "music.wav")
-subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav, "-c:a", "libvorbis", "-q:a", "4", os.path.join(OUT, "music.ogg")], check=True)
-os.remove(wav)
+if os.path.exists(wav):
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav, "-c:a", "libvorbis", "-q:a", "4", os.path.join(OUT, "music.ogg")], check=True)
+    os.remove(wav)
+
+# 0.18: взрыв кристалла-бомбы — глухой удар, рокот, треск и звон осколков
+br = np.random.default_rng(18)
+d = 0.9
+x = t(d)
+thump = np.sin(2*np.pi*np.cumsum(np.geomspace(140, 38, len(x)))/SR) * env(len(x), a=0.002, d=0.22)
+rumble = lowpass(br.uniform(-1, 1, len(x)), 40) * env(len(x), a=0.004, d=0.3) * 2.5
+crack = br.uniform(-1, 1, int(SR*0.12)) * env(int(SR*0.12), a=0.001, d=0.03) * 0.8
+s = mix(thump, rumble, crack)
+for i in range(9):
+    s = place(s, bell(br.uniform(1800, 3600), 0.12, decay=0.03)*0.18, 0.06 + i*0.05)
+save("boom", echo(s, 0.09, 0.22, 2), 0.85)
 print("ok", sorted(os.listdir(OUT)))

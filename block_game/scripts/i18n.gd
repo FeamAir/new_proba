@@ -781,7 +781,7 @@ static func has(key: String) -> bool:
 
 ## Словари языка l: основной и блоки версий (0.15, 0.16, 0.17, 0.18, 0.18 «праздник каскада»)
 static func _dicts(l: String) -> Array:
-	return [STR.get(l, {}), STR_015.get(l, {}), STR_016.get(l, {}), STR_017_TOUR.get(l, {}), STR_018.get(l, {}), STR_018_FUN.get(l, {})]
+	return [STR.get(l, {}), STR_015.get(l, {}), STR_016.get(l, {}), STR_017_TOUR.get(l, {}), STR_018.get(l, {}), STR_018_FUN.get(l, {}), STR_018_GOALS.get(l, {})]
 
 
 ## Есть ли ключ в языке l (в основном словаре или в блоках версий)
@@ -1434,5 +1434,42 @@ const STR_018_FUN := {
 		"say_kitten_win_0_girl": "Я довольная, мур!",
 		"say_kitten_win_1": "Мяу, победа!",
 		"say_kitten_win_2": "Легко!",
+	},
+}
+
+
+# ---------- 0.18: новые цели и клетки (scripts/specials.gd, specials_draw.gd) ----------
+## Кристалл-бомба, «Спаси кротёнка», «Янтарный тайник»: надписи на поле, панель уровня,
+## итог поражения, награда за тайник, подсказки при первой встрече (scripts/tutorial.gd).
+const STR_018_GOALS := {
+	"en": {
+		"goal_pet_start": "Rescue the mole!",
+		"goal_chest_start": "Open the amber cache!",
+		"bomb_boom": "BOOM!",
+		"bomb_chain": "BOOM ×%d!",
+		"chest_open": "CACHE! +%d",
+		"panel_pet": "MOLE",
+		"panel_chest": "CACHE",
+		"lose_pet": "Mole to the bottom: %d",
+		"lose_chest": "Cache: %d of %d",
+		"win_chest": "cache +%d",
+		"tut_bomb": "Fire crystal: clear its row and it blasts 3×3!",
+		"tut_pet": "Rescue the mole: bring it down to the very bottom",
+		"tut_chest": "Clear both rows of the amber cache: shards inside",
+	},
+	"ru": {
+		"goal_pet_start": "Спаси кротёнка!",
+		"goal_chest_start": "Открой янтарный тайник!",
+		"bomb_boom": "БУМ!",
+		"bomb_chain": "БУМ ×%d!",
+		"chest_open": "ТАЙНИК! +%d",
+		"panel_pet": "КРОТЁНОК",
+		"panel_chest": "ТАЙНИК",
+		"lose_pet": "Кротёнку до дна: %d",
+		"lose_chest": "Тайник: %d из %d",
+		"win_chest": "тайник +%d",
+		"tut_bomb": "Огненный кристалл: очисти его ряд — взрыв 3×3!",
+		"tut_pet": "Спаси кротёнка: доведи его до самого дна",
+		"tut_chest": "Очисти оба ряда тайника — внутри осколки",
 	},
 }

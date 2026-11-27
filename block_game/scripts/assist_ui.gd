@@ -57,7 +57,7 @@ func draw_lose() -> void:
 	var y0 := H * 0.5 - 520.0
 	sc.avatar(Vector2(g.W / 2.0, y0 + 110), 70)
 	sc._shadow_text(g.W / 2.0, y0 + 250, I18n.t("lose_title"), 54, g.TEXT)
-	sc._ctext(g.W / 2.0, y0 + 312, I18n.t("lose_crystals") % [g.crystals_total - g.crystals_left, g.crystals_total], 34, g.CRYSTAL_COL)
+	sc._ctext(g.W / 2.0, y0 + 312, g.goal_status(), 34, g.CRYSTAL_COL)  # 0.18: кристаллы, кротёнок или тайник
 	# карточка помощи
 	var rows: int = g.assist.offer_rows(g.level)
 	var box := Rect2(50, y0 + 360, 620, 330)

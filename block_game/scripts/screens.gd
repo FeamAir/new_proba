@@ -12,6 +12,8 @@ const Catalog := preload("res://scripts/decor_catalog.gd")
 ## 0.12: редкости (рамки и блеск карточек)
 const Rarity := preload("res://scripts/rarity.gd")
 const Swipe := preload("res://scripts/swipe.gd")
+const SpecialsDraw := preload("res://scripts/specials_draw.gd")  # 0.18: значки новых целей на карте
+const Levels := preload("res://scripts/levels.gd")
 ## 0.18: первая карточка каждой вкладки вещей — «ничего» (у окраски — «Родной окрас»): снять вещь слота
 const BARE := "_bare"
 ## 0.12: вещей на странице гардероба (2 ряда по 3)
@@ -1422,6 +1424,8 @@ func draw_map() -> void:
 			for i in 3:
 				g._draw_star(c + Vector2((i - 1) * 26, 52), 11, i < s)
 			rects["lvl_%d" % n] = r
+		if n <= g.max_level:  # 0.18: значок цели (кротёнок, тайник) или огненного кристалла
+			SpecialsDraw.map_badge(g, c, Levels.params(n))
 		else:
 			g.draw_circle(c, 36, Color("#1A1230"), true, -1.0, true)
 			g.draw_arc(c, 36, 0, TAU, 36, Color("#3A2D5C"), 4.0, true)
@@ -1521,7 +1525,10 @@ func draw_win() -> void:
 			parts.append(I18n.t("win_stars") % rw.stars)
 		if rw.get("chains", 0) > 0:
 			parts.append(I18n.t("win_chains") % rw.chains)
-		_ctext(box.get_center().x, box.position.y + 136, " · ".join(parts), 24, g.DIM, box.size.x - 20)
+		if rw.get("chest", 0) > 0:  # 0.18: осколки из янтарного тайника
+			parts.append(I18n.t("win_chest") % rw.chest)
+		var line := " · ".join(parts)  # 0.18: с тайником строка длиннее — шрифт ужимается по ширине
+		_ctext(box.get_center().x, box.position.y + 136, line, g.assist_ui.fit(line, 24, box.size.x - 30) if g.assist_ui else 24, g.DIM, box.size.x - 20)
 		if rw.get("gift", 0) > 0:  # 0.9: подарок новичку — ярлык на нижнем краю
 			_badge(Vector2(box.get_center().x, box.end.y - 16), I18n.t("win_gift") % rw.gift, 22)
 		# летящие искорки
@@ -1547,7 +1554,7 @@ func draw_lose() -> void:
 	var y0 := H * 0.5 - 420.0
 	avatar(Vector2(g.W / 2.0, y0 + 110), 70)
 	_shadow_text(g.W / 2.0, y0 + 260, I18n.t("lose_title"), 54, g.TEXT)
-	_ctext(g.W / 2.0, y0 + 330, I18n.t("lose_crystals") % [g.crystals_total - g.crystals_left, g.crystals_total], 34, g.CRYSTAL_COL)
+	_ctext(g.W / 2.0, y0 + 330, g.goal_status(), 34, g.CRYSTAL_COL)  # 0.18: кристаллы, кротёнок или тайник
 	_ctext(g.W / 2.0, y0 + 380, I18n.t("lose_hint"), 28, g.DIM)
 	if g.state_time > 0.8:
 		_button("retry", Rect2(110, y0 + 450, 500, 120), I18n.t("retry"), true, 46)
