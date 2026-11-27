@@ -109,7 +109,10 @@ var crystals_total := 0
 var crystals_left := 0
 var pieces_used := 0
 var par := 0
-var speed_step := 1       # ступень скорости из таблицы уровней
+var speed_step := 1       # ступень скорости: база зала + разгон по времени (Levels.speed_at)
+var level_time := 0.0     # 0.18: секунды игры в уровне (без паузы, каскада и шагов обучения)
+var speed_base := 1       # 0.18: ступень на старте уровня (Levels.base_speed)
+var speed_ramp := 15.0    # 0.18: секунд на одну ступень разгона (Levels.ramp_sec / поле ramp)
 var level_override := {}  # для инструментов (робот-тестер): заменяет поля строки таблицы
 var last_stars := 0
 var score := 0
@@ -286,7 +289,10 @@ func start_level(n: int) -> void:
 	lr.seed = p.seed
 	var rows: int = clampi(p.rows, 1, 7)
 	crystals_total = clampi(p.c, 1, 8)
-	speed_step = p.speed
+	speed_base = p.base
+	speed_ramp = p.ramp
+	level_time = 0.0
+	speed_step = Levels.speed_at(speed_base, speed_ramp, 0.0)
 	for r in rows:
 		var y := ROWS - 1 - r
 		var holes: Array = []
@@ -377,6 +383,16 @@ func _pick_type(avoid: int) -> int:
 					return i
 				break
 	return 0
+
+
+## 0.18: разгон внутри уровня. Время идёт только в состоянии PLAYING (пауза, каскад
+## и шаги обучения не считаются); каждые speed_ramp секунд — ступень быстрее, до Levels.SPEED_CAP.
+func _tick_speed(delta: float) -> void:
+	level_time += delta
+	var s: int = Levels.speed_at(speed_base, speed_ramp, level_time)
+	if s > speed_step:
+		speed_step = s
+		_popup(I18n.t("faster"), board_pos + Vector2(COLS * CELL / 2.0, 3 * CELL), ACCENT, 34)
 
 
 func fall_interval() -> float:
@@ -701,6 +717,8 @@ func step(delta: float) -> void:
 		State.PLAYING:
 			if not has_piece:
 				return
+			if not tut.holds_fall():
+				_tick_speed(delta)
 			if fits(piece_cells, piece_pos + Vector2i(0, 1)):
 				lock_timer = 0.0
 				if tut.holds_fall():  # 0.9: пока на экране шаг обучения, фигура сама не падает

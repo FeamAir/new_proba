@@ -21,6 +21,7 @@ const STR := {
 	"en": {
 		# игра
 		"cascade": "CASCADE ×%d",
+		"faster": "FASTER!",
 		"crystal_one": "CRYSTAL!",
 		"crystal_many": "CRYSTALS ×%d",
 		"panel_next": "NEXT",
@@ -400,6 +401,7 @@ const STR := {
 	},
 	"ru": {
 		"cascade": "КАСКАД ×%d",
+		"faster": "БЫСТРЕЕ!",
 		"crystal_one": "КРИСТАЛЛ!",
 		"crystal_many": "КРИСТАЛЛЫ ×%d",
 		"panel_next": "ДАЛЕЕ",
