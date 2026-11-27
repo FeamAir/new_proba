@@ -24,6 +24,8 @@
    gender — если указан, слой только для этого облика ("boy"/"girl");
    poses  — поправки для поз: {"happy": {"dx":0.05, "dy":-0.1, "scale":1.1, "rot":-5}} (dx, dy в U, прибавляются
             к offset; scale умножает width; rot прибавляется).
+   Кроме того, fit.json -> pose_fix -> <герой> -> <поза> -> <anchor> — такая же поправка для ВСЕХ слоёв на этой
+   точке героя в этой позе (например, у котика в прыжке шея ниже). Сначала pose_fix, потом poses слоя.
 4. Порядок рисования: слои z="behind" (по order) -> герой -> слои z="front" (по order).
 """
 import os, sys, json
@@ -77,18 +79,19 @@ def layers_for(hero, items, gender="boy"):
     return out
 
 
-def place(L, anchors, W, H, pose):
+def place(L, anchors, W, H, pose, hero=""):
     """Где и каким размером рисовать слой: (центр-pivot в px героя, ширина px, поворот, flip)."""
     U = (anchors["neck"][1] - anchors["head"][1]) * H
     ax, ay = anchors[L["anchor"]]
     ox, oy = L.get("offset", [0, 0])
     w = L["width"]
     rot = L.get("rot", 0.0)
-    p = L.get("poses", {}).get(pose, {})
-    ox += p.get("dx", 0.0)
-    oy += p.get("dy", 0.0)
-    w *= p.get("scale", 1.0)
-    rot += p.get("rot", 0.0)
+    # общая поправка позы героя для всех вещей на этой точке (fit.json -> pose_fix), потом — поправка слоя
+    for p in (FIT.get("pose_fix", {}).get(hero, {}).get(pose, {}).get(L["anchor"], {}), L.get("poses", {}).get(pose, {})):
+        ox += p.get("dx", 0.0)
+        oy += p.get("dy", 0.0)
+        w *= p.get("scale", 1.0)
+        rot += p.get("rot", 0.0)
     return (ax * W + ox * U, ay * H + oy * U), w * U, rot, U
 
 
@@ -123,11 +126,11 @@ def compose(hero, pose="idle", items=(), gender="boy", skin=None, marks=False, m
     canvas = Image.new("RGBA", (W + 2 * mx, H + 2 * my), (0, 0, 0, 0))
     Ls = layers_for(hero, items, gender)
     for L in [L for L in Ls if L.get("z") == "behind"]:
-        (x, y), wp, rot, U = place(L, anchors, W, H, pose)
+        (x, y), wp, rot, U = place(L, anchors, W, H, pose, hero)
         draw_layer(canvas, L, hero, (x + mx, y + my), wp, rot, game)
     canvas.alpha_composite(himg, (mx, my))
     for L in [L for L in Ls if L.get("z") != "behind"]:
-        (x, y), wp, rot, U = place(L, anchors, W, H, pose)
+        (x, y), wp, rot, U = place(L, anchors, W, H, pose, hero)
         draw_layer(canvas, L, hero, (x + mx, y + my), wp, rot, game)
     if marks:
         d = ImageDraw.Draw(canvas)
