@@ -79,4 +79,8 @@ func draw(g, hero: Rect2, x_min: float) -> void:
 	g._rbox(r, col, 18)
 	var tip := Vector2(cx + 10.0, r.end.y)
 	g.draw_colored_polygon(PackedVector2Array([tip + Vector2(-12, -1), tip + Vector2(8, -1), tip + Vector2(-4, 16)]), col)
-	g.draw_string(g.font, Vector2(r.position.x, r.position.y + h / 2.0 + size * 0.36), text, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, int(size * pop), Color(0.16, 0.09, 0.3, a))
+	# 0.19: появление облачка — масштабом, шрифт одного размера (game.gd draw_text_k)
+	if g.has_method("draw_text_k"):
+		g.draw_text_k(Vector2(r.get_center().x, r.position.y + h / 2.0 + size * 0.36), text, size, pop, Color(0.16, 0.09, 0.3, a), true, g.draw_off)
+	else:
+		g.draw_string(g.font, Vector2(r.position.x, r.position.y + h / 2.0 + size * 0.36), text, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, size, Color(0.16, 0.09, 0.3, a))

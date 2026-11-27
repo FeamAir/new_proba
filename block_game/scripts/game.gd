@@ -99,6 +99,10 @@ enum State { SPLASH, HOME, PLAYING, PAUSED, CLEARING, SETTLE, WIN, LOSE, PICK_HE
 
 var state := State.SPLASH
 var state_time := 0.0
+## 0.19: из какого состояния уровня ушли в паузу (PLAYING, CLEARING или SETTLE) — туда и вернёмся.
+## Раньше «Продолжить» всегда ставило PLAYING: пауза жестом «Назад» во время каскада оставляла
+## игру в PLAYING без фигуры — фигура не появлялась, ввод не принимался («зависание» 0.18).
+var paused_from := State.PLAYING
 var board: Array = []
 var fall_dist: Array = []
 var piece_ids: Array = []  # номер уложенной фигуры для каждой клетки (0 — камень/кристалл/пусто)
@@ -195,6 +199,7 @@ var repeat_left := {}
 var board_touch := {}
 var sb := StyleBoxFlat.new()
 var font: Font
+var draw_off := Vector2.ZERO  # 0.19: сдвиг тряски, под которым сейчас рисуется панель (для draw_text_k)
 
 
 func _init() -> void:
@@ -385,6 +390,7 @@ func start_level(n: int) -> void:
 	say.reset()
 	owl.reset()
 	_snapped = false
+	paused_from = State.PLAYING
 	tut.on_start(self)
 	if tut.wants_first_piece(n):
 		next_type = Tutorial.FIRST_PIECE
@@ -458,12 +464,51 @@ func in_danger() -> bool:
 
 
 func _set_state(s: State) -> void:
+	if s == State.PAUSED and state in [State.PLAYING, State.CLEARING, State.SETTLE]:
+		paused_from = state  # 0.19: продолжить — в то же состояние (каскад доиграется)
+		held.clear()  # палец, державший кнопку, после паузы (или сворачивания) уже не держит её
+		repeat_left.clear()
+		board_touch.clear()
 	if s != State.HOME and decor_ui and decor_ui.active:
 		decor_ui.active = false  # 0.15: ушли с экрана «Дом» — режим украшения закрывается
 		decor_ui.tryon.clear()
 		decor_ui.spot = ""
 	state = s
 	state_time = 0.0
+
+
+## 0.19: пауза в уровне (кнопка, «Назад», сворачивание): из игры и из анимации каскада.
+func pause_game() -> bool:
+	if state not in [State.PLAYING, State.CLEARING, State.SETTLE]:
+		return false
+	_set_state(State.PAUSED)
+	return true
+
+
+## 0.19: снять паузу — вернуться туда, откуда ушли: к фигуре или в недоигранный каскад.
+func resume_game() -> void:
+	if state != State.PAUSED:
+		return
+	var s := paused_from
+	paused_from = State.PLAYING
+	if s == State.CLEARING and clearing_rows.is_empty():
+		s = State.PLAYING  # каскад уже не идёт (снят отменой, новой попыткой) — шаг ниже разберётся
+	var keep_clear := clear_timer
+	var keep_settle := settle_timer
+	_set_state(s)
+	clear_timer = keep_clear
+	settle_timer = keep_settle
+
+
+## 0.19: страховка от «замёрзшей» игры: PLAYING без фигуры (так не должно быть: после фиксации
+## фигуры — каскад, новая фигура или итог). Доиграть очистку, осыпание и дать новую фигуру.
+func _recover_flow() -> void:
+	if not clearing_rows.is_empty():
+		_set_state(State.CLEARING)
+		return
+	fall_dist.fill(0)
+	if not _check_lines():
+		_after_chain()
 
 
 # ---------- Фигура ----------
@@ -854,6 +899,7 @@ func step(delta: float) -> void:
 				go_home()
 		State.PLAYING:
 			if not has_piece:
+				_recover_flow()  # 0.19: не «замерзать» без фигуры
 				return
 			if not tut.holds_fall():
 				_tick_speed(delta)
@@ -1038,8 +1084,7 @@ func _process(delta: float) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
-		if state == State.PLAYING:
-			_set_state(State.PAUSED)
+		pause_game()  # 0.19: и во время каскада — продолжится с того же места
 	elif what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		if notice_ui and notice_ui.active():
 			notice_ui.back()
@@ -1052,7 +1097,7 @@ func _notification(what: int) -> void:
 			return
 		match state:
 			State.PLAYING, State.CLEARING, State.SETTLE:
-				_set_state(State.PAUSED)
+				pause_game()
 			State.WARDROBE:
 				if not screens.cancel_try():  # сначала снимается примерка
 					go_home()
@@ -1098,10 +1143,10 @@ func _key(e: InputEventKey) -> void:
 		KEY_SPACE: _press("hard")
 		KEY_Z, KEY_BACKSPACE: undo_piece()  # 0.18: «Совиное время» с клавиатуры
 		KEY_P, KEY_ESCAPE:
-			if state == State.PLAYING:
-				_set_state(State.PAUSED)
-			elif state == State.PAUSED:
-				_set_state(State.PLAYING)
+			if state == State.PAUSED:
+				resume_game()
+			else:
+				pause_game()
 		KEY_ENTER:
 			if state == State.HOME:
 				start_level(max_level)
@@ -1176,9 +1221,8 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 	if tut.on_tap(self, pos):  # 0.9: шаг-пояснение обучения закрывается касанием
 		return
 	if pause_rect.grow(12).has_point(pos):
-		if state == State.PLAYING:
+		if pause_game():  # 0.19: и во время каскада
 			play("pause")
-			_set_state(State.PAUSED)
 		return
 	if owl.rect.grow(12).has_point(pos):
 		undo_piece()  # 0.18: «Совиное время»; во время каскада и после итога — не срабатывает
@@ -1202,7 +1246,7 @@ func _pause_menu_tap(pos: Vector2) -> void:
 		if menu_buttons[n].has_point(pos):
 			play("click")
 			match n:
-				"resume": _set_state(State.PLAYING)
+				"resume": resume_game()
 				"music":
 					music_on = not music_on
 					_update_music()
@@ -1346,7 +1390,9 @@ func _draw() -> void:
 	draw_set_transform(off + z[1] * (1.0 - z[0]), 0.0, Vector2(z[0], z[0]))
 	_draw_board()
 	draw_set_transform(off)
+	draw_off = off
 	_draw_panel()
+	draw_off = Vector2.ZERO
 	draw_set_transform(Vector2.ZERO)
 	_draw_controls()
 	_draw_effects()
@@ -1559,7 +1605,8 @@ func _draw_panel() -> void:
 		var cs := 56.0 * (1.0 + 0.22 * jb)
 		_draw_block(Vector2(panel_x - 6 + 28, y + 38) - Vector2(cs, cs) / 2.0 - Vector2(0, 10 * jb), cs, CRYSTAL)
 		var got := maxi(0, crystals_total - crystals_left - juice.in_flight())
-		draw_string(font, Vector2(panel_x + 52, y + 52 - 8 * jb), "%d/%d" % [got, crystals_total], HORIZONTAL_ALIGNMENT_LEFT, pw - 52, int(access.fs(38) * (1.0 + 0.2 * jb)), CRYSTAL_COL)
+		var cbase := ceili(access.fs(38) * 1.2)  # 0.19: «подпрыгивание» — масштабом, не размером шрифта
+		draw_text_k(Vector2(panel_x + 52, y + 52 - 8 * jb), "%d/%d" % [got, crystals_total], cbase, access.fs(38) * (1.0 + 0.2 * jb) / cbase, CRYSTAL_COL, false, draw_off)
 		if chest_total > 0:  # 0.18: бонусный тайник — значок справа от счётчика
 			SpecialsDraw.chest_icon(self, Vector2(panel_x + pw - 14, y + 36), 32, chest_open)
 	else:
@@ -1573,7 +1620,10 @@ func _draw_panel() -> void:
 	for i in stats.size():
 		sy = y + 104.0 + i * step_y
 		draw_string(font, Vector2(panel_x, sy), stats[i][0], HORIZONTAL_ALIGNMENT_LEFT, pw, lab, DIM)
-		draw_string(font, Vector2(panel_x, sy + val + 2), stats[i][1], HORIZONTAL_ALIGNMENT_LEFT, pw, int(stats[i][2]), ACCENT if i == 0 else TEXT)
+		if i == 0:  # 0.19: счёт «подпрыгивает» масштабом (один размер шрифта)
+			draw_text_k(Vector2(panel_x, sy + val + 2), stats[i][1], ceili(val * 1.25), stats[i][2] / ceili(val * 1.25), ACCENT, false, draw_off)
+		else:
+			draw_string(font, Vector2(panel_x, sy + val + 2), stats[i][1], HORIZONTAL_ALIGNMENT_LEFT, pw, int(stats[i][2]), TEXT)
 	# 0.18: под числом фигур — «до 3 звёзд» (звёздочки и сколько фигур ещё можно)
 	var gy := sy + val + 2.0 + access.fs(24) + 12.0
 	var gh: float = StarGoal.draw(self, panel_x, gy, pw, access.fs(24))
@@ -1648,12 +1698,27 @@ func _draw_effects() -> void:
 		var sc: float = 0.6 + minf(age / 0.12, 1.0) * 0.55
 		if age > 0.12:
 			sc = 1.15 - minf((age - 0.12) / 0.1, 1.0) * 0.15
-		var size := int(p.size * sc * (Access.TEXT_K if access.big else 1.0))
+		var tk: float = p.size * (Access.TEXT_K if access.big else 1.0)
+		var base := ceili(tk * 1.15)  # 0.19: один размер шрифта на надпись, «прыжок» — масштабом
 		var a: float = clampf(p.life / 0.4, 0.0, 1.0)
-		var pos := Vector2(0, p.p.y)
+		var pos := Vector2(board_pos.x + COLS * CELL / 2.0, p.p.y)
 		for o in [Vector2(-3, 0), Vector2(3, 0), Vector2(0, -3), Vector2(0, 3)]:
-			draw_string(font, pos + o, p.text, HORIZONTAL_ALIGNMENT_CENTER, board_pos.x * 2 + COLS * CELL, size, Color(0.07, 0.04, 0.14, a))
-		draw_string(font, pos, p.text, HORIZONTAL_ALIGNMENT_CENTER, board_pos.x * 2 + COLS * CELL, size, Color(p.col, a))
+			draw_text_k(pos + o, p.text, base, tk * sc / base, Color(0.07, 0.04, 0.14, a))
+		draw_text_k(pos, p.text, base, tk * sc / base, Color(p.col, a))
+
+
+## 0.19: надпись «прыгающего» размера — шрифт одного размера base, а размер меняется масштабом k.
+## Каждый новый размер шрифта — новые картинки букв в памяти и на видеокарте (кэш шрифта не
+## очищается, первая отрисовка размера — растеризация букв). Надпись «Супер!», плавно меняющая
+## размер 48→115, оставляла до ~110 МБ и подтормаживала кадры. at — точка начала строки по базовой
+## линии (center — середина строки); origin — сдвиг, под которым сейчас рисуют (тряска панели).
+func draw_text_k(at: Vector2, text: String, base: int, k: float, col: Color, center := true, origin := Vector2.ZERO) -> void:
+	var x := 0.0
+	if center:
+		x = -font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, base).x / 2.0
+	draw_set_transform(origin + at, 0.0, Vector2(k, k))
+	draw_string(font, Vector2(x, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, base, col)
+	draw_set_transform(origin)
 
 
 func _draw_star(c: Vector2, r: float, filled: bool) -> void:

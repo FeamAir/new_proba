@@ -16,6 +16,7 @@ const BANNER_TIME := 1.1
 const FLY_TIME := 0.6       # полёт кристалла к счётчику
 const ZOOM_TIME := 0.7      # приближение на последнем кристалле
 const ZOOM_K := 0.05
+const BANNER_FONT := 116    # 0.19: размер шрифта надписи (наибольший в анимации: 96 × 1,2)
 const STEP_SEMITONES := 2.0  # combo1..5 сделаны лестницей через тон (tools/make_sounds.py)
 const VIBE_DROP := 20       # мс вибрации на сброс
 const VIBE_CASCADE := 35    # мс на каскад (+10 мс за звено)
@@ -180,10 +181,11 @@ func draw() -> void:
 		if age > 0.14:
 			sc = 1.2 - minf((age - 0.14) / 0.12, 1.0) * 0.2
 		var a := clampf((BANNER_TIME - age) / 0.3, 0.0, 1.0)
-		var size := int(96 * sc)
-		var w: float = g.board_pos.x * 2 + bsize.x
-		var y: float = g.board_pos.y + bsize.y * 0.36
+		# 0.19: шрифт одного размера BANNER_FONT, «прыжок» надписи — масштабом (game.gd draw_text_k)
+		var size := 96.0 * sc
+		var k := size / BANNER_FONT
+		var c := Vector2(g.board_pos.x + bsize.x / 2.0, g.board_pos.y + bsize.y * 0.36)
 		for o in [Vector2(-5, 0), Vector2(5, 0), Vector2(0, -5), Vector2(0, 5), Vector2(4, 6)]:
-			g.draw_string(g.font, Vector2(0, y) + o, banner, HORIZONTAL_ALIGNMENT_CENTER, w, size, Color(0.07, 0.04, 0.14, a))
-		g.draw_string(g.font, Vector2(0, y), banner, HORIZONTAL_ALIGNMENT_CENTER, w, size, Color(banner_col, a))
-		g.draw_string(g.font, Vector2(0, y - size * 0.06), banner, HORIZONTAL_ALIGNMENT_CENTER, w, size, Color(1, 1, 1, 0.25 * a))
+			g.draw_text_k(c + o, banner, BANNER_FONT, k, Color(0.07, 0.04, 0.14, a))
+		g.draw_text_k(c, banner, BANNER_FONT, k, Color(banner_col, a))
+		g.draw_text_k(c - Vector2(0, size * 0.06), banner, BANNER_FONT, k, Color(1, 1, 1, 0.25 * a))

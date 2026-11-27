@@ -20,6 +20,14 @@ godot --headless --path block_game -s tools/level_bot.gd -- --levels=1-100 --gam
 ```
 godot --headless --path block_game -s tests/test_logic.gd
 ```
+«Долгий прогон» (0.19, `tools/soak_bot.gd`): робот играет уровни 1–15 и всё время мешает игре —
+пауза, «Назад», сворачивание, отмена, меню — и следит, чтобы игра не «замерзала», а время кадра,
+память и число объектов не росли. В тестах он идёт коротко (7 минут игрового времени), долго — так:
+```
+godot --headless --path block_game -s tests/test_v019_soak.gd -- --soak-sec=1200 --seed=7
+```
+(`--k=1` — рисовать каждый кадр, как на телефоне; медленнее.)
+
 Звуки пересоздаются командой `python3 tools/make_sounds.py`, значки и заставка — `node tools/icons.cjs`.
 
 ## Что есть (версия 0.2)

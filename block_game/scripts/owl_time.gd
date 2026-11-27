@@ -12,7 +12,7 @@ extends RefCounted
 const I18n := preload("res://scripts/i18n.gd")
 
 ## Переменные game.gd, которые отмена не трогает
-const SKIP := ["state", "state_time", "level", "max_level", "stars", "level_override", "last_stars", "last_reward",
+const SKIP := ["state", "state_time", "paused_from", "draw_off", "level", "max_level", "stars", "level_override", "last_stars", "last_reward",
 	"particles", "popups", "motes", "shake", "score_bump", "t_total", "shown_score",
 	"music_on", "sfx_on", "sfx", "players", "music_player", "H", "board_pos", "panel_x", "buttons",
 	"pause_rect", "menu_buttons", "held", "repeat_left", "board_touch", "font", "sb",
@@ -124,9 +124,10 @@ func draw(g) -> void:
 		var y: float = g.board_pos.y + g.ROWS * g.CELL * 0.3
 		var w: float = g.board_pos.x * 2 + g.COLS * g.CELL
 		hourglass(g, Vector2(w / 2.0, y - size - 50), 2.2, ang, a, 1.0 - k)
+		var tc := Vector2(g.board_pos.x + g.COLS * g.CELL / 2.0, y)  # 0.19: шрифт 56, рост — масштабом
 		for o in [Vector2(-4, 0), Vector2(4, 0), Vector2(0, -4), Vector2(0, 4)]:
-			g.draw_string(g.font, Vector2(0, y) + o, I18n.t("owl_time"), HORIZONTAL_ALIGNMENT_CENTER, w, size, Color(0.07, 0.04, 0.14, a))
-		g.draw_string(g.font, Vector2(0, y), I18n.t("owl_time"), HORIZONTAL_ALIGNMENT_CENTER, w, size, Color(g.CRYSTAL_COL, a))
+			g.draw_text_k(tc + o, I18n.t("owl_time"), 56, sc, Color(0.07, 0.04, 0.14, a))
+		g.draw_text_k(tc, I18n.t("owl_time"), 56, sc, Color(g.CRYSTAL_COL, a))
 	if wants_hint(g):
 		var r := Rect2(minf(rect.position.x, g.W - 316.0), rect.end.y + 14, 300, 58)
 		var a2 := clampf(hint_t / 0.3, 0.0, 1.0)
