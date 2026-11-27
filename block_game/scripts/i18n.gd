@@ -1298,7 +1298,7 @@ const STR_017_TOUR := {
 
 # ---------- 0.18: «Родной окрас», снять вещь, полка кубков ----------
 ## card_natural — карточка слота «Окраска» (вернуть прежний вид), card_bare — карточка «ничего» в других слотах;
-## shelf_* — кнопки и подсказка у полки кубков в 3D-доме и на полке 2D.
+## shelf_* — кнопки и подсказка у полки кубков в 3D-доме (обзор от первого лица).
 const STR_018 := {
 	"en": {
 		"card_natural": "Natural look",
@@ -1307,9 +1307,9 @@ const STR_018 := {
 		"card_take_off": "Take off",
 		"card_restore": "Restore",
 		"natural_back": "Natural look is back",
-		"shelf_all": "Whole shelf",
+		"shelf_center": "Center",
 		"shelf_close": "Close",
-		"shelf_hint": "Swipe for the next trophy",
+		"shelf_hint": "Drag to look around",
 	},
 	"ru": {
 		"card_natural": "Родной окрас",
@@ -1318,8 +1318,8 @@ const STR_018 := {
 		"card_take_off": "Снять",
 		"card_restore": "Вернуть",
 		"natural_back": "Родной окрас вернулся",
-		"shelf_all": "Вся полка",
+		"shelf_center": "Прямо",
 		"shelf_close": "Закрыть",
-		"shelf_hint": "Листай пальцем — соседний кубок",
+		"shelf_hint": "Веди пальцем — осматривайся",
 	},
 }

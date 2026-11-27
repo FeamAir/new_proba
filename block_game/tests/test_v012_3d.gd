@@ -279,7 +279,9 @@ func _test_screen(gm) -> void:
 	for i in 6:
 		gm._touch_drag(0, Vector2(360 - i * 30, 560), Vector2(-30, 0))
 	gm._touch_up(0, Vector2(180, 560))
-	check(absf(h.room.cam.yaw - yaw0) > 0.3, "палец по сцене крутит камеру")
+	# 0.18: если камера уже у полки (показ новых кубков), палец поворачивает «голову» — обзор от первого лица
+	var turned: bool = absf(h.room.cam.look_yaw) > 0.3 if h.room.cam.look_mode else absf(h.room.cam.yaw - yaw0) > 0.3
+	check(turned, "палец по сцене крутит камеру")
 	gm.meta.set_hero("owl")
 
 

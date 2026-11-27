@@ -6,9 +6,9 @@ extends RefCounted
 ##     в запасном 2D-доме открывается полка славы с 2D-кубками; подпись, когда камера у кубка или у полки;
 ##   * запасной 2D-дом: при возвращении с новым кубком полка открывается сама (один раз).
 ## Рисунки кубков — scripts/trophies.gd; данные (какие кубки есть, даты) — scripts/meta.gd.
-## 0.18: у полки в 3D — стрелки ◀ ▶ (соседний кубок), «Вся полка», «Закрыть»; свайп пальцем — соседний кубок,
-##   щипок — вся полка / обратно к кубку; тап мимо кубков из режима полки не выводит.
-##   На полке 2D — стрелки в подписи и свайп по полке (тап — при отпускании пальца).
+## 0.18: у полки в 3D — обзор от первого лица: палец поворачивает «голову» (scripts/home3d/orbit_camera.gd),
+##   тап по кубку — его название в подписи, тап мимо из режима полки не выводит; кнопки «Прямо» (взгляд в
+##   середину полки) и «Закрыть». На полке 2D — стрелки в подписи и свайп по полке (тап — при отпускании пальца).
 
 const Meta := preload("res://scripts/meta.gd")
 const I18n := preload("res://scripts/i18n.gd")
@@ -170,7 +170,7 @@ func draw_home() -> void:
 	_ctext(r.get_center().x, r.end.y - 9, "%d/%d" % [cnt, Meta.HALL_COUNT], 20, GOLD if cnt > 0 else g.TEXT, r.size.x)
 	if in3d:
 		_caption_3d(h)
-		if (h.trophy_focus > 0 or h.shelf_focus) and not h.revealing():
+		if h.shelf_focus and not h.revealing():
 			_shelf_controls(h)
 	if panel_open:
 		_draw_panel()
@@ -193,59 +193,45 @@ func _caption_3d(h) -> void:
 			_ctext(r.get_center().x, r.position.y + 46, I18n.t("trophy_shelf"), 32, Color(GOLD, a), r.size.x)
 			_ctext(r.get_center().x, r.position.y + 90, "%d / %d" % [Meta.trophy_count(g.max_level), Meta.HALL_COUNT], 34, Color(g.TEXT, a), r.size.x)
 		return
+	r.size.y = 98  # 0.18: в обзоре полки подпись ниже — больше места для полки
 	if n > 0:
 		var have: bool = Meta.trophy_count(g.max_level) >= n
 		_cap_box(r, 1.0, Trophies.glow_color(n) if have else Color(0.6, 0.6, 0.8))
 		var nm := Meta.trophy_name(n)
-		_ctext(r.get_center().x, r.position.y + 48, nm, _fit(nm, r.size.x - 30, 36), GOLD if have else Color(0.85, 0.85, 0.95), r.size.x)
+		_ctext(r.get_center().x, r.position.y + 42, nm, _fit(nm, r.size.x - 30, 36), GOLD if have else Color(0.85, 0.85, 0.95), r.size.x)
 		var sub := ""
 		if have:
 			sub = "%s · %s" % [Meta.hall_name(n - 1), g.meta.trophy_done_text(n)]
 		else:
 			sub = I18n.t("trophy_locked") % n
-		_ctext(r.get_center().x, r.position.y + 90, sub, _fit(sub, r.size.x - 30, 25), g.TEXT, r.size.x)
+		_ctext(r.get_center().x, r.position.y + 80, sub, _fit(sub, r.size.x - 30, 25), g.TEXT, r.size.x)
 	elif h.shelf_focus:
 		_cap_box(r, 1.0, GOLD)
-		_ctext(r.get_center().x, r.position.y + 48, I18n.t("trophy_shelf"), 36, GOLD, r.size.x)
+		_ctext(r.get_center().x, r.position.y + 42, I18n.t("trophy_shelf"), 36, GOLD, r.size.x)
 		var sub := "%d / %d · %s" % [Meta.trophy_count(g.max_level), Meta.HALL_COUNT, I18n.t("trophy_tap")]
-		_ctext(r.get_center().x, r.position.y + 90, sub, _fit(sub, r.size.x - 30, 25), g.TEXT, r.size.x)
+		_ctext(r.get_center().x, r.position.y + 80, sub, _fit(sub, r.size.x - 30, 25), g.TEXT, r.size.x)
 
 
-## 0.18: кнопки у полки в 3D: стрелки по бокам (у кубка), под подписью — «Вся полка» и «Закрыть»
+## 0.18: кнопки у полки в 3D под подписью: «Прямо» и «Закрыть»; пока игрок не повернул голову — подсказка
 func _shelf_controls(h) -> void:
-	var at_trophy: bool = h.trophy_focus > 0
-	if at_trophy:
-		for k in 2:
-			var name: String = ["sh_prev", "sh_next"][k]
-			var r: Rect2 = shelf_rects()[name]
-			rects[name] = r
-			g._rbox(r, Color(0.1, 0.06, 0.2, 0.78), 26)
-			g.draw_polyline(_rr(r.grow(-1), 25), Color(GOLD, 0.5), 2.0, true)
-			var c := r.get_center()
-			var sx := -1.0 if k == 0 else 1.0
-			g.draw_colored_polygon(PackedVector2Array([c + Vector2(sx * 20, 0), c + Vector2(-sx * 12, -22), c + Vector2(-sx * 12, 22)]), GOLD)
-		var ar: Rect2 = shelf_rects()["sh_all"]
-		rects["sh_all"] = ar
-		_pill_button(ar, I18n.t("shelf_all"))
+	var R := shelf_rects()
+	rects["sh_center"] = R.sh_center
+	_pill_button(R.sh_center, I18n.t("shelf_center"))
+	rects["sh_close"] = R.sh_close
+	_pill_button(R.sh_close, "✕  " + I18n.t("shelf_close"))
+	if not h.room.cam.look_used:
 		var hint := I18n.t("shelf_hint")
 		var hfs := _fit(hint, g.W - 120, 23)
 		var hw: float = g.font.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, hfs).x + 36.0
-		g._rbox(Rect2(g.W / 2.0 - hw / 2.0, 466, hw, 32), Color(PANEL, 0.7), 16)
-		_ctext(g.W / 2.0, 489, hint, hfs, Color(g.TEXT, 0.9), g.W)
-	var cr: Rect2 = shelf_rects()["sh_close" if at_trophy else "sh_close_c"]
-	rects["sh_close"] = cr
-	_pill_button(cr, "✕  " + I18n.t("shelf_close"))
+		g._rbox(Rect2(g.W / 2.0 - hw / 2.0, 432, hw, 30), Color(PANEL, 0.7), 15)
+		_ctext(g.W / 2.0, 454, hint, hfs, Color(g.TEXT, 0.9), g.W)
 
 
 ## Где кнопки полки 3D (для рисования, касаний и тестов)
 func shelf_rects() -> Dictionary:
-	var y: float = g.H * 0.5 - 70.0
 	return {
-		"sh_prev": Rect2(12, y, 92, 140),
-		"sh_next": Rect2(g.W - 104, y, 92, 140),
-		"sh_all": Rect2(84, 390, 320, 66),
-		"sh_close": Rect2(416, 390, 220, 66),
-		"sh_close_c": Rect2(g.W / 2.0 - 120, 390, 240, 66),
+		"sh_center": Rect2(84, 370, 290, 56),
+		"sh_close": Rect2(386, 370, 250, 56),
 	}
 
 
@@ -260,18 +246,11 @@ func _tap_shelf_3d(pos: Vector2) -> bool:
 	var h = g.home3d
 	if h == null or not h.showing() or not h.in_shelf() or h.revealing():
 		return false
-	var at_trophy: bool = h.room.focused_trophy() > 0
 	var R := shelf_rects()
-	if at_trophy and R.sh_prev.has_point(pos):
-		h.step_trophy(-1)
+	if R.sh_center.has_point(pos):
+		h.look_center()
 		return true
-	if at_trophy and R.sh_next.has_point(pos):
-		h.step_trophy(1)
-		return true
-	if at_trophy and R.sh_all.has_point(pos):
-		h.show_whole_shelf()
-		return true
-	if (R.sh_close if at_trophy else R.sh_close_c).has_point(pos):
+	if R.sh_close.has_point(pos):
 		h.close_shelf()
 		return true
 	return false

@@ -92,9 +92,16 @@ var _t := 0.0
 var _house: Node3D
 ## 0.14: полка славы (scripts/home3d/trophy_shelf.gd). shelf_def задаёт комната в _init:
 ## {style, pos (у стены, на полу), yaw (+Z — в комнату), rows [[высота, радиус стены]], room_r, spacing, scale,
-##  depth, focus_d — с какого расстояния смотреть на один кубок, view_d — на всю полку}
+##  depth, focus_d — с какого расстояния смотреть на один кубок, view_d — на всю полку;
+##  0.18: look_d — где стоять в обзоре от первого лица (от середины полки), щипком — от LOOK_D_MIN до view_d}
 var shelf_def := {}
 var shelf
+## 0.18: кубок, выбранный касанием в обзоре полки (подпись сверху; 0 — нет)
+var look_hall := 0
+const LOOK_D := 1.25
+## Глаза чуть выше середины полки: полка — посередине между подписью сверху и кнопками снизу
+const LOOK_EYE := 0.05
+const LOOK_D_MIN := 0.75
 ## Полученные кубки (номера залов) и ещё не «появившиеся» (показ при возвращении домой)
 var trophies_done: Array = []
 var trophies_hidden: Array = []
@@ -543,33 +550,81 @@ func reveal_trophies(halls: Array) -> void:
 	focus_shelf()
 
 
+## 0.18: обзор полки от первого лица: камера встаёт перед серединой полки и смотрит на неё
+## (уже стоит — взгляд плавно прямо, выбор кубка снят)
 func focus_shelf() -> void:
 	if shelf == null:
 		return
 	shelf.set_spin(0)
-	cam.fly_to(shelf.center(), shelf.facing(), shelf_def.get("view_d", 1.9), 0.1)
+	look_hall = 0
+	var v := look_view()
+	cam.look_enter(shelf.center(), shelf.facing(), v.x, v.y, v.z, LOOK_EYE)
 
 
-## Подлететь к кубку зала n: он медленно поворачивается на подставке
+## Где стоять в обзоре: (расстояние от середины полки, ближе всего, дальше всего) — только внутри комнаты
+func look_view() -> Vector3:
+	var c: Vector3 = shelf.center() + Vector3(0, LOOK_EYE, 0)
+	var back: Vector3 = shelf.facing()
+	back.y = 0.0
+	back = back.normalized()
+	var far_d: float = shelf_def.get("view_d", 1.9)
+	var d: float = shelf_def.get("look_d", LOOK_D)
+	var guard := 0
+	while not _inside(c + back * far_d) and far_d > LOOK_D_MIN and guard < 60:
+		far_d -= 0.03
+		guard += 1
+	d = minf(d, far_d)
+	while not _inside(c + back * d) and d > 0.4 and guard < 120:
+		d -= 0.03
+		guard += 1
+	return Vector3(d, minf(LOOK_D_MIN, d), maxf(far_d, d))
+
+
+## Кубок зала n: в обзоре полки — его название в подписи, взгляд плавно поворачивается к нему (без перелёта),
+## кубок медленно крутится на подставке. Из обычного обзора дома — сначала встаём к полке.
 func focus_trophy(n: int) -> void:
 	if shelf == null:
 		return
-	shelf.set_spin(n if shelf.has_trophy(n) else 0)
-	cam.fly_to(shelf.slot_center(n), shelf.slot_dir(n), shelf_def.get("focus_d", 0.7), 0.08)
+	if not cam.look_mode:
+		focus_shelf()
+	look_hall = clampi(n, 1, 10)
+	shelf.set_spin(look_hall if shelf.has_trophy(look_hall) else 0)
+	cam.look_toward(shelf.slot_center(look_hall))
 
 
-## К какому кубку подлетела камера (0 — ни к какому)
+## Какой кубок выбран в обзоре полки (0 — никакой)
 func focused_trophy() -> int:
-	if shelf == null or not cam.focused:
+	if shelf == null or not cam.look_mode:
 		return 0
-	for n in range(1, 11):
-		if cam.goal_pivot.distance_to(shelf.slot_center(n)) < 0.02:
-			return n
-	return 0
+	return look_hall
 
 
+## Камера у полки (обзор от первого лица)
 func focused_shelf() -> bool:
-	return shelf != null and cam.focused and cam.goal_pivot.distance_to(shelf.center()) < 0.02
+	return shelf != null and cam.look_mode
+
+
+## 0.18: кнопка «Прямо»: взгляд плавно в середину полки (выбранный кубок остаётся в подписи)
+func look_center() -> void:
+	if shelf != null and cam.look_mode:
+		cam.look_center()
+
+
+## Кубок под пальцем (только кубки — для обзора полки); нет — пусто
+func pick_trophy(pos: Vector2, radius := 110.0) -> Dictionary:
+	var best := {}
+	var best_d := radius
+	if shelf == null:
+		return best
+	for n in range(1, 11):
+		var p: Vector3 = shelf.slot_center(n)
+		if cam.is_position_behind(p):
+			continue
+		var d := cam.unproject_position(p).distance_to(pos)
+		if d < best_d:
+			best_d = d
+			best = {"type": "trophy", "hall": n, "at": p}
+	return best
 
 
 # ---------- Герой ----------
