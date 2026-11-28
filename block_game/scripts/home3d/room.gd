@@ -165,11 +165,24 @@ func spot_list() -> Array:
 
 
 func build() -> void:
+	for st in build_steps():
+		(st as Callable).call()
+
+
+## 0.19: постройка по шагам — scripts/home3d/home_loader.gd делает по шагу за кадр (экран загрузки не замирает).
+## build() — все шаги сразу (тесты, запасной путь).
+func build_steps() -> Array:
+	return [_step_house, _hero, _step_merge, _step_decor, _markers, _build_shelf, _step_shelf_fill, _step_finish]
+
+
+func _step_house() -> void:
 	_environment()
 	_house = node(self)
 	_house.name = "house"
 	_build_house(_house)
-	_hero()
+
+
+func _step_merge() -> void:
 	var moving := []
 	for a in anims:
 		moving.append(a.n)
@@ -180,10 +193,19 @@ func build() -> void:
 			moving.append(p)
 	merge_static(_house, moving)
 	_capture_env()
+
+
+func _step_decor() -> void:
 	for spot in spot_list():
 		_place(spot)
-	_markers()
-	_build_shelf()
+
+
+func _step_shelf_fill() -> void:
+	if shelf:
+		shelf.fill()
+
+
+func _step_finish() -> void:
 	_camera()
 	built = true
 	var sty := style.duplicate()
@@ -529,7 +551,7 @@ func _build_shelf() -> void:
 	shelf.setup(shelf_def, trophies_done, high)
 	shelf.hidden = trophies_hidden.duplicate()
 	add_child(shelf)
-	shelf.build()
+	shelf.build_frame()  # кубки — следующим шагом (_step_shelf_fill)
 
 
 ## Кубки изменились (новый зал пройден, показ закончился): перестраиваются только кубки, не полка

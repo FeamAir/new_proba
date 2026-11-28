@@ -40,10 +40,16 @@ static func mat(col: Color, rough := 0.85, emit := 0.0, outline := true, emit_co
 	m.albedo_color = col
 	m.roughness = rough
 	m.metallic_specular = 0.25
+	# 0.19: свечение включено у ВСЕХ таких материалов (у несветящихся — чёрное, ×0: картинка та же).
+	# Так светящиеся и обычные детали — один шейдер, а не два: меньше шейдеров собирается при первом
+	# показе дома (на телефоне каждый — заметная пауза), см. scripts/home3d/home_loader.gd
+	m.emission_enabled = true
 	if emit > 0.0:
-		m.emission_enabled = true
 		m.emission = col if emit_col.r < 0.0 else emit_col
 		m.emission_energy_multiplier = emit
+	else:
+		m.emission = Color(0, 0, 0)
+		m.emission_energy_multiplier = 0.0
 	# мягкий «бархатный» край, как у игрушки
 	m.rim_enabled = true
 	m.rim = 0.25

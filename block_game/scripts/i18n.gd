@@ -48,6 +48,9 @@ const STR := {
 		"pick_lives_kitten": "lives in a cozy attic",
 		"pick_ok": "LET'S GO!",
 		"pick_hint": "You can switch buddies in the Wardrobe",
+		# 0.19: экран загрузки 3D-дома (точки после текста рисуются анимацией)
+		"loading_home": "Building your home",
+		"loading_gfx": "Tuning the graphics",
 		"hero_owl": "Owlet",
 		"hero_axolotl": "Axolotl",
 		"hero_puppy": "Puppy",
@@ -426,6 +429,8 @@ const STR := {
 		"pick_lives_kitten": "живёт на уютном чердаке",
 		"pick_ok": "ВПЕРЁД!",
 		"pick_hint": "Друга можно сменить в гардеробе",
+		"loading_home": "Строим домик",
+		"loading_gfx": "Настраиваем графику",
 		"hero_owl": "Совёнок",
 		"hero_axolotl": "Аксолотль",
 		"hero_puppy": "Щенок",

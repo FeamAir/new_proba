@@ -32,6 +32,8 @@ pointing/emulate_touch_from_mouse=true
 
 textures/canvas_textures/default_texture_filter=2
 
+; 0.19: кэш собранных шейдеров на диске (user://shader_cache): при втором запуске 3D-дом открывается быстрее
+shader_compiler/shader_cache/enabled=true
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.0706, 0.0431, 0.1412, 1)

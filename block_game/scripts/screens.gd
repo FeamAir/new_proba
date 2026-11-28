@@ -14,6 +14,7 @@ const Rarity := preload("res://scripts/rarity.gd")
 const Swipe := preload("res://scripts/swipe.gd")
 const SpecialsDraw := preload("res://scripts/specials_draw.gd")  # 0.18: значки новых целей на карте
 const Levels := preload("res://scripts/levels.gd")
+const LoadingUI := preload("res://scripts/loading_ui.gd")  # 0.19: экран загрузки дома в окне сцены гардероба
 const StarGoal := preload("res://scripts/star_goal.gd")  # 0.19: строка «★★★ — за N фигур» на экране победы
 ## 0.18: первая карточка каждой вкладки вещей — «ничего» (у окраски — «Родной окрас»): снять вещь слота
 const BARE := "_bare"
@@ -627,6 +628,10 @@ func draw_wardrobe() -> void:
 				var sc: Vector2 = g.home3d.spot_screen(sp)
 				if sc.x >= 0.0:
 					rects["spot_" + sp] = Rect2(sc - Vector2(50, 50), Vector2(100, 100))
+		elif g.home3d.loading():
+			# 0.19: новый дом строится по частям (смена друга) — в окне сцены экран загрузки
+			LoadingUI.draw(g, st, 1.0, g.home3d.load_progress(), g.home3d.load_text_key())
+			focus = st.get_center()
 		else:
 			home.draw(g, kind, org, s, view, Meta.home_stage(g.max_level), placed, g.meta.outfit(), g.t_total, react, spot, false)
 			focus = home.spot_screen(kind, spot)

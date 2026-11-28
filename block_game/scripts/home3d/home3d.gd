@@ -15,6 +15,7 @@ extends Node
 ## вернуть 3D в паузе.
 
 const Meta := preload("res://scripts/meta.gd")
+const HomeLoader := preload("res://scripts/home3d/home_loader.gd")
 const ROOMS := {
 	"owl": preload("res://scripts/home3d/room_owl.gd"),
 	"axolotl": preload("res://scripts/home3d/room_axolotl.gd"),
@@ -37,6 +38,9 @@ const LOOK_V_OFFSET := 0.0
 
 ## Для тестов: строить 3D даже без экрана (headless)
 static var force := false
+## 0.19: постройка по частям с экраном загрузки (scripts/home3d/home_loader.gd): -1 — сама (на экране — да,
+## без экрана и в тестах с force — нет, дом строится сразу), 0 — никогда, 1 — всегда (тест экрана загрузки)
+static var stage_load := -1
 
 var g                       # узел игры (scripts/game.gd)
 var vp: SubViewport
@@ -66,6 +70,12 @@ var _prewarm_frames := 0
 
 
 var _guard_tripped := false
+## 0.19: дом строится / прогревается по частям (экран загрузки); null — нет
+var loader = null
+## Экран загрузки после готовности ещё чуть-чуть гаснет поверх дома (1 -> 0)
+var load_fade := 0.0
+## Последняя загрузка: кадров, мс постройки и прогрева, групп прогрева (для тестов и замеров)
+var last_load := {}
 
 ## 0.14: полка славы. trophy_focus — к какому кубку подлетела камера (подпись на экране; 0 — нет),
 ## shelf_focus — камера у полки; reveal_halls / reveal_t — показ новых кубков (-1 — нет показа)
@@ -145,8 +155,14 @@ func set_quality(q: String, manual := false) -> void:
 	if q == "2d":
 		_free()
 		return
+	if loader != null and not loader.rewarm:
+		_free()  # дом ещё строился со старым качеством — построится заново с новым
+		return
 	if room:
 		room.set_quality(q == "high")
+		if loader == null and _staged() and not HomeLoader.is_warmed(kind, stage, q):
+			# 0.19: другое качество — другие шейдеры (без теней): собрать их за экраном «Настраиваем графику»
+			_start_load(HomeLoader.new(self, kind, stage, q, true))
 		_apply_viewport()
 
 
@@ -158,12 +174,32 @@ func is_3d() -> bool:
 
 ## Дом в 3D на весь экран «Дом» (иначе — 2D-дом)
 func showing() -> bool:
-	return is_3d() and room != null and mode == "home"
+	return is_3d() and room != null and mode == "home" and loader == null
 
 
 ## Дом в 3D в окне гардероба (вкладка «Дом»)
 func showing_stage() -> bool:
-	return is_3d() and room != null and mode == "stage"
+	return is_3d() and room != null and mode == "stage" and loader == null
+
+
+## 0.19: идёт постройка или прогрев дома — вместо дома рисуется экран загрузки (scripts/loading_ui.gd)
+func loading() -> bool:
+	return loader != null and mode in ["home", "stage"]
+
+
+func load_progress() -> float:
+	return loader.progress() if loader != null else 1.0
+
+
+## Экран загрузки — «строим» (новый дом) или «настраиваем графику» (только прогрев после смены качества)
+func load_text_key() -> String:
+	return "loading_gfx" if loader != null and loader.rewarm else "loading_home"
+
+
+func _staged() -> bool:
+	if stage_load >= 0:
+		return stage_load == 1
+	return not force and DisplayServer.get_name() != "headless"
 
 
 func _wanted() -> String:
@@ -187,11 +223,13 @@ func _process(delta: float) -> void:
 		return
 	var want := _wanted()
 	if want == "off":
-		if room != null:
+		if room != null or loader != null:
 			_free()
 		mode = "off"
 		return
 	if want == "idle":
+		if loader != null and not loader.rewarm:
+			_free()  # ушли посреди постройки — построится заново, когда понадобится
 		if room != null:
 			_pause(true)
 		mode = "idle"
@@ -199,15 +237,31 @@ func _process(delta: float) -> void:
 	var k: String = g.meta.hero
 	var st: int = Meta.home_stage(g.max_level)
 	var prev := mode
-	if room == null or k != kind or st != stage:
+	load_fade = maxf(0.0, load_fade - delta * 3.0)
+	if loader != null and not loader.rewarm and (loader.kind != k or loader.stage != st):
+		_free()  # пока строился, сменился герой или ступень
+	if loader == null and (room == null or k != kind or st != stage):
+		if _staged() and ROOMS.has(k):
+			# 0.19: по частям: в этом кадре — только экран загрузки, работа — со следующего
+			_free()
+			_start_load(HomeLoader.new(self, k, st, quality))
+			mode = want
+			return
 		_build(k, st)
 		if want != "prewarm":
 			# смена дома / вход после уровня: из темноты, камера плавно влетает
 			fade = 1.0
 			room.cam.intro()
-	elif prev == "prewarm" and want == "home":
+	elif loader == null and prev == "prewarm" and want == "home":
 		fade = 0.7
 		room.cam.intro()
+	if loader != null:
+		mode = want
+		if g.state == g.State.HOME:
+			g.state_time = 0.0  # экскурсия, подсказки, автопоказ кубков — после загрузки
+		if not loader.step():
+			return
+		_finish_load(want)
 	mode = want
 	_pause(false)
 	_apply_viewport()
@@ -242,16 +296,29 @@ func _build(k: String, st: int) -> void:
 	vp.handle_input_locally = false
 	vp.audio_listener_enable_3d = false
 	add_child(vp)
-	room = ROOMS[k].new()
-	room.setup(k, st, g.meta.decor_placed.get(k, {}), g.meta.outfit(), quality == "high", g.meta.decor_rot.get(k, {}), g.meta.room_of(k))
-	room.trophies_done = Meta.trophies(g.max_level)
-	room.trophies_hidden = g.meta.trophies_pending(g.max_level)
+	room = make_room(k, st)
+	vp.add_child(room)
+	room.build()
+	_adopt(k, st)
+	last_build_ms = (Time.get_ticks_usec() - t0) / 1000.0
+	_apply_viewport()
+
+
+## Комната героя k (ещё не построена): украшения, наряд, качество, кубки — из сохранения
+func make_room(k: String, st: int):
+	var r = ROOMS[k].new()
+	r.setup(k, st, g.meta.decor_placed.get(k, {}), g.meta.outfit(), quality == "high", g.meta.decor_rot.get(k, {}), g.meta.room_of(k))
+	r.trophies_done = Meta.trophies(g.max_level)
+	r.trophies_hidden = g.meta.trophies_pending(g.max_level)
+	return r
+
+
+## Построенная комната стала домом на экране
+func _adopt(k: String, st: int) -> void:
 	reveal_halls = []
 	reveal_t = -1.0
 	trophy_focus = 0
 	shelf_focus = false
-	vp.add_child(room)
-	room.build()
 	room.cam.tapped.connect(_on_tap)
 	room.cam.double_tapped.connect(_on_double_tap)
 	kind = k
@@ -261,11 +328,39 @@ func _build(k: String, st: int) -> void:
 	_pending_spot = ""
 	_home_time = 0.0
 	_frames_ok = 0
-	last_build_ms = (Time.get_ticks_usec() - t0) / 1000.0
+
+
+## 0.19: начать постройку / прогрев по частям
+func _start_load(l) -> void:
+	loader = l
+	if not l.rewarm and not _guard_armed and builds == 0:
+		_guard_armed = true
+		_guard(true)
+
+
+## Постройка и прогрев закончились: дом — на экран (из затемнения, камера влетает)
+func _finish_load(want: String) -> void:
+	var l = loader
+	loader = null
+	last_load = {"frames": l.frames, "build_ms": l.build_ms, "warm_ms": l.warm_ms, "groups": l.groups.size(), "warm": l.needs_warm(), "rewarm": l.rewarm}
+	if not l.rewarm:
+		vp = l.vp
+		room = l.room
+		_adopt(l.kind, l.stage)
+		last_build_ms = l.build_ms
 	_apply_viewport()
+	if l.needs_warm() or l.frames > 2:
+		load_fade = 1.0
+	if want != "prewarm" and not l.rewarm:
+		fade = 1.0
+		room.cam.intro()
 
 
 func _free() -> void:
+	if loader != null:
+		var l = loader
+		loader = null
+		l.cancel()
 	if vp != null:
 		remove_child(vp)
 		vp.queue_free()
@@ -568,4 +663,5 @@ func _watch_fps(delta: float) -> void:
 ## Для тестов и замеров
 func debug_info() -> Dictionary:
 	return {"mode": mode, "kind": kind, "stage": stage, "built": room != null, "builds": builds,
-		"vp": vp.size if vp else Vector2i.ZERO, "quality": quality, "build_ms": last_build_ms}
+		"vp": vp.size if vp else Vector2i.ZERO, "quality": quality, "build_ms": last_build_ms,
+		"loading": loading(), "load": last_load}

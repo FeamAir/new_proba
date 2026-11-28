@@ -43,6 +43,12 @@ func setup(d: Dictionary, dn: Array, hq: bool) -> void:
 
 
 func build() -> void:
+	build_frame()
+	fill()
+
+
+## 0.19: полка без кубков (постройка дома по шагам, scripts/home3d/home_loader.gd); кубки — fill()
+func build_frame() -> void:
 	_layout()
 	frame_n = node(self)
 	frame_n.name = "frame"
@@ -59,6 +65,9 @@ func build() -> void:
 	merge_static(frame_n, mv)
 	saved.append_array(anims)
 	anims = saved
+
+
+func fill() -> void:
 	_fill()
 	built = true
 

@@ -41,6 +41,7 @@ const ForgeUI := preload("res://scripts/forge_ui.gd")
 ## 0.12b: окно «Гардероб обновлён», окно имени, 0.16: подсказка о своём гардеробе (scripts/notice_ui.gd)
 const NoticeUI := preload("res://scripts/notice_ui.gd")
 const Home3D := preload("res://scripts/home3d/home3d.gd")  # 0.12: 3D-дома
+const LoadingUI := preload("res://scripts/loading_ui.gd")  # 0.19: экран «Строим домик» (3D-дом строится по частям)
 const TrophyUI := preload("res://scripts/trophy_ui.gd")  # 0.14: кубки залов
 const DecorateUI := preload("res://scripts/decorate_ui.gd")  # 0.15: режим украшения комнаты
 ## 0.17: герой рядом с полем (scripts/play_hero.gd) и «Удобство» (scripts/access.gd, access_ui.gd)
@@ -1171,6 +1172,8 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 			go_home()
 			return
 		State.HOME:
+			if home3d and home3d.loading():
+				return  # 0.19: экран загрузки дома: касание не нажимает кнопки, которых ещё не видно
 			if tour.tap(self, pos):
 				return  # 0.17: экскурсия забирает касания (кнопки и камера 3D-дома их не получают)
 			if decor_ui and decor_ui.active:
@@ -1361,6 +1364,10 @@ func _draw() -> void:
 		return
 	match state:
 		State.HOME:
+			if home3d and home3d.loading():
+				# 0.19: дом строится / прогревается по частям — экран загрузки (живой, по настоящему времени)
+				LoadingUI.draw(self, Rect2(0, 0, W, H), 1.0, home3d.load_progress(), home3d.load_text_key())
+				return
 			screens.draw_home()
 			if decor_ui and decor_ui.active:
 				return  # 0.15: в режиме украшения — только его полоса и панель (рисует screens.draw_home)
@@ -1368,6 +1375,8 @@ func _draw() -> void:
 			if trophy_ui:
 				trophy_ui.draw_home()
 			tour.draw(self)  # 0.17: экскурсия по главному экрану — поверх всего
+			if home3d and home3d.load_fade > 0.0:
+				LoadingUI.draw(self, Rect2(0, 0, W, H), home3d.load_fade, 1.0)  # фон загрузки гаснет
 			return
 		State.FORGE:
 			_draw_background()
